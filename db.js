@@ -2,7 +2,9 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'crm.db');
+// Vercel n'a accès en écriture qu'à /tmp
+const DB_PATH = process.env.DB_PATH ||
+  (process.env.VERCEL ? '/tmp/crm.db' : path.join(__dirname, 'data', 'crm.db'));
 const dir = path.dirname(DB_PATH);
 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 

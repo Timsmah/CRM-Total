@@ -43,5 +43,11 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`CRM Bangkok → http://localhost:${PORT}`));
+// Local dev
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`CRM Bangkok → http://localhost:${PORT}`));
+}
+
+// Vercel serverless export
+module.exports = app;
