@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "CRM Bangkok (dev)",
+      "runtimeExecutable": "/Users/timmeniere/.nvm/versions/node/v20.20.1/bin/node",
+      "runtimeArgs": ["server.js"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "CRM Bangkok (prod)",
+      "runtimeExecutable": "/Users/timmeniere/.nvm/versions/node/v20.20.1/bin/node",
+      "runtimeArgs": ["/Users/timmeniere/.nvm/versions/node/v20.20.1/bin/npm", "start"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

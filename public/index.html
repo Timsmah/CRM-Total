@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CRM Bangkok</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login-screen" class="hidden">
+    <div class="login-card">
+      <div class="login-logo">🏙️</div>
+      <h1>CRM Bangkok</h1>
+      <p class="login-sub">Agent immobilier · Bangkok</p>
+      <form id="login-form">
+        <input type="password" id="password-input" placeholder="Mot de passe" autocomplete="current-password">
+        <button type="submit">Connexion</button>
+        <p id="login-error" class="error hidden">Mot de passe incorrect</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+
+    <aside id="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">🏙️</span>
+        <span class="logo-text">CRM BKK</span>
+      </div>
+      <nav>
+        <a href="#clients" class="nav-item" data-section="clients">
+          <span class="nav-icon">👥</span><span>Clients</span>
+        </a>
+        <a href="#properties" class="nav-item" data-section="properties">
+          <span class="nav-icon">🏠</span><span>Properties</span>
+        </a>
+        <a href="#deals" class="nav-item" data-section="deals">
+          <span class="nav-icon">🤝</span><span>Deals</span>
+        </a>
+        <a href="#finance" class="nav-item" data-section="finance">
+          <span class="nav-icon">💰</span><span>Finance</span>
+        </a>
+      </nav>
+      <button id="logout-btn">⎋ Déconnexion</button>
+    </aside>
+
+    <main id="content"></main>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal">
+      <div id="modal-header">
+        <h3 id="modal-title"></h3>
+        <button id="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/clients.js"></script>
+  <script src="/js/properties.js"></script>
+  <script src="/js/deals.js"></script>
+  <script src="/js/finance.js"></script>
+</body>
+</html>
