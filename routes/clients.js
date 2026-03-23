@@ -49,6 +49,12 @@ router.patch('/:id/archive', (req, res) => {
   res.json({ archived: !!newVal });
 });
 
+router.patch('/:id/contact-status', (req, res) => {
+  const { contact_status } = req.body;
+  db.prepare('UPDATE clients SET contact_status = ? WHERE id = ?').run(contact_status, req.params.id);
+  res.json({ contact_status });
+});
+
 router.patch('/:id/fees', (req, res) => {
   const client = db.prepare('SELECT research_fees_paid FROM clients WHERE id = ?').get(req.params.id);
   if (!client) return res.status(404).json({ error: 'Client non trouvé' });

@@ -71,7 +71,7 @@ db.exec(`
 `);
 
 // Migrate existing clients table if needed
-const newCols = ['budget_eur','property_type','city','bedrooms','move_in_date','duration','project'];
+const newCols = ['budget_eur','property_type','city','bedrooms','move_in_date','duration','project','contact_status'];
 newCols.forEach(col => {
   try { db.exec(`ALTER TABLE clients ADD COLUMN ${col} TEXT`); } catch {}
 });

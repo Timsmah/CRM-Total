@@ -82,8 +82,12 @@ const Router = {
     document.getElementById('content').innerHTML = '<p class="spinner">Chargement…</p>';
 
     try {
-      await sections[section].load();
-      sections[section].render();
+      if (sections[section].init) {
+        await sections[section].init();
+      } else {
+        await sections[section].load();
+        sections[section].render();
+      }
     } catch (err) {
       console.error(err);
       Toast.show('Erreur de chargement', 'error');
