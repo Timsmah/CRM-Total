@@ -1,3 +1,10 @@
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 const Clients = {
   data: [],
   filter: 'tous',
@@ -56,7 +63,7 @@ const Clients = {
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
           ${typeLine ? `<p>🏠 ${typeLine}</p>` : ''}
-          ${c.move_in_date ? `<p>📅 ${c.move_in_date}${c.duration ? ' · ' + c.duration : ''}</p>` : ''}
+          ${c.move_in_date ? `<p>📅 Arrivée : ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}</p>` : ''}
           ${c.criteria ? `<p style="color:var(--text-2);font-size:12px;margin-top:4px;font-style:italic">${c.criteria}</p>` : ''}
           <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
             <span class="source-tag">${c.source}</span>
