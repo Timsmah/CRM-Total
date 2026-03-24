@@ -2,7 +2,22 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 
-const parsePhotos = (p) => { p.photos = JSON.parse(p.photos || '[]'); return p; };
+const parsePhotos = (p) => { try { p.photos = JSON.parse(p.photos || '[]'); } catch { p.photos = []; } return p; };
+
+// Simple CSV parser (gère les champs entre guillemets)
+function parseCSV(text) {
+  return text.trim().split('\n').map(line => {
+    const fields = [];
+    let field = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQuotes = !inQuotes; }
+      else if (line[i] === ',' && !inQuotes) { fields.push(field.trim()); field = ''; }
+      else { field += line[i]; }
+    }
+    fields.push(field.trim());
+    return fields;
+  });
+}
 
 router.get('/', async (req, res) => {
   const archived = req.query.archived === 'true' ? 1 : 0;
@@ -52,6 +67,49 @@ router.patch('/:id/archive', async (req, res) => {
   const newVal = prop.archived ? 0 : 1;
   await db.from('properties').update({ archived: newVal }).eq('id', req.params.id);
   res.json({ archived: !!newVal });
+});
+
+// Sync depuis Google Sheet public (CSV)
+router.post('/sync/sheets', async (req, res) => {
+  try {
+    const SHEET_ID = '1S7Hwemso7y2wxWH7CvmJ17BzMikpzW_P49jfqxys-NA';
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+    const response = await fetch(url, { redirect: 'follow' });
+    if (!response.ok) throw new Error(`Sheet HTTP ${response.status}`);
+
+    const rows = parseCSV(await response.text()).slice(1); // skip header
+    let imported = 0, updated = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[2] || !r[2].trim()) continue;
+      const sheetRow = i + 2;
+      const payload = {
+        title        : r[2].trim(),
+        zone         : r[0].trim(),
+        room_no      : r[3].trim(),
+        floor        : r[4].trim(),
+        room_type    : r[5].trim(),
+        sqm          : r[6].trim(),
+        price        : parseInt(r[7].replace(/[^0-9]/g, '')) || null,
+        owner_contact: r[8].trim(),
+        drive_link   : r[9] ? r[9].trim() : ''
+      };
+
+      const { data: existing } = await db.from('properties').select('id').eq('sheet_row', sheetRow).maybeSingle();
+      if (!existing) {
+        await db.from('properties').insert({ ...payload, status: 'Disponible', sheet_row: sheetRow, photos: '[]' });
+        imported++;
+      } else {
+        await db.from('properties').update(payload).eq('sheet_row', sheetRow);
+        updated++;
+      }
+    }
+    res.json({ imported, updated, total: rows.length });
+  } catch (err) {
+    console.error('Properties sync error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
