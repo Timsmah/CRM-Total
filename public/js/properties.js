@@ -3,10 +3,11 @@ const Properties = {
   filterStatus : 'tous',
   filterZone   : 'toutes',
   filterBeds   : 'tous',
+  filterPriceMax: 250000,
   showArchived : false,
 
   async init() {
-    document.getElementById('content').innerHTML = '<p class="spinner">Synchronisation…</p>';
+    document.getElementById('content').innerHTML = '<p class="spinner">Syncing…</p>';
     try { await api.post('/properties/sync/sheets', {}); } catch {}
     await this.load();
     this.render();
@@ -39,31 +40,31 @@ const Properties = {
       <div class="section-header">
         <h2>Properties</h2>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="Properties.openAddModal()">+ Ajouter</button>
+          <button class="btn btn-primary" onclick="Properties.openAddModal()">+ Add</button>
           <button class="btn btn-secondary" onclick="Properties.syncSheets()">↻ Sheets</button>
           <button class="btn btn-ghost" onclick="Properties.toggleArchived()">
-            ${this.showArchived ? '← Actifs' : '🗃 Archivés'}
+            ${this.showArchived ? '← Active' : '🗃 Archived'}
           </button>
         </div>
       </div>
 
       <div class="filters-block">
         <div class="filter-group">
-          <span class="filter-label">Statut</span>
+          <span class="filter-label">Status</span>
           <div class="filter-pills">
-            ${['tous','disponible','proposé','loué'].map(s =>
-              `<button class="pill ${this.filterStatus === s ? 'active' : ''}"
-                onclick="Properties.setFilter('status','${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`
+            ${[['tous','All'],['disponible','Available'],['proposé','Proposed'],['loué','Rented']].map(([val,lbl]) =>
+              `<button class="pill ${this.filterStatus === val ? 'active' : ''}"
+                onclick="Properties.setFilter('status','${val}')">${lbl}</button>`
             ).join('')}
           </div>
         </div>
 
         ${zones.length ? `
         <div class="filter-group">
-          <span class="filter-label">Quartier</span>
+          <span class="filter-label">Zone</span>
           <div class="filter-pills">
             <button class="pill ${this.filterZone === 'toutes' ? 'active' : ''}"
-              onclick="Properties.setFilter('zone','toutes')">Tous</button>
+              onclick="Properties.setFilter('zone','toutes')">All</button>
             ${zones.map(z =>
               `<button class="pill ${this.filterZone === z ? 'active' : ''}"
                 onclick="Properties.setFilter('zone','${z}')">${z}</button>`
@@ -73,16 +74,29 @@ const Properties = {
 
         ${beds.length ? `
         <div class="filter-group">
-          <span class="filter-label">Chambres</span>
+          <span class="filter-label">Bedrooms</span>
           <div class="filter-pills">
             <button class="pill ${this.filterBeds === 'tous' ? 'active' : ''}"
-              onclick="Properties.setFilter('beds','tous')">Tous</button>
+              onclick="Properties.setFilter('beds','tous')">All</button>
             ${beds.map(b =>
               `<button class="pill ${this.filterBeds === b ? 'active' : ''}"
-                onclick="Properties.setFilter('beds','${b}')">${b} ch.</button>`
+                onclick="Properties.setFilter('beds','${b}')">${b} BR</button>`
             ).join('')}
           </div>
         </div>` : ''}
+
+        <div class="filter-group">
+          <span class="filter-label">Max price</span>
+          <div class="price-slider-wrap">
+            <input type="range" min="0" max="250000" step="5000"
+              value="${this.filterPriceMax}"
+              oninput="Properties.setFilter('price', this.value)"
+              class="price-slider">
+            <span class="price-slider-val">
+              ${this.filterPriceMax >= 250000 ? 'No limit' : Number(this.filterPriceMax).toLocaleString('fr-FR') + ' ฿'}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div class="cards-grid">
@@ -95,14 +109,16 @@ const Properties = {
       if (this.filterStatus !== 'tous' && p.status.toLowerCase() !== this.filterStatus) return false;
       if (this.filterZone !== 'toutes' && p.zone !== this.filterZone) return false;
       if (this.filterBeds !== 'tous' && this.extractBeds(p.room_type) !== this.filterBeds) return false;
+      if (p.price && p.price > this.filterPriceMax) return false;
       return true;
     });
   },
 
   setFilter(type, val) {
-    if (type === 'status') this.filterStatus = val;
-    if (type === 'zone')   this.filterZone   = val;
-    if (type === 'beds')   this.filterBeds   = val;
+    if (type === 'status') this.filterStatus  = val;
+    if (type === 'zone')   this.filterZone    = val;
+    if (type === 'beds')   this.filterBeds    = val;
+    if (type === 'price')  this.filterPriceMax = Number(val);
     this.render();
   },
 
@@ -127,9 +143,9 @@ const Properties = {
         </div>
         ${p.description ? `<p style="color:var(--text-2);font-size:12px;margin-top:6px;line-height:1.4">${p.description.substring(0,100)}${p.description.length>100?'…':''}</p>` : ''}
         <div class="card-actions">
-          <button class="btn btn-secondary btn-sm" onclick="Properties.openEditModal(${p.id})">Modifier</button>
+          <button class="btn btn-secondary btn-sm" onclick="Properties.openEditModal(${p.id})">Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="Properties.archive(${p.id})">
-            ${this.showArchived ? 'Désarchiver' : 'Archiver'}
+            ${this.showArchived ? 'Unarchive' : 'Archive'}
           </button>
         </div>
       </div>`;
@@ -151,9 +167,9 @@ const Properties = {
 
   async syncSheets() {
     try {
-      Toast.show('Synchronisation…', 'info');
+      Toast.show('Syncing…', 'info');
       const r = await api.post('/properties/sync/sheets', {});
-      Toast.show(`${r.imported} importé(s) · ${r.updated} mis à jour`);
+      Toast.show(`${r.imported} imported · ${r.updated} updated`);
       await this.load();
       this.render();
     } catch (err) {
@@ -161,10 +177,10 @@ const Properties = {
     }
   },
 
-  openAddModal() { Modal.open('Ajouter un bien', this.formHTML(null)); },
+  openAddModal() { Modal.open('Add property', this.formHTML(null)); },
   openEditModal(id) {
     const p = this.data.find(x => x.id === id);
-    Modal.open('Modifier le bien', this.formHTML(p));
+    Modal.open('Edit property', this.formHTML(p));
   },
 
   formHTML(p) {
@@ -172,12 +188,12 @@ const Properties = {
     return `
       <form onsubmit="Properties.submit(event, ${p ? p.id : 'null'})">
         <div class="form-row">
-          <label>Titre / Projet *</label>
+          <label>Title / Project *</label>
           <input name="title" required value="${p?.title || ''}">
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>Prix (THB/mois)</label>
+            <label>Price (THB/month)</label>
             <input name="price" type="number" value="${p?.price || ''}">
           </div>
           <div class="form-row">
@@ -187,30 +203,30 @@ const Properties = {
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>Type</label>
+            <label>Room type</label>
             <input name="room_type" placeholder="2BR 2Bath" value="${p?.room_type || ''}">
           </div>
           <div class="form-row">
-            <label>Superficie</label>
+            <label>Floor area</label>
             <input name="sqm" placeholder="85 Sq.m." value="${p?.sqm || ''}">
           </div>
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>Étage</label>
+            <label>Floor</label>
             <input name="floor" placeholder="7th" value="${p?.floor || ''}">
           </div>
           <div class="form-row">
-            <label>N° appartement</label>
+            <label>Unit no.</label>
             <input name="room_no" value="${p?.room_no || ''}">
           </div>
         </div>
         <div class="form-row">
-          <label>Contact propriétaire</label>
+          <label>Owner contact</label>
           <input name="owner_contact" placeholder="Tel / Line / FB" value="${p?.owner_contact || ''}">
         </div>
         <div class="form-row">
-          <label>Lien Google Drive (photos)</label>
+          <label>Google Drive link (photos)</label>
           <input name="drive_link" placeholder="https://drive.google.com/drive/folders/…" value="${p?.drive_link || ''}">
         </div>
         <div class="form-row">
@@ -218,14 +234,14 @@ const Properties = {
           <textarea name="description" rows="2">${p?.description || ''}</textarea>
         </div>
         <div class="form-row">
-          <label>Statut</label>
+          <label>Status</label>
           <select name="status">
             ${statuses.map(s => `<option ${p?.status === s ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
         </div>
         <div class="form-actions">
-          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn btn-primary">${p ? 'Enregistrer' : 'Ajouter'}</button>
+          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Cancel</button>
+          <button type="submit" class="btn btn-primary">${p ? 'Save' : 'Add'}</button>
         </div>
       </form>`;
   },

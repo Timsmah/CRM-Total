@@ -6,11 +6,11 @@ function formatDate(str) {
 }
 
 const CONTACT_COLS = [
-  { key: 'À contacter',    cls: 'col-to-contact'  },
-  { key: 'Contacté',       cls: 'col-contacted'   },
-  { key: 'Pas de réponse', cls: 'col-no-response' },
-  { key: 'Rappeler',       cls: 'col-callback'    },
-  { key: 'RDV fixé',       cls: 'col-meeting'     },
+  { key: 'À contacter',    label: 'To Contact',    cls: 'col-to-contact'  },
+  { key: 'Contacté',       label: 'Contacted',     cls: 'col-contacted'   },
+  { key: 'Pas de réponse', label: 'No Response',   cls: 'col-no-response' },
+  { key: 'Rappeler',       label: 'Call Back',     cls: 'col-callback'    },
+  { key: 'RDV fixé',       label: 'Meeting Set',   cls: 'col-meeting'     },
 ];
 
 const Clients = {
@@ -20,7 +20,7 @@ const Clients = {
 
   async init() {
     // Affiche un placeholder rapide
-    document.getElementById('content').innerHTML = '<p class="spinner">Synchronisation…</p>';
+    document.getElementById('content').innerHTML = '<p class="spinner">Syncing…</p>';
     // Sync silencieux au chargement
     try { await api.post('/clients/sync/sheets', {}); } catch {}
     await this.load();
@@ -36,17 +36,17 @@ const Clients = {
       <div class="section-header">
         <h2>Clients</h2>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
+          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Add</button>
           <button class="btn btn-secondary" onclick="Clients.syncSheets()">↻ Sheets</button>
           <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
-            ${this.showArchived ? '← Actifs' : '🗃 Archivés'}
+            ${this.showArchived ? '← Active' : '🗃 Archived'}
           </button>
         </div>
       </div>
       <div class="filter-pills">
-        ${['Tous','Prospect','Onboarding','Recherche active','Signé','Perdu'].map(s =>
-          `<button class="pill ${this.filter === s.toLowerCase() ? 'active' : ''}"
-            onclick="Clients.setFilter('${s.toLowerCase()}')">${s}</button>`
+        ${[['tous','All'],['prospect','Prospect'],['onboarding','Onboarding'],['recherche active','Active Search'],['signé','Signed'],['perdu','Lost']].map(([val,lbl]) =>
+          `<button class="pill ${this.filter === val ? 'active' : ''}"
+            onclick="Clients.setFilter('${val}')">${lbl}</button>`
         ).join('')}
       </div>
       <div class="kanban-board">
@@ -71,7 +71,7 @@ const Clients = {
     return `
       <div class="kanban-col">
         <div class="kanban-col-header ${col.cls}">
-          <span>${col.key}</span>
+          <span>${col.label}</span>
           <span class="kanban-count">${cards.length}</span>
         </div>
         <div class="kanban-cards">
@@ -100,7 +100,7 @@ const Clients = {
           ${badge(c.status)}
           <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
             onclick="Clients.toggleFees(${c.id})" title="Frais de recherche">
-            ${c.research_fees_paid ? '✓ Frais' : '○ Frais'}
+            ${c.research_fees_paid ? '✓ Fees' : '○ Fees'}
           </button>
         </div>
         <div class="client-name">${c.name}</div>
@@ -108,18 +108,18 @@ const Clients = {
           ${c.whatsapp ? `<p>📱 ${c.whatsapp}</p>` : ''}
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
-          ${c.move_in_date ? `<p class="${urgency}">📅 ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟡' : ''}</p>` : ''}
+          ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟡' : ''}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
         <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)">
           ${CONTACT_COLS.map(col =>
-            `<option ${(c.contact_status || 'À contacter') === col.key ? 'selected' : ''}>${col.key}</option>`
+            `<option value="${col.key}" ${(c.contact_status || 'À contacter') === col.key ? 'selected' : ''}>${col.label}</option>`
           ).join('')}
         </select>
         <div class="card-actions">
-          <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">Modifier</button>
+          <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="Clients.archive(${c.id})">
-            ${this.showArchived ? 'Désarchiver' : 'Archiver'}
+            ${this.showArchived ? 'Unarchive' : 'Archive'}
           </button>
         </div>
       </div>`;
@@ -151,13 +151,13 @@ const Clients = {
     await api.patch(`/clients/${id}/archive`);
     this.data = this.data.filter(c => c.id !== id);
     this.render();
-    Toast.show(this.showArchived ? 'Client désarchivé' : 'Client archivé');
+    Toast.show(this.showArchived ? 'Client unarchived' : 'Client archived');
   },
 
-  openAddModal() { Modal.open('Ajouter un client', this.formHTML(null)); },
+  openAddModal() { Modal.open('Add client', this.formHTML(null)); },
   openEditModal(id) {
     const c = this.data.find(x => x.id === id);
-    Modal.open('Modifier le client', this.formHTML(c));
+    Modal.open('Edit client', this.formHTML(c));
   },
 
   formHTML(c) {
@@ -166,7 +166,7 @@ const Clients = {
     return `
       <form onsubmit="Clients.submit(event, ${c ? c.id : 'null'})">
         <div class="form-row">
-          <label>Nom *</label>
+          <label>Name *</label>
           <input name="name" required value="${c?.name || ''}">
         </div>
         <div class="form-row">
@@ -175,21 +175,21 @@ const Clients = {
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>Budget min (THB)</label>
+            <label>Min budget (THB)</label>
             <input name="budget_min" type="number" value="${c?.budget_min || ''}">
           </div>
           <div class="form-row">
-            <label>Budget max (THB)</label>
+            <label>Max budget (THB)</label>
             <input name="budget_max" type="number" value="${c?.budget_max || ''}">
           </div>
         </div>
         <div class="form-row">
-          <label>Zones souhaitées</label>
+          <label>Desired zones</label>
           <input name="zones" placeholder="Sukhumvit, Thonglor, Ari…" value="${c?.zones || ''}">
         </div>
         <div class="form-row">
-          <label>Critères</label>
-          <textarea name="criteria" rows="2" placeholder="2 BR, balcon, piscine…">${c?.criteria || ''}</textarea>
+          <label>Criteria</label>
+          <textarea name="criteria" rows="2" placeholder="2 BR, balcony, pool…">${c?.criteria || ''}</textarea>
         </div>
         <div class="form-2">
           <div class="form-row">
@@ -199,15 +199,15 @@ const Clients = {
             </select>
           </div>
           <div class="form-row">
-            <label>Statut pipeline</label>
+            <label>Pipeline status</label>
             <select name="status">
               ${statuses.map(s => `<option ${c?.status === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="form-actions">
-          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn btn-primary">${c ? 'Enregistrer' : 'Ajouter'}</button>
+          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Cancel</button>
+          <button type="submit" class="btn btn-primary">${c ? 'Save' : 'Add'}</button>
         </div>
       </form>`;
   },
@@ -219,10 +219,10 @@ const Clients = {
       if (id) {
         const existing = this.data.find(c => c.id === id);
         await api.put(`/clients/${id}`, { ...existing, ...data });
-        Toast.show('Client modifié');
+        Toast.show('Client updated');
       } else {
         await api.post('/clients', data);
-        Toast.show('Client ajouté');
+        Toast.show('Client added');
       }
       Modal.close();
       await this.load();
@@ -234,9 +234,9 @@ const Clients = {
 
   async syncSheets() {
     try {
-      Toast.show('Synchronisation…', 'info');
+      Toast.show('Syncing…', 'info');
       const r = await api.post('/clients/sync/sheets', {});
-      Toast.show(`${r.imported} importé(s) · ${r.updated} mis à jour`);
+      Toast.show(`${r.imported} imported · ${r.updated} updated`);
       await this.load();
       this.render();
     } catch (err) {

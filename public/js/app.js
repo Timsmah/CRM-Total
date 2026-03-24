@@ -54,9 +54,18 @@ const STATUS_CLASS = {
   'Visite planifiée': 'visit', 'Annulé': 'cancelled'
 };
 
+const STATUS_LABEL = {
+  'Prospect': 'Prospect', 'Onboarding': 'Onboarding',
+  'Recherche active': 'Active Search', 'Signé': 'Signed', 'Perdu': 'Lost',
+  'Disponible': 'Available', 'Proposé': 'Proposed', 'Loué': 'Rented',
+  'En cours': 'In Progress', 'Envoyé au client': 'Sent', 'Signé': 'Signed',
+  'Visite planifiée': 'Visit Scheduled', 'Annulé': 'Cancelled'
+};
+
 function badge(status) {
-  const cls = STATUS_CLASS[status] || 'ongoing';
-  return `<span class="badge b-${cls}">${status}</span>`;
+  const cls   = STATUS_CLASS[status] || 'ongoing';
+  const label = STATUS_LABEL[status] || status;
+  return `<span class="badge b-${cls}">${label}</span>`;
 }
 
 function fmtTHB(n) {
@@ -79,7 +88,7 @@ const Router = {
       el.classList.toggle('active', el.dataset.section === section)
     );
 
-    document.getElementById('content').innerHTML = '<p class="spinner">Chargement…</p>';
+    document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
 
     try {
       if (sections[section].init) {
@@ -90,7 +99,7 @@ const Router = {
       }
     } catch (err) {
       console.error(err);
-      Toast.show('Erreur de chargement', 'error');
+      Toast.show('Loading error', 'error');
     }
 
     this.current = section;

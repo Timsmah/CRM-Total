@@ -21,7 +21,7 @@ const Finance = {
 
   monthLabel(ym) {
     const [y, m] = ym.split('-');
-    return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   },
 
   // Summary by account for selected month
@@ -52,14 +52,14 @@ const Finance = {
       </div>
 
       <div class="month-selector">
-        <label style="color:var(--text-2);font-size:13px">Mois :</label>
+        <label style="color:var(--text-2);font-size:13px">Month:</label>
         <select onchange="Finance.changeMonth(this.value)">
           ${months.map(m =>
             `<option value="${m}" ${m === this.selectedMonth ? 'selected' : ''}>${this.monthLabel(m)}</option>`
           ).join('')}
         </select>
         <span style="color:var(--text-2);font-size:13px">
-          Total : <strong style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</strong>
+          Total: <strong style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</strong>
         </span>
       </div>
 
@@ -80,7 +80,7 @@ const Finance = {
       <table class="tx-table">
         <thead>
           <tr>
-            <th>Date</th><th>Type</th><th>Compte</th><th>Notes</th><th>Montant</th><th></th>
+            <th>Date</th><th>Type</th><th>Account</th><th>Notes</th><th>Amount</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -98,7 +98,7 @@ const Finance = {
                 </div>
               </td>
             </tr>`).join('')
-            : `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-2)">Aucune transaction ce mois</td></tr>`}
+            : `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-2)">No transactions this month</td></tr>`}
         </tbody>
       </table>`;
   },
@@ -108,10 +108,10 @@ const Finance = {
     this.render();
   },
 
-  openAddModal() { Modal.open('Ajouter une transaction', this.formHTML(null)); },
+  openAddModal() { Modal.open('Add transaction', this.formHTML(null)); },
   openEditModal(id) {
     const t = this.data.find(x => x.id === id);
-    Modal.open('Modifier la transaction', this.formHTML(t));
+    Modal.open('Edit transaction', this.formHTML(t));
   },
 
   formHTML(t) {
@@ -120,7 +120,7 @@ const Finance = {
       <form onsubmit="Finance.submit(event, ${t ? t.id : 'null'})">
         <div class="form-2">
           <div class="form-row">
-            <label>Montant (THB) *</label>
+            <label>Amount (THB) *</label>
             <input name="amount" type="number" step="0.01" required value="${t?.amount || ''}">
           </div>
           <div class="form-row">
@@ -148,11 +148,11 @@ const Finance = {
         </div>
         <div class="form-row">
           <label>Notes</label>
-          <input name="notes" placeholder="Client, deal, référence…" value="${t?.notes || ''}">
+          <input name="notes" placeholder="Client, deal, reference…" value="${t?.notes || ''}">
         </div>
         <div class="form-actions">
-          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn btn-primary">${t ? 'Enregistrer' : 'Ajouter'}</button>
+          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Cancel</button>
+          <button type="submit" class="btn btn-primary">${t ? 'Save' : 'Add'}</button>
         </div>
       </form>`;
   },
@@ -163,10 +163,10 @@ const Finance = {
     try {
       if (id) {
         await api.put(`/finance/${id}`, data);
-        Toast.show('Transaction modifiée');
+        Toast.show('Transaction updated');
       } else {
         await api.post('/finance', data);
-        Toast.show('Transaction ajoutée');
+        Toast.show('Transaction added');
       }
       Modal.close();
       await this.load();
@@ -177,10 +177,10 @@ const Finance = {
   },
 
   async remove(id) {
-    if (!confirm('Supprimer cette transaction ?')) return;
+    if (!confirm('Delete this transaction?')) return;
     await api.del(`/finance/${id}`);
     this.data = this.data.filter(t => t.id !== id);
     this.render();
-    Toast.show('Transaction supprimée');
+    Toast.show('Transaction deleted');
   }
 };

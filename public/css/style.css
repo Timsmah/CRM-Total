@@ -207,6 +207,33 @@ nav { flex: 1; padding: 0 10px; }
 }
 .fees-btn.paid { color: var(--green); }
 
+/* ── PRICE SLIDER ────────────────────────────────── */
+.price-slider-wrap { display: flex; align-items: center; gap: 12px; }
+.price-slider {
+  -webkit-appearance: none;
+  width: 200px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+.price-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+.price-slider-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  min-width: 90px;
+}
+
 /* ── KANBAN ──────────────────────────────────────── */
 .kanban-board {
   display: flex;
