@@ -1,7 +1,9 @@
 const Properties = {
   data: [],
-  filter: 'tous',
-  showArchived: false,
+  filterStatus : 'tous',
+  filterZone   : 'toutes',
+  filterBeds   : 'tous',
+  showArchived : false,
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Synchronisation…</p>';
@@ -14,8 +16,25 @@ const Properties = {
     this.data = await api.get('/properties?archived=' + this.showArchived);
   },
 
+  // Extrait le nombre de chambres depuis room_type ("2BR 2Bath" → "2")
+  extractBeds(room_type) {
+    if (!room_type) return null;
+    const m = room_type.match(/(\d+)\s*BR/i);
+    return m ? m[1] : null;
+  },
+
+  // Listes dynamiques générées depuis les données
+  uniqueZones() {
+    return [...new Set(this.data.map(p => p.zone).filter(Boolean))].sort();
+  },
+  uniqueBeds() {
+    return [...new Set(this.data.map(p => this.extractBeds(p.room_type)).filter(Boolean))]
+      .sort((a, b) => Number(a) - Number(b));
+  },
+
   render() {
-    const statuses = ['Tous','Disponible','Proposé','Loué'];
+    const zones = this.uniqueZones();
+    const beds  = this.uniqueBeds();
     document.getElementById('content').innerHTML = `
       <div class="section-header">
         <h2>Properties</h2>
@@ -27,20 +46,64 @@ const Properties = {
           </button>
         </div>
       </div>
-      <div class="filter-pills">
-        ${statuses.map(s =>
-          `<button class="pill ${this.filter === s.toLowerCase() ? 'active' : ''}"
-            onclick="Properties.setFilter('${s.toLowerCase()}')">${s}</button>`
-        ).join('')}
+
+      <div class="filters-block">
+        <div class="filter-group">
+          <span class="filter-label">Statut</span>
+          <div class="filter-pills">
+            ${['tous','disponible','proposé','loué'].map(s =>
+              `<button class="pill ${this.filterStatus === s ? 'active' : ''}"
+                onclick="Properties.setFilter('status','${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`
+            ).join('')}
+          </div>
+        </div>
+
+        ${zones.length ? `
+        <div class="filter-group">
+          <span class="filter-label">Quartier</span>
+          <div class="filter-pills">
+            <button class="pill ${this.filterZone === 'toutes' ? 'active' : ''}"
+              onclick="Properties.setFilter('zone','toutes')">Tous</button>
+            ${zones.map(z =>
+              `<button class="pill ${this.filterZone === z ? 'active' : ''}"
+                onclick="Properties.setFilter('zone','${z}')">${z}</button>`
+            ).join('')}
+          </div>
+        </div>` : ''}
+
+        ${beds.length ? `
+        <div class="filter-group">
+          <span class="filter-label">Chambres</span>
+          <div class="filter-pills">
+            <button class="pill ${this.filterBeds === 'tous' ? 'active' : ''}"
+              onclick="Properties.setFilter('beds','tous')">Tous</button>
+            ${beds.map(b =>
+              `<button class="pill ${this.filterBeds === b ? 'active' : ''}"
+                onclick="Properties.setFilter('beds','${b}')">${b} ch.</button>`
+            ).join('')}
+          </div>
+        </div>` : ''}
       </div>
+
       <div class="cards-grid">
         ${this.filtered().map(p => this.cardHTML(p)).join('') || '<p class="empty">Aucun bien</p>'}
       </div>`;
   },
 
   filtered() {
-    if (this.filter === 'tous') return this.data;
-    return this.data.filter(p => p.status.toLowerCase() === this.filter);
+    return this.data.filter(p => {
+      if (this.filterStatus !== 'tous' && p.status.toLowerCase() !== this.filterStatus) return false;
+      if (this.filterZone !== 'toutes' && p.zone !== this.filterZone) return false;
+      if (this.filterBeds !== 'tous' && this.extractBeds(p.room_type) !== this.filterBeds) return false;
+      return true;
+    });
+  },
+
+  setFilter(type, val) {
+    if (type === 'status') this.filterStatus = val;
+    if (type === 'zone')   this.filterZone   = val;
+    if (type === 'beds')   this.filterBeds   = val;
+    this.render();
   },
 
   cardHTML(p) {
@@ -72,7 +135,6 @@ const Properties = {
       </div>`;
   },
 
-  setFilter(f) { this.filter = f; this.render(); },
 
   async toggleArchived() {
     this.showArchived = !this.showArchived;
