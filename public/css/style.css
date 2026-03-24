@@ -293,6 +293,9 @@ nav { flex: 1; padding: 0 10px; }
 }
 .cs-select:focus { outline: none; border-color: var(--accent); }
 
+.urgent-red   { color: var(--red)   !important; font-weight: 600; }
+.urgent-amber { color: var(--amber) !important; font-weight: 600; }
+
 /* ── PROPERTY CARD ───────────────────────────────── */
 .prop-photo {
   width: 100%;

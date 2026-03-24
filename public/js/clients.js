@@ -60,7 +60,14 @@ const Clients = {
   },
 
   columnHTML(col) {
-    const cards = this.filtered().filter(c => (c.contact_status || 'À contacter') === col.key);
+    const cards = this.filtered()
+      .filter(c => (c.contact_status || 'À contacter') === col.key)
+      .sort((a, b) => {
+        if (!a.move_in_date && !b.move_in_date) return 0;
+        if (!a.move_in_date) return 1;
+        if (!b.move_in_date) return -1;
+        return new Date(a.move_in_date) - new Date(b.move_in_date);
+      });
     return `
       <div class="kanban-col">
         <div class="kanban-col-header ${col.cls}">
@@ -73,10 +80,19 @@ const Clients = {
       </div>`;
   },
 
+  urgencyClass(move_in_date) {
+    if (!move_in_date) return '';
+    const days = Math.ceil((new Date(move_in_date) - new Date()) / 86400000);
+    if (days <= 14) return 'urgent-red';
+    if (days <= 30) return 'urgent-amber';
+    return '';
+  },
+
   cardHTML(c) {
     const budgetLine = c.budget_max
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : null;
+    const urgency = this.urgencyClass(c.move_in_date);
 
     return `
       <div class="card kanban-card">
@@ -92,7 +108,7 @@ const Clients = {
           ${c.whatsapp ? `<p>📱 ${c.whatsapp}</p>` : ''}
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
-          ${c.move_in_date ? `<p>📅 ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}</p>` : ''}
+          ${c.move_in_date ? `<p class="${urgency}">📅 ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟡' : ''}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
         <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)">
