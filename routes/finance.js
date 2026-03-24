@@ -1,32 +1,35 @@
 const express = require('express');
-const router = express.Router();
-const db = require('../db');
+const router  = express.Router();
+const db      = require('../db');
 
-router.get('/', (req, res) => {
-  const transactions = db.prepare(
-    'SELECT * FROM finance ORDER BY date DESC, created_at DESC'
-  ).all();
-  res.json(transactions);
+router.get('/', async (req, res) => {
+  const { data, error } = await db.from('finance')
+    .select('*').order('date', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { amount, date, type, account, notes } = req.body;
-  const result = db.prepare(`
-    INSERT INTO finance (amount, date, type, account, notes) VALUES (?, ?, ?, ?, ?)
-  `).run(amount, date, type, account, notes || '');
-  res.json(db.prepare('SELECT * FROM finance WHERE id = ?').get(result.lastInsertRowid));
+  const { data, error } = await db.from('finance')
+    .insert({ amount, date, type, account, notes: notes || '' })
+    .select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const { amount, date, type, account, notes } = req.body;
-  db.prepare(`
-    UPDATE finance SET amount=?, date=?, type=?, account=?, notes=? WHERE id=?
-  `).run(amount, date, type, account, notes, req.params.id);
-  res.json(db.prepare('SELECT * FROM finance WHERE id = ?').get(req.params.id));
+  const { data, error } = await db.from('finance')
+    .update({ amount, date, type, account, notes })
+    .eq('id', req.params.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
-router.delete('/:id', (req, res) => {
-  db.prepare('DELETE FROM finance WHERE id = ?').run(req.params.id);
+router.delete('/:id', async (req, res) => {
+  const { error } = await db.from('finance').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
 
