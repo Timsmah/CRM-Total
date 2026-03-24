@@ -69,7 +69,10 @@ const Clients = {
         return new Date(a.move_in_date) - new Date(b.move_in_date);
       });
     return `
-      <div class="kanban-col">
+      <div class="kanban-col"
+        ondragover="Clients.onDragOver(event)"
+        ondragleave="Clients.onDragLeave(event)"
+        ondrop="Clients.onDrop(event, '${col.key}')">
         <div class="kanban-col-header ${col.cls}">
           <span>${col.label}</span>
           <span class="kanban-count">${cards.length}</span>
@@ -95,7 +98,9 @@ const Clients = {
     const urgency = this.urgencyClass(c.move_in_date);
 
     return `
-      <div class="card kanban-card">
+      <div class="card kanban-card" draggable="true"
+        ondragstart="Clients.onDragStart(event, ${c.id})"
+        ondragend="Clients.onDragEnd(event)">
         <div class="card-top">
           ${badge(c.status)}
           <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
@@ -152,6 +157,35 @@ const Clients = {
     this.data = this.data.filter(c => c.id !== id);
     this.render();
     Toast.show(this.showArchived ? 'Client unarchived' : 'Client archived');
+  },
+
+  // ── Drag & Drop ──────────────────────────────────
+  onDragStart(e, id) {
+    e.dataTransfer.setData('clientId', id);
+    e.currentTarget.classList.add('dragging');
+  },
+
+  onDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+  },
+
+  onDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+  },
+
+  onDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget))
+      e.currentTarget.classList.remove('drag-over');
+  },
+
+  async onDrop(e, colKey) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const id = Number(e.dataTransfer.getData('clientId'));
+    if (!id) return;
+    await this.setContactStatus(id, colKey);
   },
 
   openAddModal() { Modal.open('Add client', this.formHTML(null)); },

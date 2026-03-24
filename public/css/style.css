@@ -309,6 +309,11 @@ nav { flex: 1; padding: 0 10px; }
 
 .kanban-empty { color: var(--text-3); font-size: 12px; padding: 6px 4px; }
 
+.kanban-card[draggable="true"] { cursor: grab; }
+.kanban-card[draggable="true"]:active { cursor: grabbing; }
+.kanban-card.dragging { opacity: 0.4; transform: scale(0.97); }
+.kanban-col.drag-over { border-color: var(--accent); background: rgba(212,168,83,.06); }
+
 .cs-select {
   width: 100%;
   margin-top: 8px;
