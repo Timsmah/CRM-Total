@@ -290,7 +290,9 @@ nav { flex: 1; padding: 0 10px; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scrollbar-width: none;
 }
+.kanban-cards::-webkit-scrollbar { display: none; }
 
 .kanban-card { padding: 12px; }
 .kanban-card .client-name { font-size: 13.5px; }
@@ -313,6 +315,29 @@ nav { flex: 1; padding: 0 10px; }
 .kanban-card[draggable="true"]:active { cursor: grabbing; }
 .kanban-card.dragging { opacity: 0.4; transform: scale(0.97); }
 .kanban-col.drag-over { border-color: var(--accent); background: rgba(212,168,83,.06); }
+
+/* Colonne en focus (clic sur header) */
+.kanban-col-header { cursor: pointer; transition: background 0.12s; }
+.kanban-col-header:hover { background: rgba(255,255,255,.03); }
+
+.kanban-col.focused {
+  width: auto !important;
+  flex: 1 1 auto;
+  max-height: none;
+}
+.kanban-col.focused .kanban-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  flex-direction: unset;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.kanban-col.focused .kanban-cards::-webkit-scrollbar { display: none; }
+.kanban-col.focused .kanban-card .client-name { font-size: 15px; }
+.kanban-col.focused .kanban-card .client-details p { font-size: 13px; }
+.kanban-col.focused .kanban-col-header { font-size: 13px; }
+.kanban-board.has-focus .kanban-col:not(.focused) { display: none; }
 
 .cs-select {
   width: 100%;

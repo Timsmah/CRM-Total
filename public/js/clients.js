@@ -17,6 +17,7 @@ const Clients = {
   data: [],
   filter: 'tous',
   showArchived: false,
+  focusedCol: null,
 
   async init() {
     // Affiche un placeholder rapide
@@ -49,7 +50,7 @@ const Clients = {
             onclick="Clients.setFilter('${val}')">${lbl}</button>`
         ).join('')}
       </div>
-      <div class="kanban-board">
+      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
         ${CONTACT_COLS.map(col => this.columnHTML(col)).join('')}
       </div>`;
   },
@@ -69,13 +70,16 @@ const Clients = {
         return new Date(a.move_in_date) - new Date(b.move_in_date);
       });
     return `
-      <div class="kanban-col"
+      <div class="kanban-col ${this.focusedCol === col.key ? 'focused' : ''}"
         ondragover="Clients.onDragOver(event)"
         ondragleave="Clients.onDragLeave(event)"
         ondrop="Clients.onDrop(event, '${col.key}')">
-        <div class="kanban-col-header ${col.cls}">
+        <div class="kanban-col-header ${col.cls}" onclick="Clients.toggleFocus('${col.key}')">
           <span>${col.label}</span>
-          <span class="kanban-count">${cards.length}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="kanban-count">${cards.length}</span>
+            <span style="font-size:10px;opacity:.5">${this.focusedCol === col.key ? '✕' : '⊞'}</span>
+          </div>
         </div>
         <div class="kanban-cards">
           ${cards.map(c => this.cardHTML(c)).join('') || '<p class="kanban-empty">—</p>'}
@@ -157,6 +161,11 @@ const Clients = {
     this.data = this.data.filter(c => c.id !== id);
     this.render();
     Toast.show(this.showArchived ? 'Client unarchived' : 'Client archived');
+  },
+
+  toggleFocus(colKey) {
+    this.focusedCol = this.focusedCol === colKey ? null : colKey;
+    this.render();
   },
 
   // ── Drag & Drop ──────────────────────────────────
