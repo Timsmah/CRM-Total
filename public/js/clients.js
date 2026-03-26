@@ -50,6 +50,11 @@ const Clients = {
             onclick="Clients.setFilter('${val}')">${lbl}</button>`
         ).join('')}
       </div>
+      <div class="kanban-legend">
+        <span class="legend-item"><span class="legend-dot dot-red"></span> Move-in &lt; 14 days</span>
+        <span class="legend-item"><span class="legend-dot dot-amber"></span> Move-in &lt; 30 days</span>
+        <span class="legend-item"><span class="legend-clock">🕐</span> Days since form submitted</span>
+      </div>
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
         ${CONTACT_COLS.map(col => this.columnHTML(col)).join('')}
       </div>`;
@@ -87,6 +92,14 @@ const Clients = {
       </div>`;
   },
 
+  daysAgo(dateStr) {
+    if (!dateStr) return null;
+    const days = Math.floor((new Date() - new Date(dateStr)) / 86400000);
+    if (days === 0) return 'today';
+    if (days === 1) return '1d ago';
+    return `${days}d ago`;
+  },
+
   urgencyClass(move_in_date) {
     if (!move_in_date) return '';
     const days = Math.ceil((new Date(move_in_date) - new Date()) / 86400000);
@@ -99,7 +112,8 @@ const Clients = {
     const budgetLine = c.budget_max
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : null;
-    const urgency = this.urgencyClass(c.move_in_date);
+    const urgency  = this.urgencyClass(c.move_in_date);
+    const daysAgo  = this.daysAgo(c.created_at);
 
     return `
       <div class="card kanban-card" draggable="true"
@@ -107,10 +121,13 @@ const Clients = {
         ondragend="Clients.onDragEnd(event)">
         <div class="card-top">
           ${badge(c.status)}
-          <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
-            onclick="Clients.toggleFees(${c.id})" title="Frais de recherche">
-            ${c.research_fees_paid ? '✓ Fees' : '○ Fees'}
-          </button>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${daysAgo ? `<span class="days-ago-badge">🕐 ${daysAgo}</span>` : ''}
+            <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
+              onclick="Clients.toggleFees(${c.id})" title="Research fees">
+              ${c.research_fees_paid ? '✓ Fees' : '○ Fees'}
+            </button>
+          </div>
         </div>
         <div class="client-name">${c.name}</div>
         <div class="client-details">
