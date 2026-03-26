@@ -6,11 +6,11 @@ function formatDate(str) {
 }
 
 const CONTACT_COLS = [
-  { key: 'À contacter',    label: 'To Contact',    cls: 'col-to-contact'  },
-  { key: 'Contacté',       label: 'Contacted',     cls: 'col-contacted'   },
-  { key: 'Pas de réponse', label: 'No Response',   cls: 'col-no-response' },
-  { key: 'Rappeler',       label: 'Call Back',     cls: 'col-callback'    },
-  { key: 'Property to Find', label: 'Property to Find', cls: 'col-meeting' },
+  { key: 'À contacter',      label: 'To Contact',       cls: 'col-to-contact'  },
+  { key: 'Contacté',         label: 'Contacted',        cls: 'col-contacted'   },
+  { key: 'Property to Find', label: 'Property to Find', cls: 'col-meeting'     },
+  { key: 'Pas de réponse',   label: 'No Response',      cls: 'col-no-response' },
+  { key: 'Rappeler',         label: 'Call Back',        cls: 'col-callback'    },
 ];
 
 const Clients = {
