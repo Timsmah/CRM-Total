@@ -10,7 +10,7 @@ const CONTACT_COLS = [
   { key: 'Contacté',       label: 'Contacted',     cls: 'col-contacted'   },
   { key: 'Pas de réponse', label: 'No Response',   cls: 'col-no-response' },
   { key: 'Rappeler',       label: 'Call Back',     cls: 'col-callback'    },
-  { key: 'RDV fixé',       label: 'Meeting Set',   cls: 'col-meeting'     },
+  { key: 'Property to Find', label: 'Property to Find', cls: 'col-meeting' },
 ];
 
 const Clients = {
@@ -60,14 +60,28 @@ const Clients = {
       </div>`;
   },
 
+  effectiveContactStatus(c) {
+    if (c.research_fees_paid && c.status === 'Recherche active') return 'Property to Find';
+    return c.contact_status || 'À contacter';
+  },
+
   filtered() {
     if (this.filter === 'tous') return this.data;
     return this.data.filter(c => c.status.toLowerCase() === this.filter);
   },
 
   columnHTML(col) {
+    // Auto-save any client that should be in 'Property to Find' but isn't stored as such
+    this.filtered().forEach(c => {
+      const effective = this.effectiveContactStatus(c);
+      if (effective !== (c.contact_status || 'À contacter') && c.contact_status !== effective) {
+        c.contact_status = effective;
+        api.patch(`/clients/${c.id}/contact-status`, { contact_status: effective }).catch(() => {});
+      }
+    });
+
     const cards = this.filtered()
-      .filter(c => (c.contact_status || 'À contacter') === col.key)
+      .filter(c => this.effectiveContactStatus(c) === col.key)
       .sort((a, b) => {
         if (!a.move_in_date && !b.move_in_date) return 0;
         if (!a.move_in_date) return 1;
@@ -137,9 +151,10 @@ const Clients = {
           ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟡' : ''}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
-        <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)">
+        <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)"
+          ${c.research_fees_paid && c.status === 'Recherche active' ? 'disabled title="Auto: Fees paid + Active Search"' : ''}>
           ${CONTACT_COLS.map(col =>
-            `<option value="${col.key}" ${(c.contact_status || 'À contacter') === col.key ? 'selected' : ''}>${col.label}</option>`
+            `<option value="${col.key}" ${this.effectiveContactStatus(c) === col.key ? 'selected' : ''}>${col.label}</option>`
           ).join('')}
         </select>
         <div class="card-actions">
