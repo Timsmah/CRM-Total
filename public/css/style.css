@@ -393,6 +393,14 @@ nav { flex: 1; padding: 0 10px; }
 .urgent-amber  { color: var(--amber) !important; font-weight: 600; }
 .urgent-yellow { color: #eab308     !important; font-weight: 600; }
 
+.kanban-card { cursor: pointer; }
+
+/* ── DETAIL MODAL ────────────────────────────────── */
+.detail-grid { display: flex; flex-direction: column; gap: 10px; }
+.detail-row { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.detail-label { color: var(--text-2); font-size: 12px; min-width: 90px; flex-shrink: 0; padding-top: 1px; }
+.detail-row span:last-child { font-size: 13px; flex: 1; }
+
 /* ── PROPERTY CARD ───────────────────────────────── */
 .prop-photo {
   width: 100%;

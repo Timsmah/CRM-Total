@@ -2,7 +2,24 @@ function formatDate(str) {
   if (!str) return '';
   const d = new Date(str);
   if (isNaN(d)) return str;
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const FR_TO_EN = {
+  '1 an': '1 year', '2 ans': '2 years', '3 ans': '3 years',
+  '1 mois': '1 month', '2 mois': '2 months', '3 mois': '3 months',
+  '4 mois': '4 months', '5 mois': '5 months', '6 mois': '6 months',
+  '7 mois': '7 months', '8 mois': '8 months', '9 mois': '9 months',
+  '10 mois': '10 months', '11 mois': '11 months', '12 mois': '12 months',
+  'Autre': 'Other', 'autre': 'Other',
+  'Non précisé': 'Not specified', 'non précisé': 'Not specified',
+  'Oui': 'Yes', 'Non': 'No',
+  'Formulaire': 'Form', 'Location': 'Rental', 'Achat': 'Purchase',
+};
+
+function tr(val) {
+  if (!val) return val;
+  return FR_TO_EN[val] || FR_TO_EN[val.trim()] || val;
 }
 
 const CONTACT_COLS = [
@@ -129,13 +146,15 @@ const Clients = {
     const budgetLine = c.budget_max
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : null;
-    const urgency  = this.urgencyClass(c.move_in_date);
-    const daysAgo  = this.daysAgo(c);
+    const urgency = this.urgencyClass(c.move_in_date);
+    const daysAgo = this.daysAgo(c);
+    const urgencyIcon = urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟠' : urgency === 'urgent-yellow' ? ' 🟡' : '';
 
     return `
       <div class="card kanban-card" draggable="true"
         ondragstart="Clients.onDragStart(event, ${c.id})"
-        ondragend="Clients.onDragEnd(event)">
+        ondragend="Clients.onDragEnd(event)"
+        onclick="Clients.openDetailModal(${c.id}, event)">
         <div class="card-top">
           ${badge(c.status)}
           <div style="display:flex;align-items:center;gap:6px">
@@ -148,10 +167,10 @@ const Clients = {
         </div>
         <div class="client-name">${c.name}</div>
         <div class="client-details">
-          ${c.whatsapp ? `<p>📱 ${c.whatsapp}</p>` : ''}
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
-          ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟠' : urgency === 'urgent-yellow' ? ' 🟡' : ''}</p>` : ''}
+          ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${urgencyIcon}</p>` : ''}
+          ${c.duration ? `<p>⏱ Duration: ${tr(c.duration)}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
         <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)"
@@ -230,6 +249,35 @@ const Clients = {
     const id = Number(e.dataTransfer.getData('clientId'));
     if (!id) return;
     await this.setContactStatus(id, colKey);
+  },
+
+  openDetailModal(id, e) {
+    if (e && (e.target.closest('button') || e.target.closest('select'))) return;
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const urgency = this.urgencyClass(c.move_in_date);
+    const urgencyIcon = urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟠' : urgency === 'urgent-yellow' ? ' 🟡' : '';
+    const budgetLine = c.budget_max
+      ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
+      : '—';
+    Modal.open(c.name, `
+      <div class="detail-grid">
+        <div class="detail-row">${badge(c.status)}${c.research_fees_paid ? '<span class="fees-btn paid">✓ Fees paid</span>' : ''}</div>
+        ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 Phone</span><span>${c.whatsapp}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label">💰 Budget</span><span>${budgetLine}</span></div>
+        ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 Zones</span><span>${c.zones}</span></div>` : ''}
+        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 Arrival</span><span class="${urgency}">${formatDate(c.move_in_date)}${urgencyIcon}</span></div>` : ''}
+        ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ Duration</span><span>${tr(c.duration)}</span></div>` : ''}
+        ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 Type</span><span>${c.property_type}</span></div>` : ''}
+        ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 Bedrooms</span><span>${c.bedrooms}</span></div>` : ''}
+        ${c.criteria ? `<div class="detail-row"><span class="detail-label">📝 Criteria</span><span>${c.criteria}</span></div>` : ''}
+        ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 Source</span><span>${tr(c.source)}</span></div>` : ''}
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-ghost" onclick="Modal.close()">Close</button>
+        <button class="btn btn-secondary" onclick="Modal.close(); Clients.openEditModal(${c.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="Modal.close(); Clients.archive(${c.id})">${this.showArchived ? 'Unarchive' : 'Archive'}</button>
+      </div>`);
   },
 
   openAddModal() { Modal.open('Add client', this.formHTML(null)); },
