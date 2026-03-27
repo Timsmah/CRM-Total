@@ -53,6 +53,7 @@ const Clients = {
       <div class="kanban-legend">
         <span class="legend-item"><span class="legend-dot dot-red"></span> Move-in &lt; 14 days</span>
         <span class="legend-item"><span class="legend-dot dot-amber"></span> Move-in &lt; 30 days</span>
+        <span class="legend-item"><span class="legend-dot dot-yellow"></span> Move-in &lt; 60 days</span>
         <span class="legend-item"><span class="legend-clock">🕐</span> Days since form submitted</span>
       </div>
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
@@ -120,6 +121,7 @@ const Clients = {
     const days = Math.ceil((new Date(move_in_date) - new Date()) / 86400000);
     if (days <= 14) return 'urgent-red';
     if (days <= 30) return 'urgent-amber';
+    if (days <= 60) return 'urgent-yellow';
     return '';
   },
 
@@ -149,7 +151,7 @@ const Clients = {
           ${c.whatsapp ? `<p>📱 ${c.whatsapp}</p>` : ''}
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
-          ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟡' : ''}</p>` : ''}
+          ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${c.duration ? ' · ' + c.duration : ''}${urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟠' : urgency === 'urgent-yellow' ? ' 🟡' : ''}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
         <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)"

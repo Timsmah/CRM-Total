@@ -146,8 +146,9 @@ nav { flex: 1; padding: 0 10px; }
   border-radius: 50%;
   flex-shrink: 0;
 }
-.dot-red   { background: var(--red); }
-.dot-amber { background: var(--amber); }
+.dot-red    { background: var(--red); }
+.dot-amber  { background: var(--amber); }
+.dot-yellow { background: #eab308; }
 .legend-clock { font-size: 11px; }
 
 /* ── DAYS AGO BADGE ──────────────────────────────── */
@@ -388,8 +389,9 @@ nav { flex: 1; padding: 0 10px; }
 }
 .cs-select:focus { outline: none; border-color: var(--accent); }
 
-.urgent-red   { color: var(--red)   !important; font-weight: 600; }
-.urgent-amber { color: var(--amber) !important; font-weight: 600; }
+.urgent-red    { color: var(--red)   !important; font-weight: 600; }
+.urgent-amber  { color: var(--amber) !important; font-weight: 600; }
+.urgent-yellow { color: #eab308     !important; font-weight: 600; }
 
 /* ── PROPERTY CARD ───────────────────────────────── */
 .prop-photo {
