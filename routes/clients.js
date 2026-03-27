@@ -93,14 +93,16 @@ router.post('/sync/sheets', async (req, res) => {
           name: r.name, whatsapp: r.phone, budget_max: budgetThb, budget_eur: budgetEur,
           zones, criteria: r.criteria, property_type: r.propertyType, city: r.city,
           bedrooms: r.bedrooms, move_in_date: r.moveInDate, duration: r.duration,
-          project: r.project, source: 'Formulaire', sheet_row: r.sheetRow
+          project: r.project, source: 'Formulaire', sheet_row: r.sheetRow,
+          form_submitted_at: r.date || null
         });
         imported++;
       } else {
         await db.from('clients').update({
           name: r.name, whatsapp: r.phone, budget_max: budgetThb, budget_eur: budgetEur,
           zones, criteria: r.criteria, property_type: r.propertyType, city: r.city,
-          bedrooms: r.bedrooms, move_in_date: r.moveInDate, duration: r.duration, project: r.project
+          bedrooms: r.bedrooms, move_in_date: r.moveInDate, duration: r.duration, project: r.project,
+          form_submitted_at: r.date || null
         }).eq('sheet_row', r.sheetRow);
         updated++;
       }

@@ -106,7 +106,8 @@ const Clients = {
       </div>`;
   },
 
-  daysAgo(dateStr) {
+  daysAgo(c) {
+    const dateStr = c.form_submitted_at || c.created_at;
     if (!dateStr) return null;
     const days = Math.floor((new Date() - new Date(dateStr)) / 86400000);
     if (days === 0) return 'today';
@@ -127,7 +128,7 @@ const Clients = {
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : null;
     const urgency  = this.urgencyClass(c.move_in_date);
-    const daysAgo  = this.daysAgo(c.created_at);
+    const daysAgo  = this.daysAgo(c);
 
     return `
       <div class="card kanban-card" draggable="true"
