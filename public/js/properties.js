@@ -235,8 +235,16 @@ const Properties = {
     Toast.show('Caching photos…', 'info');
     try {
       const r = await api.post('/properties/cache-photos', {});
-      Toast.show(`✓ ${r.cached} / ${r.total} photos cached`);
-      await this.load();
+      // Applique directement les photos depuis la réponse serveur (sans re-fetch Supabase)
+      if (r.photoMap) {
+        for (const p of this.data) {
+          const photos = r.photoMap[String(p.id)] || r.photoMap[p.id];
+          if (photos && photos.length) p.cached_photos = photos;
+        }
+      }
+      const totalPhotos = Object.values(r.photoMap || {}).reduce((s, a) => s + a.length, 0);
+      Toast.show(`✓ ${r.cached}/${r.total} props · ${totalPhotos} photos`);
+      if (r.errors && r.errors.length) console.warn('Cache errors:', r.errors);
       this.render();
     } catch (err) {
       Toast.show(err.message, 'error');

@@ -122,28 +122,42 @@ router.post('/cache-photos', async (req, res) => {
   const { data: props } = await db.from('properties')
     .select('id, drive_link').not('drive_link', 'is', null).neq('drive_link', '');
 
-  const results = await Promise.all((props || []).map(async (p) => {
+  const photoMap = {}; // propId → [{id, thumbnail}]
+  const errors   = [];
+
+  const fetchFolder = async (p) => {
     const m = p.drive_link.match(/folders\/([a-zA-Z0-9_-]+)/);
-    if (!m) return false;
+    if (!m) { errors.push({ id: p.id, reason: 'no_folder_id' }); return; }
     const folderId = m[1];
     try {
+      // Sans filtre MIME — on prend tous les fichiers du dossier
       const url = `https://www.googleapis.com/drive/v3/files`
-        + `?q='${folderId}'+in+parents+and+mimeType+contains+'image/'`
-        + `&fields=files(id,name)&orderBy=name&pageSize=30&key=${apiKey}`;
+        + `?q='${folderId}'+in+parents`
+        + `&fields=files(id,name,mimeType)&orderBy=name&pageSize=50&key=${apiKey}`;
       const r = await fetch(url);
       const d = await r.json();
-      if (d.error || !d.files) return false;
-      const files = d.files.map(f => ({
-        id: f.id,
-        thumbnail: `https://drive.google.com/thumbnail?id=${f.id}&sz=w800`
-      }));
+      if (d.error) { errors.push({ id: p.id, reason: d.error.message }); return; }
+      const files = (d.files || [])
+        .filter(f => f.mimeType && (f.mimeType.startsWith('image/') || f.mimeType === 'application/octet-stream'))
+        .map(f => ({ id: f.id, thumbnail: `https://drive.google.com/thumbnail?id=${f.id}&sz=w800` }));
+      photoMap[p.id] = files;
       await db.from('properties').update({ cached_photos: JSON.stringify(files) }).eq('id', p.id);
-      return true;
-    } catch { return false; }
-  }));
+    } catch (err) { errors.push({ id: p.id, reason: err.message }); }
+  };
 
-  const cached = results.filter(Boolean).length;
-  res.json({ cached, total: (props || []).length });
+  // Batches de 4 avec 150ms entre chaque pour éviter le rate-limit Drive
+  const BATCH = 4;
+  for (let i = 0; i < (props || []).length; i += BATCH) {
+    await Promise.all((props || []).slice(i, i + BATCH).map(fetchFolder));
+    if (i + BATCH < (props || []).length) await new Promise(r => setTimeout(r, 150));
+  }
+
+  res.json({
+    cached  : Object.keys(photoMap).length,
+    total   : (props || []).length,
+    errors,          // visible dans la console si besoin
+    photoMap          // renvoyé au frontend pour affichage immédiat sans re-fetch Supabase
+  });
 });
 
 module.exports = router;
