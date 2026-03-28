@@ -80,11 +80,11 @@ router.post('/sync/sheets', async (req, res) => {
     const rows = parseCSV(await response.text()).slice(1); // skip header
     let imported = 0, updated = 0;
 
+    const payload = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (!r[2] || !r[2].trim()) continue;
-      const sheetRow = i + 2;
-      const payload = {
+      payload.push({
         title        : r[2].trim(),
         zone         : r[0].trim(),
         room_no      : r[3].trim(),
@@ -93,19 +93,20 @@ router.post('/sync/sheets', async (req, res) => {
         sqm          : r[6].trim(),
         price        : parseInt(r[7].replace(/[^0-9]/g, '')) || null,
         owner_contact: r[8].trim(),
-        drive_link   : r[9] ? r[9].trim() : ''
-      };
-
-      const { data: existing } = await db.from('properties').select('id').eq('sheet_row', sheetRow).maybeSingle();
-      if (!existing) {
-        await db.from('properties').insert({ ...payload, status: 'Disponible', sheet_row: sheetRow, photos: '[]' });
-        imported++;
-      } else {
-        await db.from('properties').update(payload).eq('sheet_row', sheetRow);
-        updated++;
-      }
+        drive_link   : r[9] ? r[9].trim() : '',
+        status       : 'Disponible',
+        sheet_row    : i + 2,
+        photos       : '[]'
+      });
     }
-    res.json({ imported, updated, total: rows.length });
+
+    if (payload.length) {
+      const { error } = await db.from('properties')
+        .upsert(payload, { onConflict: 'sheet_row', ignoreDuplicates: false });
+      if (error) throw new Error(error.message);
+    }
+
+    res.json({ imported: payload.length, updated: 0, total: payload.length });
   } catch (err) {
     console.error('Properties sync error:', err);
     res.status(500).json({ error: err.message });

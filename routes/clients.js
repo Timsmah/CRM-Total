@@ -78,37 +78,36 @@ router.post('/sync/sheets', async (req, res) => {
     if (!response.ok) throw new Error(`Apps Script HTTP ${response.status}`);
 
     const { rows = [] } = await response.json();
-    let imported = 0, updated = 0;
 
-    for (const r of rows) {
-      if (!r.name || !r.name.trim()) continue;
-      const budgetThb = parseInt(r.budgetThb) || null;
-      const budgetEur = parseInt(r.budgetEur) || null;
-      const zones     = r.zones || r.location || '';
+    const payload = rows
+      .filter(r => r.name && r.name.trim())
+      .map(r => ({
+        name             : r.name,
+        whatsapp         : r.phone || '',
+        budget_max       : parseInt(r.budgetThb) || null,
+        budget_eur       : parseInt(r.budgetEur) || null,
+        zones            : r.zones || r.location || '',
+        criteria         : r.criteria || '',
+        property_type    : r.propertyType || '',
+        city             : r.city || '',
+        bedrooms         : r.bedrooms || '',
+        move_in_date     : r.moveInDate || null,
+        duration         : r.duration || '',
+        project          : r.project || '',
+        source           : 'Formulaire',
+        sheet_row        : r.sheetRow,
+        form_submitted_at: r.date || null
+      }));
 
-      const { data: existing } = await db.from('clients').select('id').eq('sheet_row', r.sheetRow).single();
+    if (!payload.length) return res.json({ imported: 0, updated: 0, total: 0 });
 
-      if (!existing) {
-        await db.from('clients').insert({
-          name: r.name, whatsapp: r.phone, budget_max: budgetThb, budget_eur: budgetEur,
-          zones, criteria: r.criteria, property_type: r.propertyType, city: r.city,
-          bedrooms: r.bedrooms, move_in_date: r.moveInDate, duration: r.duration,
-          project: r.project, source: 'Formulaire', sheet_row: r.sheetRow,
-          form_submitted_at: r.date || null
-        });
-        imported++;
-      } else {
-        await db.from('clients').update({
-          name: r.name, whatsapp: r.phone, budget_max: budgetThb, budget_eur: budgetEur,
-          zones, criteria: r.criteria, property_type: r.propertyType, city: r.city,
-          bedrooms: r.bedrooms, move_in_date: r.moveInDate, duration: r.duration, project: r.project,
-          form_submitted_at: r.date || null
-        }).eq('sheet_row', r.sheetRow);
-        updated++;
-      }
-    }
+    // 1 seule requête upsert au lieu de N×SELECT + N×INSERT/UPDATE
+    const { error } = await db.from('clients')
+      .upsert(payload, { onConflict: 'sheet_row', ignoreDuplicates: false });
 
-    res.json({ imported, updated, total: rows.length });
+    if (error) throw new Error(error.message);
+
+    res.json({ imported: payload.length, updated: 0, total: payload.length });
   } catch (err) {
     console.error('Sheets sync error:', err);
     res.status(500).json({ error: err.message });
