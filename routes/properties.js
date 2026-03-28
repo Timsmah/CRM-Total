@@ -113,4 +113,37 @@ router.post('/sync/sheets', async (req, res) => {
   }
 });
 
+// Cache photos depuis Drive pour toutes les propriétés
+router.post('/cache-photos', async (req, res) => {
+  const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
+  if (!apiKey) return res.status(400).json({ error: 'GOOGLE_DRIVE_API_KEY manquant' });
+
+  const { data: props } = await db.from('properties')
+    .select('id, drive_link').not('drive_link', 'is', null).neq('drive_link', '');
+
+  let cached = 0;
+  for (const p of props) {
+    const m = p.drive_link.match(/folders\/([a-zA-Z0-9_-]+)/);
+    if (!m) continue;
+    const folderId = m[1];
+    try {
+      const url = `https://www.googleapis.com/drive/v3/files`
+        + `?q='${folderId}'+in+parents+and+mimeType+contains+'image/'`
+        + `&fields=files(id,name)&orderBy=name&pageSize=30&key=${apiKey}`;
+      const r = await fetch(url);
+      const d = await r.json();
+      if (d.error) continue;
+      const files = (d.files || []).map(f => ({
+        id: f.id,
+        thumbnail: `https://drive.google.com/thumbnail?id=${f.id}&sz=w800`
+      }));
+      await db.from('properties').update({ cached_photos: JSON.stringify(files) }).eq('id', p.id);
+      cached++;
+      // Petite pause pour éviter le rate-limit Drive
+      await new Promise(r => setTimeout(r, 300));
+    } catch {}
+  }
+  res.json({ cached, total: props.length });
+});
+
 module.exports = router;

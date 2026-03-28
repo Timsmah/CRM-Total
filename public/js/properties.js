@@ -44,6 +44,7 @@ const Properties = {
         <div class="header-actions">
           <button class="btn btn-primary" onclick="Properties.openAddModal()">+ Add</button>
           <button class="btn btn-secondary" onclick="Properties.syncSheets()">↻ Sheets</button>
+          <button class="btn btn-secondary" onclick="Properties.cachePhotos()" title="Fetch & cache all photos from Drive">📸 Cache photos</button>
           <button class="btn btn-ghost" onclick="Properties.toggleArchived()">
             ${this.showArchived ? '← Active' : '🗃 Archived'}
           </button>
@@ -104,10 +105,11 @@ const Properties = {
       <div class="cards-grid">
         ${this.filtered().map(p => this.cardHTML(p)).join('') || '<p class="empty">No properties</p>'}
       </div>`;
-    // Lazy-load photos après rendu
+    // Charge les photos (depuis cache Supabase ou Drive API)
     setTimeout(() => {
       this.filtered().forEach(p => {
-        if (p.drive_link) this.loadPhotos(p.id, p.drive_link);
+        const cached = (() => { try { return JSON.parse(p.cached_photos || '[]'); } catch { return []; } })();
+        if (cached.length || p.drive_link) this.loadPhotos(p.id, p.drive_link, cached);
       });
     }, 0);
   },
@@ -136,21 +138,32 @@ const Properties = {
     return m ? m[1] : null;
   },
 
-  async loadPhotos(propertyId, driveLink) {
+  async loadPhotos(propertyId, driveLink, cachedPhotos) {
     const folderId = this.extractFolderId(driveLink);
-    if (!folderId) return;
-    if (this.photoCache[folderId] !== undefined) {
+    const cacheKey = folderId || `prop-${propertyId}`;
+
+    // Utilise le cache Supabase en priorité
+    if (cachedPhotos && cachedPhotos.length) {
+      this.photoCache[cacheKey] = cachedPhotos;
       const el = document.getElementById(`photo-${propertyId}`);
-      if (el) this.renderCarouselEl(el, propertyId, folderId);
+      if (el) this.renderCarouselEl(el, propertyId, cacheKey);
       return;
     }
-    this.photoCache[folderId] = [];
+
+    // Fallback : appel Drive API direct
+    if (!folderId) return;
+    if (this.photoCache[cacheKey] !== undefined) {
+      const el = document.getElementById(`photo-${propertyId}`);
+      if (el) this.renderCarouselEl(el, propertyId, cacheKey);
+      return;
+    }
+    this.photoCache[cacheKey] = [];
     try {
       const data = await api.get(`/drive/folder/${folderId}`);
-      this.photoCache[folderId] = data.files || [];
+      this.photoCache[cacheKey] = data.files || [];
     } catch {}
     const el = document.getElementById(`photo-${propertyId}`);
-    if (el) this.renderCarouselEl(el, propertyId, folderId);
+    if (el) this.renderCarouselEl(el, propertyId, cacheKey);
   },
 
   renderCarouselEl(el, propertyId, folderId) {
@@ -256,6 +269,19 @@ const Properties = {
     this.data = this.data.filter(p => p.id !== id);
     this.render();
     Toast.show(this.showArchived ? 'Bien désarchivé' : 'Bien archivé');
+  },
+
+  async cachePhotos() {
+    Toast.show('Caching photos… (this may take 1-2 min)', 'info');
+    try {
+      const r = await api.post('/properties/cache-photos', {});
+      Toast.show(`✓ ${r.cached} properties cached`);
+      await this.load();
+      this.photoCache = {};
+      this.render();
+    } catch (err) {
+      Toast.show(err.message, 'error');
+    }
   },
 
   async syncSheets() {
