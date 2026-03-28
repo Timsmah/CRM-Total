@@ -20,6 +20,17 @@
       padding: 18px 24px 14px;
       border-bottom: 1px solid #1e1e1e;
     }
+    .header-agent { display: flex; align-items: center; gap: 12px; }
+    .header-photo {
+      width: 42px; height: 42px; border-radius: 50%;
+      object-fit: cover; border: 2px solid #d4a843;
+    }
+    .header-photo-placeholder {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: #d4a843; color: #111; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; border: 2px solid #d4a843;
+    }
     .brand { font-size: 17px; font-weight: 800; letter-spacing: 1.5px; color: #fff; }
     .brand span { color: #d4a843; }
     .brand-sub { font-size: 11px; color: #666; font-weight: 400; letter-spacing: 0.5px; margin-top: 1px; }
@@ -188,9 +199,12 @@
 <body>
 
 <div class="header">
-  <div>
-    <div class="brand">TIM<span>THLD</span></div>
-    <div class="brand-sub">Real Estate · Bangkok</div>
+  <div class="header-agent">
+    <img class="header-photo" src="/profile.jpg" onerror="this.outerHTML='<div class=\'header-photo-placeholder\'>T</div>'" alt="Tim">
+    <div>
+      <div class="brand">TIM<span>THLD</span></div>
+      <div class="brand-sub">Real Estate Agent · Bangkok</div>
+    </div>
   </div>
 </div>
 
@@ -265,7 +279,6 @@ function render(p) {
 
       ${p.description ? `<div class="description">${esc(p.description)}</div>` : ''}
 
-      ${agentHTML}
     </div>
 
     <div class="cta-bar">
