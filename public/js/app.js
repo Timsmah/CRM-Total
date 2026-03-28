@@ -123,6 +123,9 @@ const App = {
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
 
+    // Pre-warm Apps Script while the user types their password
+    fetch('/api/auth/warmup').catch(() => {});
+
     document.getElementById('login-form').onsubmit = async (e) => {
       e.preventDefault();
       const pw = document.getElementById('password-input').value;

@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 
-const parsePhotos = (p) => { try { p.photos = JSON.parse(p.photos || '[]'); } catch { p.photos = []; } return p; };
+const parseJSON  = (v) => { if (Array.isArray(v)) return v; try { return JSON.parse(v || '[]'); } catch { return []; } };
+const parsePhotos = (p) => { p.photos = parseJSON(p.photos); p.cached_photos = parseJSON(p.cached_photos); return p; };
 
 // Simple CSV parser (gère les champs entre guillemets)
 function parseCSV(text) {
@@ -121,10 +122,9 @@ router.post('/cache-photos', async (req, res) => {
   const { data: props } = await db.from('properties')
     .select('id, drive_link').not('drive_link', 'is', null).neq('drive_link', '');
 
-  let cached = 0;
-  for (const p of props) {
+  const results = await Promise.all((props || []).map(async (p) => {
     const m = p.drive_link.match(/folders\/([a-zA-Z0-9_-]+)/);
-    if (!m) continue;
+    if (!m) return false;
     const folderId = m[1];
     try {
       const url = `https://www.googleapis.com/drive/v3/files`
@@ -132,18 +132,18 @@ router.post('/cache-photos', async (req, res) => {
         + `&fields=files(id,name)&orderBy=name&pageSize=30&key=${apiKey}`;
       const r = await fetch(url);
       const d = await r.json();
-      if (d.error) continue;
-      const files = (d.files || []).map(f => ({
+      if (d.error || !d.files) return false;
+      const files = d.files.map(f => ({
         id: f.id,
         thumbnail: `https://drive.google.com/thumbnail?id=${f.id}&sz=w800`
       }));
       await db.from('properties').update({ cached_photos: JSON.stringify(files) }).eq('id', p.id);
-      cached++;
-      // Petite pause pour éviter le rate-limit Drive
-      await new Promise(r => setTimeout(r, 300));
-    } catch {}
-  }
-  res.json({ cached, total: props.length });
+      return true;
+    } catch { return false; }
+  }));
+
+  const cached = results.filter(Boolean).length;
+  res.json({ cached, total: (props || []).length });
 });
 
 module.exports = router;

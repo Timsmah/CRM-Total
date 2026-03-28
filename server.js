@@ -1,21 +1,18 @@
 require('dotenv').config();
-const express = require('express');
-const session = require('express-session');
-const path = require('path');
+const express      = require('express');
+const cookieParser = require('cookie-parser');
+const path         = require('path');
 
-const app = express();
+const app    = express();
+const SECRET = process.env.SESSION_SECRET || 'crm-bkk-secret';
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'crm-bkk-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
-}));
+app.use(cookieParser(SECRET));
 
+// ── Auth middleware (signed cookie, works across serverless instances) ──────
 const requireAuth = (req, res, next) => {
-  if (req.session && req.session.authenticated) return next();
+  if (req.signedCookies && req.signedCookies.crm_auth === '1') return next();
   res.status(401).json({ error: 'Non autorisé' });
 };
 
@@ -32,11 +29,11 @@ app.post('/api/properties/import', (req, res, next) => {
 }, require('./routes/propertyImport'));
 
 // Protected routes
-app.use('/api/drive',   requireAuth, require('./routes/drive'));
-app.use('/api/clients', requireAuth, require('./routes/clients'));
+app.use('/api/drive',      requireAuth, require('./routes/drive'));
+app.use('/api/clients',    requireAuth, require('./routes/clients'));
 app.use('/api/properties', requireAuth, require('./routes/properties'));
-app.use('/api/deals', requireAuth, require('./routes/deals'));
-app.use('/api/finance', requireAuth, require('./routes/finance'));
+app.use('/api/deals',      requireAuth, require('./routes/deals'));
+app.use('/api/finance',    requireAuth, require('./routes/finance'));
 
 // Static files & SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));
