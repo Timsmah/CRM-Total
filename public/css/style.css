@@ -316,6 +316,7 @@ nav { flex: 1; padding: 0 10px; }
 .col-to-contact  { color: var(--amber); }
 .col-contacted   { color: var(--blue); }
 .col-no-response { color: var(--text-2); }
+.col-urgent      { color: #a855f7; }
 .col-callback    { color: var(--red); }
 .col-meeting     { color: var(--green); }
 
