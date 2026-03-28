@@ -42,6 +42,14 @@ const Properties = {
     </div>`;
   },
 
+  preloadAdjacent(photos, idx) {
+    if (photos.length < 2) return;
+    [-1, 1].forEach(d => {
+      const img = new Image();
+      img.src = photos[(idx + d + photos.length) % photos.length].thumbnail;
+    });
+  },
+
   carNav(propertyId, dir, e) {
     e.stopPropagation();
     const p = this.data.find(x => x.id === propertyId);
@@ -55,6 +63,8 @@ const Properties = {
     // Met à jour le modal si ouvert
     const modalEl = document.getElementById(`modal-photo-slot-${propertyId}`);
     if (modalEl) modalEl.innerHTML = this.carouselHTML(photos, this.photoIndex[propertyId], propertyId, 'height:220px');
+    // Précharge les voisines
+    this.preloadAdjacent(photos, this.photoIndex[propertyId]);
   },
 
   // ── Filtres ─────────────────────────────────────────────────────────────────
@@ -158,6 +168,10 @@ const Properties = {
       <div class="cards-grid">
         ${this.filtered().map(p => this.cardHTML(p)).join('') || '<p class="empty">No properties</p>'}
       </div>`;
+    // Précharge l'image suivante de chaque carte en arrière-plan
+    setTimeout(() => {
+      this.filtered().forEach(p => this.preloadAdjacent(this.getPhotos(p), this.photoIndex[p.id] || 0));
+    }, 50);
   },
 
   // ── Carte propriété ─────────────────────────────────────────────────────────
