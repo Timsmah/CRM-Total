@@ -5,6 +5,8 @@ const Properties = {
   filterBeds   : 'tous',
   filterPriceMax: 250000,
   showArchived : false,
+  photoCache   : {},   // folderId → [{ id, thumbnail }]
+  photoIndex   : {},   // propertyId → current index
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Syncing…</p>';
@@ -100,8 +102,14 @@ const Properties = {
       </div>
 
       <div class="cards-grid">
-        ${this.filtered().map(p => this.cardHTML(p)).join('') || '<p class="empty">Aucun bien</p>'}
+        ${this.filtered().map(p => this.cardHTML(p)).join('') || '<p class="empty">No properties</p>'}
       </div>`;
+    // Lazy-load photos après rendu
+    setTimeout(() => {
+      this.filtered().forEach(p => {
+        if (p.drive_link) this.loadPhotos(p.id, p.drive_link);
+      });
+    }, 0);
   },
 
   filtered() {
@@ -122,26 +130,76 @@ const Properties = {
     this.render();
   },
 
+  extractFolderId(url) {
+    if (!url) return null;
+    const m = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : null;
+  },
+
+  async loadPhotos(propertyId, driveLink) {
+    const folderId = this.extractFolderId(driveLink);
+    if (!folderId) return;
+    if (this.photoCache[folderId] !== undefined) {
+      const el = document.getElementById(`photo-${propertyId}`);
+      if (el) this.renderCarouselEl(el, propertyId, folderId);
+      return;
+    }
+    this.photoCache[folderId] = [];
+    try {
+      const data = await api.get(`/drive/folder/${folderId}`);
+      this.photoCache[folderId] = data.files || [];
+    } catch {}
+    const el = document.getElementById(`photo-${propertyId}`);
+    if (el) this.renderCarouselEl(el, propertyId, folderId);
+  },
+
+  renderCarouselEl(el, propertyId, folderId) {
+    const photos = this.photoCache[folderId] || [];
+    if (!photos.length) return;
+    const idx = this.photoIndex[propertyId] || 0;
+    const photo = photos[idx];
+    el.innerHTML = `
+      <div class="carousel-wrap">
+        <img src="${photo.thumbnail}" class="prop-photo"
+          onerror="this.src=''" alt="${photo.name}">
+        ${photos.length > 1 ? `
+          <button class="car-btn car-prev" onclick="Properties.carNav(${propertyId},-1,event)">‹</button>
+          <button class="car-btn car-next" onclick="Properties.carNav(${propertyId},1,event)">›</button>
+          <span class="car-count">${idx+1} / ${photos.length}</span>
+        ` : ''}
+      </div>`;
+  },
+
+  carNav(propertyId, dir, e) {
+    e.stopPropagation();
+    const p = this.data.find(x => x.id === propertyId);
+    const folderId = this.extractFolderId(p?.drive_link);
+    const photos = this.photoCache[folderId] || [];
+    if (!photos.length) return;
+    const cur = this.photoIndex[propertyId] || 0;
+    this.photoIndex[propertyId] = (cur + dir + photos.length) % photos.length;
+    const el = document.getElementById(`photo-${propertyId}`);
+    if (el) this.renderCarouselEl(el, propertyId, folderId);
+  },
+
   cardHTML(p) {
     return `
-      <div class="card">
-        <div class="prop-no-photo">🏠</div>
-        <div class="card-top" style="margin-bottom:8px">
+      <div class="card" onclick="Properties.openDetailModal(${p.id}, event)" style="cursor:pointer">
+        <div id="photo-${p.id}" class="prop-photo-slot">
+          <div class="prop-no-photo">🏠</div>
+        </div>
+        <div class="card-top" style="margin-bottom:8px;margin-top:10px">
           ${badge(p.status)}
-          ${p.drive_link
-            ? `<a href="${p.drive_link}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none">📸 Photos</a>`
-            : ''}
         </div>
         <div class="prop-title">${p.title}</div>
         ${p.price ? `<div class="prop-price">${Number(p.price).toLocaleString('fr-FR')} ฿/mois</div>` : ''}
         <div class="prop-zone" style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
-          ${p.zone    ? `<span>📍 ${p.zone}</span>` : ''}
+          ${p.zone      ? `<span>📍 ${p.zone}</span>` : ''}
           ${p.room_type ? `<span>🛏 ${p.room_type}${p.sqm ? ' · ' + p.sqm : ''}</span>` : ''}
-          ${p.floor   ? `<span>🏢 Étage ${p.floor}</span>` : ''}
-          ${p.room_no ? `<span>🔑 Appt ${p.room_no}</span>` : ''}
+          ${p.floor     ? `<span>🏢 Floor ${p.floor}</span>` : ''}
+          ${p.room_no   ? `<span>🔑 Unit ${p.room_no}</span>` : ''}
           ${p.owner_contact ? `<span style="color:var(--text-2);font-size:11px;margin-top:2px">👤 ${p.owner_contact}</span>` : ''}
         </div>
-        ${p.description ? `<p style="color:var(--text-2);font-size:12px;margin-top:6px;line-height:1.4">${p.description.substring(0,100)}${p.description.length>100?'…':''}</p>` : ''}
         <div class="card-actions">
           <button class="btn btn-secondary btn-sm" onclick="Properties.openEditModal(${p.id})">Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="Properties.archive(${p.id})">
@@ -149,6 +207,41 @@ const Properties = {
           </button>
         </div>
       </div>`;
+  },
+
+  openDetailModal(id, e) {
+    if (e && (e.target.closest('button') || e.target.closest('a'))) return;
+    const p = this.data.find(x => x.id === id);
+    if (!p) return;
+    const folderId = this.extractFolderId(p.drive_link);
+    const photos = folderId ? (this.photoCache[folderId] || []) : [];
+    const idx = this.photoIndex[id] || 0;
+    Modal.open(p.title, `
+      <div id="modal-photo-${id}" style="margin-bottom:14px">
+        ${photos.length ? `
+          <div class="carousel-wrap modal-carousel">
+            <img src="${photos[idx].thumbnail}" class="prop-photo" style="height:220px">
+            ${photos.length > 1 ? `
+              <button class="car-btn car-prev" onclick="Properties.carNav(${id},-1,event)">‹</button>
+              <button class="car-btn car-next" onclick="Properties.carNav(${id},1,event)">›</button>
+              <span class="car-count">${idx+1} / ${photos.length}</span>
+            ` : ''}
+          </div>` : '<div class="prop-no-photo" style="height:120px">🏠</div>'}
+      </div>
+      <div class="detail-grid">
+        ${p.price ? `<div class="detail-row"><span class="detail-label">💰 Price</span><span style="color:var(--accent);font-weight:700">${Number(p.price).toLocaleString('fr-FR')} ฿/mois</span></div>` : ''}
+        ${p.zone ? `<div class="detail-row"><span class="detail-label">📍 Zone</span><span>${p.zone}</span></div>` : ''}
+        ${p.room_type ? `<div class="detail-row"><span class="detail-label">🛏 Type</span><span>${p.room_type}${p.sqm ? ' · ' + p.sqm : ''}</span></div>` : ''}
+        ${p.floor ? `<div class="detail-row"><span class="detail-label">🏢 Floor</span><span>${p.floor}</span></div>` : ''}
+        ${p.room_no ? `<div class="detail-row"><span class="detail-label">🔑 Unit</span><span>${p.room_no}</span></div>` : ''}
+        ${p.owner_contact ? `<div class="detail-row"><span class="detail-label">👤 Contact</span><span>${p.owner_contact}</span></div>` : ''}
+        ${p.description ? `<div class="detail-row"><span class="detail-label">📝 Notes</span><span>${p.description}</span></div>` : ''}
+        ${p.drive_link ? `<div class="detail-row"><span class="detail-label">📸 Drive</span><a href="${p.drive_link}" target="_blank" style="color:var(--blue)">Open folder</a></div>` : ''}
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-ghost" onclick="Modal.close()">Close</button>
+        <button class="btn btn-secondary" onclick="Modal.close();Properties.openEditModal(${id})">Edit</button>
+      </div>`);
   },
 
 

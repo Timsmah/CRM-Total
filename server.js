@@ -32,6 +32,7 @@ app.post('/api/properties/import', (req, res, next) => {
 }, require('./routes/propertyImport'));
 
 // Protected routes
+app.use('/api/drive',   requireAuth, require('./routes/drive'));
 app.use('/api/clients', requireAuth, require('./routes/clients'));
 app.use('/api/properties', requireAuth, require('./routes/properties'));
 app.use('/api/deals', requireAuth, require('./routes/deals'));
