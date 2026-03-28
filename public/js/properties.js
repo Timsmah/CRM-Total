@@ -200,6 +200,7 @@ const Properties = {
           <button class="btn btn-ghost btn-sm" onclick="Properties.archive(${p.id})">
             ${this.showArchived ? 'Unarchive' : 'Archive'}
           </button>
+          ${p.share_token ? `<button class="btn btn-ghost btn-sm" onclick="Properties.share('${p.share_token}',event)" title="Copy client link">🔗</button>` : ''}
         </div>
       </div>`;
   },
@@ -345,6 +346,12 @@ const Properties = {
           <button type="submit" class="btn btn-primary">${p ? 'Save' : 'Add'}</button>
         </div>
       </form>`;
+  },
+
+  share(token, e) {
+    e.stopPropagation();
+    const url = `${location.origin}/listing/${token}`;
+    navigator.clipboard.writeText(url).then(() => Toast.show('🔗 Link copied!'));
   },
 
   async submit(e, id) {

@@ -16,8 +16,14 @@ const requireAuth = (req, res, next) => {
   res.status(401).json({ error: 'Non autorisé' });
 };
 
-// Auth (public)
-app.use('/api/auth', require('./routes/auth'));
+// Auth & public routes
+app.use('/api/auth',    require('./routes/auth'));
+app.use('/api/listing', require('./routes/listing'));
+
+// Public listing page
+app.get('/listing/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'listing.html'));
+});
 
 // Chrome extension import — uses API key, not session
 app.post('/api/properties/import', (req, res, next) => {

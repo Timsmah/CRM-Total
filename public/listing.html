@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tim THLD · Property Listing</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%);
+    }
+    .brand { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff; text-decoration: none; }
+    .brand span { color: #d4a843; }
+
+    /* ── Photo carousel ── */
+    .photo-section {
+      position: relative;
+      width: 100%;
+      height: 60vh;
+      min-height: 320px;
+      background: #1a1a1a;
+      overflow: hidden;
+    }
+    .photo-section img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.25s ease;
+    }
+    .no-photo {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; font-size: 80px; opacity: 0.3;
+    }
+    .car-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,0.55); border: none; color: #fff;
+      width: 44px; height: 44px; border-radius: 50%;
+      font-size: 22px; cursor: pointer; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .car-btn:hover { background: rgba(0,0,0,0.8); }
+    .car-prev { left: 14px; }
+    .car-next { right: 14px; }
+    .car-count {
+      position: absolute; bottom: 14px; right: 14px;
+      background: rgba(0,0,0,0.6); color: #fff;
+      font-size: 12px; padding: 3px 10px; border-radius: 20px;
+    }
+    .car-dots {
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px;
+    }
+    .car-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: rgba(255,255,255,0.4); cursor: pointer; transition: background 0.15s;
+    }
+    .car-dot.active { background: #fff; }
+
+    /* ── Content ── */
+    .content {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 28px 20px 100px;
+    }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; padding: 4px 12px;
+      border-radius: 20px; margin-bottom: 14px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .status-available { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .status-proposed  { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .status-rented    { background: rgba(239,68,68,0.15);  color: #ef4444; }
+
+    .prop-title {
+      font-size: 26px; font-weight: 700; line-height: 1.2;
+      margin-bottom: 8px; color: #fff;
+    }
+    .prop-price {
+      font-size: 22px; font-weight: 700; color: #d4a843; margin-bottom: 24px;
+    }
+
+    .divider { height: 1px; background: #2a2a2a; margin: 20px 0; }
+
+    .details-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .detail-item {
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .detail-label {
+      font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .detail-value {
+      font-size: 15px; color: #e0e0e0; font-weight: 500;
+    }
+
+    .description {
+      margin-top: 20px; font-size: 14px; line-height: 1.7;
+      color: #aaa; white-space: pre-line;
+    }
+
+    /* ── CTA ── */
+    .cta-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      background: linear-gradient(to top, #0f0f0f 70%, transparent 100%);
+      display: flex; gap: 12px; max-width: 680px; margin: 0 auto;
+    }
+    .btn-whatsapp {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: #25d366; color: #fff; border: none; border-radius: 12px;
+      padding: 15px; font-size: 16px; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: opacity 0.15s;
+    }
+    .btn-whatsapp:hover { opacity: 0.9; }
+
+    /* ── Loading / Error ── */
+    .loading, .error-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 80vh; gap: 12px; color: #666;
+    }
+    .error-state { color: #ef4444; }
+    .spinner { width: 36px; height: 36px; border: 3px solid #333; border-top-color: #d4a843; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .photo-section { height: 52vw; min-height: 260px; }
+      .details-grid { grid-template-columns: 1fr; gap: 12px; }
+      .prop-title { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="brand">TIM<span>THLD</span></span>
+</div>
+
+<div id="root">
+  <div class="loading"><div class="spinner"></div></div>
+</div>
+
+<script>
+(async () => {
+  const token = location.pathname.split('/listing/')[1];
+  if (!token) { renderError('Invalid link'); return; }
+
+  let prop;
+  try {
+    const r = await fetch(`/api/listing/${token}`);
+    if (!r.ok) throw new Error('Not found');
+    prop = await r.json();
+  } catch {
+    renderError('This listing is no longer available.');
+    return;
+  }
+
+  render(prop);
+})();
+
+let photos = [], idx = 0;
+
+function render(p) {
+  photos = Array.isArray(p.cached_photos) ? p.cached_photos : [];
+  idx = 0;
+
+  const statusMap = { 'Disponible': ['Available','available'], 'Proposé': ['Proposed','proposed'], 'Loué': ['Rented','rented'] };
+  const [label, cls] = statusMap[p.status] || [p.status, 'available'];
+
+  document.getElementById('root').innerHTML = `
+    <div class="photo-section" id="photo-wrap">
+      ${photoHTML()}
+    </div>
+
+    <div class="content">
+      <span class="status-badge status-${cls}">● ${label}</span>
+      <div class="prop-title">${esc(p.title)}</div>
+      ${p.price ? `<div class="prop-price">${Number(p.price).toLocaleString('fr-FR')} ฿ / month</div>` : ''}
+
+      <div class="divider"></div>
+
+      <div class="details-grid">
+        ${p.zone      ? detail('📍 Location', p.zone) : ''}
+        ${p.room_type ? detail('🛏 Type', p.room_type + (p.sqm ? ' · ' + p.sqm : '')) : ''}
+        ${p.floor     ? detail('🏢 Floor', p.floor) : ''}
+        ${p.room_no   ? detail('🔑 Unit', p.room_no) : ''}
+      </div>
+
+      ${p.description ? `<div class="description">${esc(p.description)}</div>` : ''}
+    </div>
+
+    <div class="cta-bar">
+      <a class="btn-whatsapp" href="https://wa.me/66XXXXXXXXX?text=${encodeURIComponent('Hi Tim! I\'m interested in ' + p.title + ' (' + (p.price ? Number(p.price).toLocaleString('fr-FR') + ' ฿/mo' : '') + ')')}" target="_blank">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Contact Tim THLD
+      </a>
+    </div>`;
+
+  if (photos.length > 1) preload(1);
+}
+
+function photoHTML() {
+  if (!photos.length) return '<div class="no-photo">🏠</div>';
+  return `
+    <img id="listing-img" src="${photos[idx].thumbnail}" onerror="this.style.opacity='0'" alt="">
+    <button class="car-btn car-prev" onclick="nav(-1)">‹</button>
+    <button class="car-btn car-next" onclick="nav(1)">›</button>
+    <span class="car-count">${idx + 1} / ${photos.length}</span>`;
+}
+
+function nav(dir) {
+  idx = (idx + dir + photos.length) % photos.length;
+  const wrap = document.getElementById('photo-wrap');
+  if (wrap) wrap.innerHTML = photoHTML();
+  preload(dir);
+}
+
+function preload(dir) {
+  const next = (idx + dir + photos.length) % photos.length;
+  const img = new Image(); img.src = photos[next].thumbnail;
+}
+
+function detail(label, value) {
+  return `<div class="detail-item">
+    <span class="detail-label">${label}</span>
+    <span class="detail-value">${esc(String(value))}</span>
+  </div>`;
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderError(msg) {
+  document.getElementById('root').innerHTML = `<div class="error-state"><span style="font-size:40px">🏚</span><p>${msg}</p></div>`;
+}
+</script>
+</body>
+</html>
