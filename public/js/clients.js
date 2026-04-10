@@ -35,6 +35,7 @@ const Clients = {
   filter: 'tous',
   showArchived: false,
   focusedCol: null,
+  sortDir: 'desc', // 'desc' = plus récent en premier, 'asc' = plus vieux en premier
 
   async init() {
     // Affiche un placeholder rapide
@@ -98,14 +99,21 @@ const Clients = {
       }
     });
 
+    const daysAgoNum = (c) => {
+      const dateStr = c.form_submitted_at || c.created_at;
+      if (!dateStr) return -1;
+      return Math.floor((new Date() - new Date(dateStr)) / 86400000);
+    };
+
     const cards = this.filtered()
       .filter(c => this.effectiveContactStatus(c) === col.key)
-      .sort((a, b) => {
-        if (!a.move_in_date && !b.move_in_date) return 0;
-        if (!a.move_in_date) return 1;
-        if (!b.move_in_date) return -1;
-        return new Date(a.move_in_date) - new Date(b.move_in_date);
-      });
+      .sort((a, b) => this.sortDir === 'desc'
+        ? daysAgoNum(a) - daysAgoNum(b)   // récent en premier (peu de jours)
+        : daysAgoNum(b) - daysAgoNum(a)); // vieux en premier (beaucoup de jours)
+
+    const sortIcon = this.sortDir === 'desc' ? '↑' : '↓';
+    const sortTitle = this.sortDir === 'desc' ? 'Most recent first' : 'Oldest first';
+
     return `
       <div class="kanban-col ${this.focusedCol === col.key ? 'focused' : ''}"
         ondragover="Clients.onDragOver(event)"
@@ -114,6 +122,7 @@ const Clients = {
         <div class="kanban-col-header ${col.cls}" onclick="Clients.toggleFocus('${col.key}')">
           <span>${col.label}</span>
           <div style="display:flex;align-items:center;gap:6px">
+            <button class="sort-btn" onclick="Clients.toggleSort(event)" title="${sortTitle}">${sortIcon} ${sortTitle}</button>
             <span class="kanban-count">${cards.length}</span>
             <span style="font-size:10px;opacity:.5">${this.focusedCol === col.key ? '✕' : '⊞'}</span>
           </div>
@@ -192,6 +201,12 @@ const Clients = {
     await api.patch(`/clients/${id}/contact-status`, { contact_status: status });
     const c = this.data.find(x => x.id === id);
     if (c) c.contact_status = status;
+    this.render();
+  },
+
+  toggleSort(e) {
+    e.stopPropagation();
+    this.sortDir = this.sortDir === 'desc' ? 'asc' : 'desc';
     this.render();
   },
 
