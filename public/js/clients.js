@@ -62,17 +62,13 @@ const Clients = {
           </button>
         </div>
       </div>
-      <div class="filter-pills">
-        <button class="pill ${this.filter === 'tous' ? 'active' : ''}" onclick="Clients.setFilter('tous')">All</button>
-        ${CONTACT_COLS.map(col =>
-          `<button class="pill ${this.filter === col.key ? 'active' : ''}"
-            onclick="Clients.setFilter('${col.key}')">${col.label}</button>`
-        ).join('')}
-      </div>
       <div class="kanban-legend">
         <span class="legend-item"><span class="legend-dot dot-red"></span>Move-in &lt; 14 days</span>
+        <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-dot dot-amber"></span>Move-in &lt; 30 days</span>
+        <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-dot dot-yellow"></span>Move-in &lt; 60 days</span>
+        <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-clock">🕐</span>Days since form submitted</span>
       </div>
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
