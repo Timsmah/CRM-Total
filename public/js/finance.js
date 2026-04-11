@@ -2,6 +2,46 @@ const Finance = {
   data: [],
   selectedMonth: '',
 
+  async init() {
+    if (sessionStorage.getItem('finance_unlocked') !== '1') {
+      this.showLock(); return;
+    }
+    await this.load();
+    this.render();
+  },
+
+  showLock() {
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:65vh">
+        <div style="text-align:center;max-width:300px">
+          <div style="font-size:52px;margin-bottom:16px">🔒</div>
+          <h3 style="font-size:19px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px">Finance</h3>
+          <p style="color:var(--text-2);font-size:13px;margin-bottom:24px">Enter your Finance password to access this section</p>
+          <form onsubmit="Finance.unlock(event)">
+            <input type="password" id="finance-pw" placeholder="Password" autofocus
+              style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;outline:none;text-align:center;background:var(--bg);color:var(--text);margin-bottom:10px">
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:11px">Unlock</button>
+            <p id="finance-err" class="error hidden" style="margin-top:8px">Incorrect password</p>
+          </form>
+        </div>
+      </div>`;
+  },
+
+  async unlock(e) {
+    e.preventDefault();
+    const pw = document.getElementById('finance-pw').value;
+    const errEl = document.getElementById('finance-err');
+    errEl.classList.add('hidden');
+    try {
+      await api.post('/auth/finance-unlock', { password: pw });
+      sessionStorage.setItem('finance_unlocked', '1');
+      await this.load();
+      this.render();
+    } catch {
+      errEl.classList.remove('hidden');
+    }
+  },
+
   async load() {
     this.data = await api.get('/finance');
     if (!this.selectedMonth) {

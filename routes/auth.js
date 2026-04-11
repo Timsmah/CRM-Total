@@ -29,6 +29,14 @@ router.get('/check', (req, res) => {
   res.json({ authenticated });
 });
 
+router.post('/finance-unlock', (req, res) => {
+  const { password } = req.body;
+  const correct = process.env.FINANCE_PASSWORD;
+  if (!correct) return res.json({ success: true }); // pas de mdp configuré = ouvert
+  if (password === correct) return res.json({ success: true });
+  res.status(401).json({ error: 'Incorrect password' });
+});
+
 // Public warm-up: pings Apps Script so it's awake before the user logs in
 router.get('/warmup', (req, res) => {
   const url = process.env.GOOGLE_APPS_SCRIPT_URL;

@@ -81,8 +81,8 @@ function fmtDate(d) {
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { clients: Clients, properties: Properties, deals: Deals, finance: Finance };
-    if (!sections[section]) section = 'clients';
+    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, deals: Deals, finance: Finance };
+    if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
       el.classList.toggle('active', el.dataset.section === section)

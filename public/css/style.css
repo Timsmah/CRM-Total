@@ -663,6 +663,64 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 #login-form button:hover { background: var(--accent-h); }
 .error { color: var(--red); font-size: 12px; margin-top: 8px; }
 
+/* ── DASHBOARD ───────────────────────────────────── */
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi-icon { font-size: 22px; margin-bottom: 10px; }
+.kpi-val {
+  font-size: 30px; font-weight: 800;
+  color: var(--text); letter-spacing: -1px;
+  line-height: 1; margin-bottom: 6px;
+}
+.kpi-label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.kpi-accent .kpi-val { color: var(--accent); }
+.kpi-urgent { border-color: rgba(220,38,38,.25); background: #FFF8F8; }
+.kpi-urgent .kpi-val { color: var(--red); }
+
+.dash-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.dash-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+}
+.dash-card-title {
+  font-size: 13px; font-weight: 700;
+  color: var(--text); margin-bottom: 16px;
+  letter-spacing: -0.1px;
+}
+.dash-move-in {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dash-move-in:last-child { border-bottom: none; }
+
+@media (max-width: 900px) {
+  .dash-kpis { grid-template-columns: 1fr 1fr; }
+  .dash-charts { grid-template-columns: 1fr; }
+}
+
 /* ── MISC ────────────────────────────────────────── */
 .empty { color: var(--text-2); text-align: center; padding: 56px 20px; font-size: 14px; grid-column: 1/-1; }
 .spinner { text-align: center; padding: 56px; color: var(--text-2); font-size: 13px; }
