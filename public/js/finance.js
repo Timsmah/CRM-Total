@@ -2,6 +2,43 @@ const Finance = {
   data: [],
   selectedMonth: '',
 
+  // ── Exchange rate (editable, stored in localStorage) ──────────────────────
+  get eurRate() {
+    return parseFloat(localStorage.getItem('eur_rate') || '38.5');
+  },
+  set eurRate(v) {
+    localStorage.setItem('eur_rate', v);
+  },
+
+  // ── Monthly goals ──────────────────────────────────────────────────────────
+  // currency: 'THB' or 'EUR'
+  GOALS: {
+    commission: { amount: 60000, currency: 'THB' },
+    onboarding: { amount: 2500,  currency: 'EUR' },
+    visa:       null,
+    autre:      null,
+  },
+
+  goalInTHB(key) {
+    const g = this.GOALS[key];
+    if (!g) return null;
+    return g.currency === 'EUR' ? Math.round(g.amount * this.eurRate) : g.amount;
+  },
+
+  goalLabel(key) {
+    const g = this.GOALS[key];
+    if (!g) return '';
+    if (g.currency === 'EUR') return `Goal: ${g.amount.toLocaleString('fr-FR')} €`;
+    return `Goal: ${g.amount.toLocaleString('fr-FR')} ฿`;
+  },
+
+  // ── EUR formatting ─────────────────────────────────────────────────────────
+  fmtEUR(thb) {
+    if (!thb) return '';
+    return `≈ ${Math.round(thb / this.eurRate).toLocaleString('fr-FR')} €`;
+  },
+
+  // ── Lock / unlock ──────────────────────────────────────────────────────────
   async init() {
     if (sessionStorage.getItem('finance_unlocked') !== '1') {
       this.showLock(); return;
@@ -42,16 +79,15 @@ const Finance = {
     }
   },
 
+  // ── Data ───────────────────────────────────────────────────────────────────
   async load() {
     this.data = await api.get('/finance');
     if (!this.selectedMonth) {
-      // Default to current month
       const now = new Date();
       this.selectedMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     }
   },
 
-  // All months present in data + current month
   months() {
     const set = new Set(this.data.map(t => t.date.substring(0, 7)));
     const now = new Date();
@@ -64,18 +100,17 @@ const Finance = {
     return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   },
 
-  // Summary by account for selected month
+  // ── Summaries ──────────────────────────────────────────────────────────────
   summary() {
     const accounts = ['KBank', 'Crypto', 'Revolut'];
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
     return accounts.map(acct => ({
       acct,
-      total: txMonth.filter(t => t.account === acct).reduce((s, t) => s + t.amount, 0),
+      total: txMonth.filter(t => t.account === acct).reduce((s, t) => s + Number(t.amount), 0),
       count: txMonth.filter(t => t.account === acct).length
     }));
   },
 
-  // Summary by category/type for selected month
   summaryByType() {
     const types = [
       { key: 'commission', label: 'Commission', icon: '🤝', color: '#2563EB' },
@@ -84,26 +119,30 @@ const Finance = {
       { key: 'autre',      label: 'Other',        icon: '💼', color: '#D97706' },
     ];
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
-    return types.map(t => ({
-      ...t,
-      total: txMonth.filter(x => x.type === t.key).reduce((s, x) => s + Number(x.amount), 0),
-      count: txMonth.filter(x => x.type === t.key).length
-    }));
+    return types.map(t => {
+      const total = txMonth.filter(x => x.type === t.key).reduce((s, x) => s + Number(x.amount), 0);
+      const count = txMonth.filter(x => x.type === t.key).length;
+      const goal  = this.goalInTHB(t.key);
+      const pct   = goal ? Math.min(Math.round(total / goal * 100), 100) : null;
+      return { ...t, total, count, goal, pct };
+    });
   },
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   render() {
-    const months = this.months();
-    const summary = this.summary();
-    const byType = this.summaryByType();
+    const months     = this.months();
+    const summary    = this.summary();
+    const byType     = this.summaryByType();
     const grandTotal = summary.reduce((s, r) => s + r.total, 0);
-    const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
-    const types = ['commission', 'onboarding', 'visa', 'autre'];
-    const accounts = ['KBank', 'Crypto', 'Revolut'];
+    const txMonth    = this.data.filter(t => t.date.startsWith(this.selectedMonth));
 
     document.getElementById('content').innerHTML = `
       <div class="section-header">
         <h2>Finance</h2>
         <div class="header-actions">
+          <button class="btn btn-ghost" onclick="Finance.editRate()" title="Exchange rate">
+            1€ = ${this.eurRate} ฿ ✏️
+          </button>
           <button class="btn btn-primary" onclick="Finance.openAddModal()">+ Transaction</button>
         </div>
       </div>
@@ -117,6 +156,7 @@ const Finance = {
         </select>
         <span style="color:var(--text-2);font-size:13px">
           Total: <strong style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</strong>
+          <span class="eur-inline">${this.fmtEUR(grandTotal)}</span>
         </span>
       </div>
 
@@ -127,32 +167,40 @@ const Finance = {
           <div class="summary-card">
             <div class="acct">${r.acct}</div>
             <div class="total">${Number(r.total).toLocaleString('fr-FR')} ฿</div>
+            ${r.total ? `<div class="eur-sub">${this.fmtEUR(r.total)}</div>` : ''}
             <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
           </div>`).join('')}
         <div class="summary-card" style="border-color:rgba(212,168,83,.3)">
           <div class="acct">Total</div>
           <div class="total" style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</div>
+          ${grandTotal ? `<div class="eur-sub" style="color:var(--accent);opacity:.7">${this.fmtEUR(grandTotal)}</div>` : ''}
           <div class="sub">${txMonth.length} transaction${txMonth.length !== 1 ? 's' : ''}</div>
         </div>
       </div>
 
-      <!-- By category -->
+      <!-- By category + goals -->
       <div class="fin-section-label">By category</div>
       <div class="summary-row">
         ${byType.map(r => `
-          <div class="summary-card type-card" style="--type-color:${r.color}">
+          <div class="summary-card">
             <div class="acct">${r.icon} ${r.label}</div>
             <div class="total" style="color:${r.color}">${r.total ? Number(r.total).toLocaleString('fr-FR') + ' ฿' : '—'}</div>
+            ${r.total ? `<div class="eur-sub" style="color:${r.color};opacity:.7">${this.fmtEUR(r.total)}</div>` : ''}
             <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
-            ${grandTotal > 0 && r.total > 0 ? `
+            ${r.goal ? `
               <div class="type-bar-track">
-                <div class="type-bar-fill" style="width:${Math.round(r.total/grandTotal*100)}%;background:${r.color}"></div>
+                <div class="type-bar-fill" style="width:${r.pct}%;background:${r.color}20;border:none">
+                  <div style="height:100%;width:100%;background:${r.color};border-radius:4px"></div>
+                </div>
               </div>
-              <div class="type-pct" style="color:${r.color}">${Math.round(r.total/grandTotal*100)}%</div>
-            ` : ''}
+              <div class="goal-row">
+                <span class="type-pct" style="color:${r.color}">${r.pct}%</span>
+                <span class="goal-label">${this.goalLabel(r.key)}</span>
+              </div>` : ''}
           </div>`).join('')}
       </div>
 
+      <!-- Transactions table -->
       <table class="tx-table">
         <thead>
           <tr>
@@ -163,10 +211,13 @@ const Finance = {
           ${txMonth.length ? txMonth.map(t => `
             <tr>
               <td>${fmtDate(t.date)}</td>
-              <td><span style="text-transform:capitalize">${t.type}</span></td>
+              <td><span class="tx-type-badge tx-type-${t.type}">${t.type}</span></td>
               <td>${t.account}</td>
-              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
-              <td class="tx-amount">${Number(t.amount).toLocaleString('fr-FR')} ฿</td>
+              <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
+              <td>
+                <div class="tx-amount">${Number(t.amount).toLocaleString('fr-FR')} ฿</div>
+                <div class="eur-sub">${this.fmtEUR(Number(t.amount))}</div>
+              </td>
               <td>
                 <div class="tx-actions">
                   <button class="btn btn-ghost btn-sm" onclick="Finance.openEditModal(${t.id})">✏️</button>
@@ -179,31 +230,58 @@ const Finance = {
       </table>`;
   },
 
-  changeMonth(m) {
-    this.selectedMonth = m;
-    this.render();
+  // ── Actions ────────────────────────────────────────────────────────────────
+  changeMonth(m) { this.selectedMonth = m; this.render(); },
+
+  editRate() {
+    const r = prompt(`Exchange rate (THB per €)\nCurrent: 1€ = ${this.eurRate} ฿`, this.eurRate);
+    if (r && !isNaN(parseFloat(r))) {
+      this.eurRate = parseFloat(r);
+      this.render();
+    }
   },
 
-  openAddModal() { Modal.open('Add transaction', this.formHTML(null)); },
+  openAddModal()  { Modal.open('Add transaction',  this.formHTML(null)); },
   openEditModal(id) {
     const t = this.data.find(x => x.id === id);
     Modal.open('Edit transaction', this.formHTML(t));
   },
 
+  // ── Form ───────────────────────────────────────────────────────────────────
   formHTML(t) {
-    const today = new Date().toISOString().split('T')[0];
+    const today   = new Date().toISOString().split('T')[0];
+    const hasTHB  = t && !t._eur;  // existing tx stored in THB
     return `
       <form onsubmit="Finance.submit(event, ${t ? t.id : 'null'})">
+
+        <!-- Currency toggle -->
+        <div class="form-row">
+          <label>Currency</label>
+          <div class="currency-toggle">
+            <label class="cur-opt">
+              <input type="radio" name="currency" value="THB" ${!t || t._eur !== true ? 'checked' : ''} onchange="Finance.onCurrencyChange()">
+              <span>฿ THB</span>
+            </label>
+            <label class="cur-opt">
+              <input type="radio" name="currency" value="EUR" ${t?._eur === true ? 'checked' : ''} onchange="Finance.onCurrencyChange()">
+              <span>€ EUR</span>
+            </label>
+          </div>
+        </div>
+
         <div class="form-2">
           <div class="form-row">
-            <label>Amount (THB) *</label>
-            <input name="amount" type="number" step="0.01" required value="${t?.amount || ''}">
+            <label id="amount-label">Amount *</label>
+            <input id="fin-amount" name="amount_raw" type="number" step="0.01" min="0" required
+              value="${t?.amount || ''}" oninput="Finance.onAmountInput()">
+            <div id="amount-preview" class="amount-preview"></div>
           </div>
           <div class="form-row">
             <label>Date *</label>
             <input name="date" type="date" required value="${t?.date || today}">
           </div>
         </div>
+
         <div class="form-2">
           <div class="form-row">
             <label>Type *</label>
@@ -214,7 +292,7 @@ const Finance = {
             </select>
           </div>
           <div class="form-row">
-            <label>Compte *</label>
+            <label>Account *</label>
             <select name="account" required>
               ${['KBank','Crypto','Revolut'].map(s =>
                 `<option ${t?.account === s ? 'selected' : ''}>${s}</option>`
@@ -222,10 +300,12 @@ const Finance = {
             </select>
           </div>
         </div>
+
         <div class="form-row">
           <label>Notes</label>
           <input name="notes" placeholder="Client, deal, reference…" value="${t?.notes || ''}">
         </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="Modal.close()">Cancel</button>
           <button type="submit" class="btn btn-primary">${t ? 'Save' : 'Add'}</button>
@@ -233,9 +313,38 @@ const Finance = {
       </form>`;
   },
 
+  onCurrencyChange() {
+    const cur = document.querySelector('[name="currency"]:checked')?.value;
+    const lbl = document.getElementById('amount-label');
+    if (lbl) lbl.textContent = `Amount (${cur === 'EUR' ? '€' : '฿'}) *`;
+    this.onAmountInput();
+  },
+
+  onAmountInput() {
+    const cur = document.querySelector('[name="currency"]:checked')?.value || 'THB';
+    const raw = parseFloat(document.getElementById('fin-amount')?.value) || 0;
+    const preview = document.getElementById('amount-preview');
+    if (!preview) return;
+    if (!raw) { preview.textContent = ''; return; }
+    if (cur === 'EUR') {
+      preview.textContent = `≈ ${Math.round(raw * Finance.eurRate).toLocaleString('fr-FR')} ฿`;
+    } else {
+      preview.textContent = `≈ ${Math.round(raw / Finance.eurRate).toLocaleString('fr-FR')} €`;
+    }
+  },
+
   async submit(e, id) {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
+    const fd   = new FormData(e.target);
+    const data = Object.fromEntries(fd);
+    const cur  = data.currency || 'THB';
+    const raw  = parseFloat(data.amount_raw) || 0;
+
+    // Always store in THB
+    data.amount = cur === 'EUR' ? Math.round(raw * this.eurRate) : raw;
+    delete data.amount_raw;
+    delete data.currency;
+
     try {
       if (id) {
         await api.put(`/finance/${id}`, data);
