@@ -63,16 +63,17 @@ const Clients = {
         </div>
       </div>
       <div class="filter-pills">
-        ${[['tous','All'],['prospect','Prospect'],['onboarding','Onboarding'],['recherche active','Active Search'],['signé','Signed'],['perdu','Lost']].map(([val,lbl]) =>
-          `<button class="pill ${this.filter === val ? 'active' : ''}"
-            onclick="Clients.setFilter('${val}')">${lbl}</button>`
+        <button class="pill ${this.filter === 'tous' ? 'active' : ''}" onclick="Clients.setFilter('tous')">All</button>
+        ${CONTACT_COLS.map(col =>
+          `<button class="pill ${this.filter === col.key ? 'active' : ''}"
+            onclick="Clients.setFilter('${col.key}')">${col.label}</button>`
         ).join('')}
       </div>
       <div class="kanban-legend">
-        <span class="legend-item"><span class="legend-dot dot-red"></span> Move-in &lt; 14 days</span>
-        <span class="legend-item"><span class="legend-dot dot-amber"></span> Move-in &lt; 30 days</span>
-        <span class="legend-item"><span class="legend-dot dot-yellow"></span> Move-in &lt; 60 days</span>
-        <span class="legend-item"><span class="legend-clock">🕐</span> Days since form submitted</span>
+        <span class="legend-item"><span class="legend-dot dot-red"></span>Move-in &lt; 14 days</span>
+        <span class="legend-item"><span class="legend-dot dot-amber"></span>Move-in &lt; 30 days</span>
+        <span class="legend-item"><span class="legend-dot dot-yellow"></span>Move-in &lt; 60 days</span>
+        <span class="legend-item"><span class="legend-clock">🕐</span>Days since form submitted</span>
       </div>
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
         ${CONTACT_COLS.map(col => this.columnHTML(col)).join('')}
@@ -86,7 +87,7 @@ const Clients = {
 
   filtered() {
     if (this.filter === 'tous') return this.data;
-    return this.data.filter(c => c.status.toLowerCase() === this.filter);
+    return this.data.filter(c => this.effectiveContactStatus(c) === this.filter);
   },
 
   columnHTML(col) {
