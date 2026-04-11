@@ -76,15 +76,17 @@ const Dashboard = {
   },
 
   zoneData() {
+    // Skip non-geographic / vague answers
+    const SKIP = /non\s*pr[eé]cis[eé]|je ne sais|pas encore|autre|unknown|n\/a|^-+$/i;
     const zones = {};
     this.clients.forEach(c => {
       if (!c.zones) return;
       c.zones.split(/[,/]/).forEach(z => {
         const zone = z.trim();
-        if (zone) zones[zone] = (zones[zone] || 0) + 1;
+        if (zone && !SKIP.test(zone)) zones[zone] = (zones[zone] || 0) + 1;
       });
     });
-    const sorted = Object.entries(zones).sort((a, b) => b[1] - a[1]).slice(0, 7);
+    const sorted = Object.entries(zones).sort((a, b) => b[1] - a[1]).slice(0, 8);
     return { labels: sorted.map(([z]) => z), values: sorted.map(([, v]) => v) };
   },
 
@@ -166,11 +168,14 @@ const Dashboard = {
             const days = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
             const cls  = days <= 14 ? 'urgent-red' : days <= 30 ? 'urgent-amber' : 'urgent-yellow';
             return `<div class="dash-move-in">
-              <div>
-                <div style="font-weight:600;font-size:13px">${c.name}</div>
-                <div style="color:var(--text-2);font-size:12px">${c.zones || '—'}</div>
+              <div style="min-width:0;flex:1">
+                <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+                <div style="color:var(--text-2);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.zones || '—'}</div>
               </div>
-              <span class="${cls}" style="font-size:14px;font-weight:800">${days}d</span>
+              <div class="move-in-badge ${cls}">
+                <span style="font-size:15px;font-weight:800;line-height:1">${days}</span>
+                <span style="font-size:10px;font-weight:600;opacity:.8">days</span>
+              </div>
             </div>`;
           }).join('') : '<p class="empty" style="padding:32px 0">No upcoming move-ins</p>'}
         </div>
@@ -203,10 +208,11 @@ const Dashboard = {
     if (this.charts.pipeline) this.charts.pipeline.destroy();
     const ctx = document.getElementById('chart-pipeline');
     if (!ctx) return;
-    const colors = ['#D97706','#2563EB','#2A9D5C','#7C3AED','#DC2626'];
-    const bgColors = ['#FEF3C7','#DBEAFE','#D1FAE5','#EDE9FE','#FEE2E2'];
+    const colors   = ['#D97706','#2563EB','#2A9D5C','#7C3AED','#DC2626'];
+    const bgColors = ['rgba(217,119,6,.15)','rgba(37,99,235,.15)','rgba(42,157,92,.15)','rgba(124,58,237,.15)','rgba(220,38,38,.15)'];
     this.charts.pipeline = new Chart(ctx, {
       type: 'bar',
+      indexAxis: 'y',   // ← horizontal bars
       data: {
         labels: data.map(d => d.label),
         datasets: [{
@@ -214,19 +220,20 @@ const Dashboard = {
           backgroundColor: bgColors,
           borderColor: colors,
           borderWidth: 2,
-          borderRadius: 8,
+          borderRadius: 6,
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: {
-          callbacks: { label: ctx => ` ${ctx.raw} client${ctx.raw !== 1 ? 's' : ''}` }
+          callbacks: { label: ctx => `  ${ctx.raw} client${ctx.raw !== 1 ? 's' : ''}` }
         }},
         scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1, color: '#7A7670' }, grid: { color: '#F0EDE8' } },
-          x: { ticks: { color: '#7A7670' }, grid: { display: false } }
+          x: { beginAtZero: true, ticks: { stepSize: 1, color: '#7A7670' }, grid: { color: '#F0EDE8' } },
+          y: { ticks: { color: '#3A3630', font: { weight: '600', size: 12 } }, grid: { display: false } }
         },
-        animation: { duration: 1000, easing: 'easeOutQuart' }
+        animation: { duration: 900, easing: 'easeOutQuart' }
       }
     });
   },
@@ -265,25 +272,47 @@ const Dashboard = {
     if (this.charts.zones) this.charts.zones.destroy();
     const ctx = document.getElementById('chart-zones');
     if (!ctx) return;
-    const colors = ['#C9922A','#2563EB','#2A9D5C','#7C3AED','#DC2626','#D97706','#0891B2'];
+    const colors = ['#C9922A','#2563EB','#2A9D5C','#7C3AED','#DC2626','#0891B2','#D97706','#059669'];
+    const bg     = ['rgba(201,146,42,.25)','rgba(37,99,235,.2)','rgba(42,157,92,.2)','rgba(124,58,237,.2)','rgba(220,38,38,.2)','rgba(8,145,178,.2)','rgba(217,119,6,.2)','rgba(5,150,105,.2)'];
     this.charts.zones = new Chart(ctx, {
       type: 'doughnut',
       data: {
         labels: data.labels,
         datasets: [{
           data: data.values,
-          backgroundColor: colors.map(c => c + '22'),
+          backgroundColor: bg,
           borderColor: colors,
-          borderWidth: 2,
-          hoverOffset: 8,
+          borderWidth: 2.5,
+          hoverOffset: 10,
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             position: 'right',
-            labels: { font: { family: 'Inter', size: 12 }, color: '#1A1A1A', padding: 14, boxWidth: 12, borderRadius: 3 }
+            labels: {
+              font: { family: 'Inter', size: 12, weight: '600' },
+              color: '#3A3630', padding: 16, boxWidth: 13, borderRadius: 4,
+              generateLabels(chart) {
+                const ds = chart.data.datasets[0];
+                const total = ds.data.reduce((s, v) => s + v, 0);
+                return chart.data.labels.map((lbl, i) => ({
+                  text: `${lbl}  ·  ${ds.data[i]}`,
+                  fillStyle: bg[i],
+                  strokeStyle: colors[i],
+                  lineWidth: 2,
+                  index: i,
+                  hidden: false,
+                }));
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => `  ${ctx.label}: ${ctx.raw} client${ctx.raw !== 1 ? 's' : ''}`
+            }
           }
         },
         animation: { duration: 1000, easing: 'easeOutQuart' }

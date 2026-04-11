@@ -743,10 +743,27 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .dash-move-in {
   display: flex; align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
 .dash-move-in:last-child { border-bottom: none; }
+.move-in-badge {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 46px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  text-align: center;
+  background: rgba(0,0,0,.04);
+}
+.move-in-badge.urgent-red    { background: rgba(220,38,38,.1);  color: var(--red); }
+.move-in-badge.urgent-amber  { background: rgba(245,158,11,.1); color: var(--amber); }
+.move-in-badge.urgent-yellow { background: rgba(217,119,6,.1);  color: #D97706; }
+
+/* Pipeline chart needs fixed height when horizontal */
+#chart-pipeline { height: 190px !important; }
 
 @media (max-width: 900px) {
   .dash-kpis { grid-template-columns: 1fr 1fr; }
