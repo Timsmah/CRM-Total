@@ -2,12 +2,28 @@ const Finance = {
   data: [],
   selectedMonth: '',
 
-  // ── Exchange rate (editable, stored in localStorage) ──────────────────────
+  // ── Exchange rate (auto-refreshed daily, editable override) ───────────────
   get eurRate() {
-    return parseFloat(localStorage.getItem('eur_rate') || '38.5');
+    return parseFloat(localStorage.getItem('eur_rate') || '37');
   },
   set eurRate(v) {
-    localStorage.setItem('eur_rate', v);
+    localStorage.setItem('eur_rate', String(v));
+    localStorage.setItem('eur_rate_ts', Date.now());
+  },
+
+  async fetchRate() {
+    const ts  = parseInt(localStorage.getItem('eur_rate_ts') || '0');
+    const age = Date.now() - ts;
+    if (age < 86400000) return; // less than 24h old → skip
+    try {
+      const r = await fetch('https://api.frankfurter.app/latest?from=EUR&to=THB');
+      const j = await r.json();
+      const rate = j?.rates?.THB;
+      if (rate) {
+        localStorage.setItem('eur_rate', String(Math.round(rate * 10) / 10));
+        localStorage.setItem('eur_rate_ts', Date.now());
+      }
+    } catch { /* silent — keep last known rate */ }
   },
 
   // ── Monthly goals ──────────────────────────────────────────────────────────
@@ -15,7 +31,7 @@ const Finance = {
   GOALS: {
     commission: { amount: 60000, currency: 'THB' },
     onboarding: { amount: 2500,  currency: 'EUR' },
-    visa:       null,
+    visa:       { amount: 23000, currency: 'THB' }, // 2 × 11 500 ฿
     autre:      null,
   },
 
@@ -43,7 +59,7 @@ const Finance = {
     if (sessionStorage.getItem('finance_unlocked') !== '1') {
       this.showLock(); return;
     }
-    await this.load();
+    await Promise.all([this.load(), this.fetchRate()]);
     this.render();
   },
 
@@ -140,7 +156,7 @@ const Finance = {
       <div class="section-header">
         <h2>Finance</h2>
         <div class="header-actions">
-          <button class="btn btn-ghost" onclick="Finance.editRate()" title="Exchange rate">
+          <button class="btn btn-ghost" onclick="Finance.editRate()" title="Exchange rate — updated daily">
             1€ = ${this.eurRate} ฿ ✏️
           </button>
           <button class="btn btn-primary" onclick="Finance.openAddModal()">+ Transaction</button>
