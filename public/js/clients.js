@@ -23,11 +23,11 @@ function tr(val) {
 }
 
 const CONTACT_COLS = [
-  { key: 'À contacter',      label: 'To Contact',       cls: 'col-to-contact'  },
-  { key: 'Contacté',         label: 'Contacted',        cls: 'col-contacted'   },
-  { key: 'Property to Find', label: 'Property to Find', cls: 'col-meeting'     },
-  { key: 'Urgent Sending',   label: '⚠️ Urgent Sending',  cls: 'col-urgent'      },
-  { key: 'Rappeler',         label: 'Call Back',        cls: 'col-callback'    },
+  { key: 'À contacter',      label: '🆕 Prospect',        cls: 'col-to-contact'  },
+  { key: 'Contacté',         label: '🎯 To Close',         cls: 'col-contacted'   },
+  { key: 'Property to Find', label: '🔍 Active Search',    cls: 'col-meeting'     },
+  { key: 'Urgent Sending',   label: '📤 Proposal Sent',    cls: 'col-urgent'      },
+  { key: 'Rappeler',         label: '📅 Visit Planned',    cls: 'col-callback'    },
 ];
 
 const Clients = {
