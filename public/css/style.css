@@ -529,6 +529,14 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .summary-card .total { font-size: 22px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
 .summary-card .sub { font-size: 11px; color: var(--text-3); margin-top: 3px; }
 
+/* Category bar */
+.type-bar-track { height: 4px; background: var(--border); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+.type-bar-fill  { height: 4px; border-radius: 4px; transition: width .6s ease; }
+.type-pct { font-size: 11px; font-weight: 700; margin-top: 4px; }
+
+/* Section label */
+.fin-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-3); margin-bottom: 10px; }
+
 .tx-table { width: 100%; border-collapse: collapse; }
 .tx-table th { text-align: left; padding: 9px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); border-bottom: 1px solid var(--border); font-weight: 600; }
 .tx-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); }

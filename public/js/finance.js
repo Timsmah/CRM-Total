@@ -66,7 +66,7 @@ const Finance = {
 
   // Summary by account for selected month
   summary() {
-    const accounts = ['KBank', 'Wise', 'Revolut'];
+    const accounts = ['KBank', 'Crypto', 'Revolut'];
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
     return accounts.map(acct => ({
       acct,
@@ -75,13 +75,30 @@ const Finance = {
     }));
   },
 
+  // Summary by category/type for selected month
+  summaryByType() {
+    const types = [
+      { key: 'commission', label: 'Commission', icon: '🤝', color: '#2563EB' },
+      { key: 'onboarding', label: 'Onboarding', icon: '🚀', color: '#2A9D5C' },
+      { key: 'visa',       label: 'Visa',        icon: '🛂', color: '#7C3AED' },
+      { key: 'autre',      label: 'Other',        icon: '💼', color: '#D97706' },
+    ];
+    const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
+    return types.map(t => ({
+      ...t,
+      total: txMonth.filter(x => x.type === t.key).reduce((s, x) => s + Number(x.amount), 0),
+      count: txMonth.filter(x => x.type === t.key).length
+    }));
+  },
+
   render() {
     const months = this.months();
     const summary = this.summary();
+    const byType = this.summaryByType();
     const grandTotal = summary.reduce((s, r) => s + r.total, 0);
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
-    const types = ['commission', 'onboarding', 'autre'];
-    const accounts = ['KBank', 'Wise', 'Revolut'];
+    const types = ['commission', 'onboarding', 'visa', 'autre'];
+    const accounts = ['KBank', 'Crypto', 'Revolut'];
 
     document.getElementById('content').innerHTML = `
       <div class="section-header">
@@ -103,6 +120,8 @@ const Finance = {
         </span>
       </div>
 
+      <!-- By account -->
+      <div class="fin-section-label">By account</div>
       <div class="summary-row">
         ${summary.map(r => `
           <div class="summary-card">
@@ -115,6 +134,23 @@ const Finance = {
           <div class="total" style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</div>
           <div class="sub">${txMonth.length} transaction${txMonth.length !== 1 ? 's' : ''}</div>
         </div>
+      </div>
+
+      <!-- By category -->
+      <div class="fin-section-label">By category</div>
+      <div class="summary-row">
+        ${byType.map(r => `
+          <div class="summary-card type-card" style="--type-color:${r.color}">
+            <div class="acct">${r.icon} ${r.label}</div>
+            <div class="total" style="color:${r.color}">${r.total ? Number(r.total).toLocaleString('fr-FR') + ' ฿' : '—'}</div>
+            <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
+            ${grandTotal > 0 && r.total > 0 ? `
+              <div class="type-bar-track">
+                <div class="type-bar-fill" style="width:${Math.round(r.total/grandTotal*100)}%;background:${r.color}"></div>
+              </div>
+              <div class="type-pct" style="color:${r.color}">${Math.round(r.total/grandTotal*100)}%</div>
+            ` : ''}
+          </div>`).join('')}
       </div>
 
       <table class="tx-table">
@@ -172,7 +208,7 @@ const Finance = {
           <div class="form-row">
             <label>Type *</label>
             <select name="type" required>
-              ${['commission','onboarding','autre'].map(s =>
+              ${['commission','onboarding','visa','autre'].map(s =>
                 `<option ${t?.type === s ? 'selected' : ''}>${s}</option>`
               ).join('')}
             </select>
@@ -180,7 +216,7 @@ const Finance = {
           <div class="form-row">
             <label>Compte *</label>
             <select name="account" required>
-              ${['KBank','Wise','Revolut'].map(s =>
+              ${['KBank','Crypto','Revolut'].map(s =>
                 `<option ${t?.account === s ? 'selected' : ''}>${s}</option>`
               ).join('')}
             </select>
