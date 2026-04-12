@@ -22,20 +22,28 @@ const Dashboard = {
 
   kpis() {
     const now = new Date();
-    const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const eurRate = parseFloat(localStorage.getItem('eur_rate') || '37');
+
+    // Week: Monday → today
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate() - 7);
+    const lastSunday = new Date(monday); lastSunday.setDate(monday.getDate() - 1);
+
+    const inRange = (t, from, to) => { const d = new Date(t.date); return d >= from && d <= to; };
+    const revenueWeek     = this.finance.filter(t => t.date && inRange(t, monday, now)).reduce((s,t) => s + Number(t.amount), 0);
+    const revenueLastWeek = this.finance.filter(t => t.date && inRange(t, lastMonday, lastSunday)).reduce((s,t) => s + Number(t.amount), 0);
+
     const activeClients  = this.clients.filter(c => ['Onboarding','Recherche active'].includes(c.status)).length;
     const availableProps = this.properties.filter(p => p.status === 'Disponible').length;
-    const revenueMonth   = this.finance.filter(t => t.date?.startsWith(thisMonth)).reduce((s,t) => s + Number(t.amount), 0);
     const urgentMoveIns  = this.clients.filter(c => {
       if (!c.move_in_date) return false;
       const d = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
       return d >= 0 && d <= 30;
     }).length;
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastKey   = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth()+1).padStart(2,'0')}`;
-    const revLast   = this.finance.filter(t => t.date?.startsWith(lastKey)).reduce((s,t) => s + Number(t.amount), 0);
-    const eurRate   = parseFloat(localStorage.getItem('eur_rate') || '37');
-    return { activeClients, availableProps, revenueMonth, urgentMoveIns, revLast, eurRate };
+
+    return { activeClients, availableProps, revenueWeek, revenueLastWeek, urgentMoveIns, eurRate };
   },
 
   pipelineData() {
@@ -56,17 +64,23 @@ const Dashboard = {
     }));
   },
 
-  revenueByMonth() {
-    const now = new Date();
-    const months = {};
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`] = 0;
-    }
-    this.finance.forEach(t => { const k = (t.date||'').slice(0,7); if (k in months) months[k] += Number(t.amount); });
+  // Daily revenue for current month (used in dashboard chart)
+  revenueByDay() {
+    const now   = new Date();
+    const year  = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const pad = n => String(n).padStart(2, '0');
+    const prefix = `${year}-${pad(month + 1)}`;
+
+    const days = {};
+    for (let d = 1; d <= daysInMonth; d++) days[`${prefix}-${pad(d)}`] = 0;
+    this.finance.forEach(t => { if (t.date in days) days[t.date] += Number(t.amount); });
+
     return {
-      labels: Object.keys(months).map(k => { const [y,m] = k.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-US',{month:'short'}); }),
-      values: Object.values(months)
+      labels: Object.keys(days).map(k => parseInt(k.split('-')[2])), // day number 1–31
+      values: Object.values(days),
+      monthName: now.toLocaleDateString('en-US', { month: 'long' })
     };
   },
 
@@ -112,15 +126,17 @@ const Dashboard = {
   render() {
     const kpis     = this.kpis();
     const pipeline = this.pipelineData();
-    const revenue  = this.revenueByMonth();
+    const revenue  = this.revenueByDay();
     const zones    = this.zoneData();
     const urgent   = this.urgentClients();
     const now      = new Date();
 
-    const revFmt    = Number(kpis.revenueMonth).toLocaleString('fr-FR');
-    const revEUR    = Math.round(kpis.revenueMonth / kpis.eurRate).toLocaleString('fr-FR');
-    const trendPct  = kpis.revLast > 0 ? Math.round((kpis.revenueMonth - kpis.revLast) / kpis.revLast * 100) : null;
-    const trendUp   = trendPct !== null && trendPct >= 0;
+    const revFmt   = Number(kpis.revenueWeek).toLocaleString('fr-FR');
+    const revEUR   = Math.round(kpis.revenueWeek / kpis.eurRate).toLocaleString('fr-FR');
+    const trendPct = kpis.revenueLastWeek > 0
+      ? Math.round((kpis.revenueWeek - kpis.revenueLastWeek) / kpis.revenueLastWeek * 100)
+      : null;
+    const trendUp  = trendPct !== null && trendPct >= 0;
 
     document.getElementById('content').innerHTML = `
 
@@ -142,8 +158,8 @@ const Dashboard = {
           </div>
           <div class="dash-top-divider"></div>
           <div class="dash-top-stat">
-            <span class="dash-top-val" style="color:#FF6B00">${Math.round(kpis.revenueMonth/1000)}k ฿</span>
-            <span class="dash-top-label">This month</span>
+            <span class="dash-top-val" style="color:#FF6B00">${Math.round(kpis.revenueWeek/1000) || 0}k ฿</span>
+            <span class="dash-top-label">This week</span>
           </div>
         </div>
       </div>
@@ -153,12 +169,12 @@ const Dashboard = {
 
         <!-- Revenue hero -->
         <div class="kpi-card kpi-hero">
-          <div class="kpi-hero-eyebrow">💰 Revenue this month</div>
-          <div class="kpi-hero-val" data-target="${kpis.revenueMonth}" data-format="thb">0</div>
+          <div class="kpi-hero-eyebrow">💰 Revenue this week</div>
+          <div class="kpi-hero-val" data-target="${kpis.revenueWeek}" data-format="thb">0</div>
           <div class="kpi-hero-eur">≈ ${revEUR} €</div>
           ${trendPct !== null ? `
             <div class="kpi-hero-trend ${trendUp ? 'trend-up' : 'trend-down'}">
-              ${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}% vs last month
+              ${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}% vs last week
             </div>` : ''}
         </div>
 
@@ -191,7 +207,7 @@ const Dashboard = {
           ${this.pipelineHTML(pipeline)}
         </div>
         <div class="dash-card">
-          <div class="dash-card-title">Revenue <span class="dash-card-sub">last 6 months</span></div>
+          <div class="dash-card-title">Revenue <span class="dash-card-sub">${revenue.monthName} — day by day</span></div>
           <div style="height:200px;position:relative">
             <canvas id="chart-revenue"></canvas>
           </div>

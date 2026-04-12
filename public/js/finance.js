@@ -2,6 +2,7 @@ const Finance = {
   data: [],
   selectedMonth: '',
   _unlocked: false,   // in-memory only — resets on every page refresh
+  _chart: null,
 
   // ── Exchange rate (auto-refreshed daily, editable override) ───────────────
   get eurRate() {
@@ -62,6 +63,7 @@ const Finance = {
     }
     await Promise.all([this.load(), this.fetchRate()]);
     this.render();
+    setTimeout(() => this.drawRevenueChart(), 60);
   },
 
   showLock() {
@@ -91,6 +93,7 @@ const Finance = {
       this._unlocked = true;
       await Promise.all([this.load(), this.fetchRate()]);
       this.render();
+      setTimeout(() => this.drawRevenueChart(), 60);
     } catch {
       errEl.classList.remove('hidden');
     }
@@ -217,6 +220,12 @@ const Finance = {
           </div>`).join('')}
       </div>
 
+      <!-- 6-month revenue trend -->
+      <div class="fin-section-label">Revenue trend — last 6 months</div>
+      <div class="dash-card" style="margin-bottom:24px;padding:18px 22px">
+        <div style="height:160px;position:relative"><canvas id="chart-fin-revenue"></canvas></div>
+      </div>
+
       <!-- Transactions table -->
       <table class="tx-table">
         <thead>
@@ -247,14 +256,63 @@ const Finance = {
       </table>`;
   },
 
+  // ── 6-month revenue chart ─────────────────────────────────────────────────
+  revenueByMonth() {
+    const now = new Date();
+    const months = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`] = 0;
+    }
+    this.data.forEach(t => { const k = (t.date||'').slice(0,7); if (k in months) months[k] += Number(t.amount); });
+    return {
+      labels: Object.keys(months).map(k => { const [y,m] = k.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-US',{month:'short'}); }),
+      values: Object.values(months)
+    };
+  },
+
+  drawRevenueChart() {
+    if (this._chart) { this._chart.destroy(); this._chart = null; }
+    const ctx = document.getElementById('chart-fin-revenue');
+    if (!ctx) return;
+    const data = this.revenueByMonth();
+    this._chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          data: data.values,
+          backgroundColor: data.values.map((v, i) => i === data.values.length - 1 ? '#FF6B00' : 'rgba(255,107,0,.25)'),
+          borderColor:     data.values.map((v, i) => i === data.values.length - 1 ? '#FF6B00' : '#FF6B00'),
+          borderWidth: 2,
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#1A1A1A', cornerRadius: 8, padding: 10,
+          callbacks: { label: c => '  ' + Number(c.raw).toLocaleString('fr-FR') + ' ฿  ≈ ' + Math.round(c.raw / this.eurRate).toLocaleString('fr-FR') + ' €' }
+        }},
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#F0EDE8' },
+               ticks: { color: '#9A9490', callback: v => v ? (v/1000).toFixed(0)+'k ฿' : '0' }},
+          x: { ticks: { color: '#9A9490', font: { weight: '600' } }, grid: { display: false } }
+        },
+        animation: { duration: 800, easing: 'easeOutQuart' }
+      }
+    });
+  },
+
   // ── Actions ────────────────────────────────────────────────────────────────
-  changeMonth(m) { this.selectedMonth = m; this.render(); },
+  changeMonth(m) { this.selectedMonth = m; this.render(); setTimeout(() => this.drawRevenueChart(), 60); },
 
   editRate() {
     const r = prompt(`Exchange rate (THB per €)\nCurrent: 1€ = ${this.eurRate} ฿`, this.eurRate);
     if (r && !isNaN(parseFloat(r))) {
       this.eurRate = parseFloat(r);
       this.render();
+      setTimeout(() => this.drawRevenueChart(), 60);
     }
   },
 
@@ -373,6 +431,7 @@ const Finance = {
       Modal.close();
       await this.load();
       this.render();
+      setTimeout(() => this.drawRevenueChart(), 60);
     } catch (err) {
       Toast.show(err.message, 'error');
     }
@@ -383,6 +442,7 @@ const Finance = {
     await api.del(`/finance/${id}`);
     this.data = this.data.filter(t => t.id !== id);
     this.render();
+    setTimeout(() => this.drawRevenueChart(), 60);
     Toast.show('Transaction deleted');
   }
 };
