@@ -20,56 +20,6 @@ function parseCSV(text) {
   });
 }
 
-// ── Public endpoint (no auth) — used by HSC website ──────────────────────────
-router.get('/public', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  const { data, error } = await db.from('properties')
-    .select('id, title, zone, price, sqm, floor, room_type, photos, cached_photos, status, description, sheet_row')
-    .eq('archived', 0)
-    .eq('status', 'Disponible')
-    .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
-
-  const properties = data.map(p => {
-    const photos = parseJSON(p.cached_photos).length
-      ? parseJSON(p.cached_photos)
-      : parseJSON(p.photos);
-
-    // Parse bedrooms from room_type e.g. "1BR 1Bath" → 1
-    const brMatch = (p.room_type || '').match(/(\d+)\s*BR/i);
-    const bedrooms = brMatch ? parseInt(brMatch[1]) : (p.room_type?.toLowerCase().includes('studio') ? 0 : null);
-
-    // Parse sqm number from "32 Sq.m." → 32
-    const sqmMatch = (p.sqm || '').toString().replace(/,/g, '').match(/[\d.]+/);
-    const size_sqm = sqmMatch ? parseFloat(sqmMatch[0]) : null;
-
-    // Parse price number from "70,000" → 70000
-    const priceNum = parseInt((p.price || '').toString().replace(/[^0-9]/g, '')) || null;
-
-    return {
-      id:             p.id,
-      name_en:        p.title || '',
-      name_fr:        p.title || '',
-      location:       p.zone || '',
-      city:           'Bangkok',
-      listing_type:   'rent',
-      price_rent:     priceNum,
-      price_sale:     null,
-      property_type:  p.room_type || '',
-      bedrooms,
-      size_sqm,
-      floor:          p.floor || '',
-      image_urls:     photos.map(ph => ph.thumbnail || ph.url || ph).filter(Boolean),
-      status:         'available',
-      badges:         [],
-      description_en: p.description || '',
-      description_fr: p.description || '',
-    };
-  });
-
-  res.json(properties);
-});
-
 router.get('/', async (req, res) => {
   const archived = req.query.archived === 'true' ? 1 : 0;
   const { data, error } = await db.from('properties')
@@ -210,4 +160,53 @@ router.post('/cache-photos', async (req, res) => {
   });
 });
 
+// ── Public handler exported for use without auth in server.js ────────────────
+async function publicHandler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const { data, error } = await db.from('properties')
+    .select('id, title, zone, price, sqm, floor, room_type, photos, cached_photos, status, description')
+    .eq('archived', 0)
+    .eq('status', 'Disponible')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+
+  const properties = (data || []).map(p => {
+    const photos = parseJSON(p.cached_photos).length
+      ? parseJSON(p.cached_photos)
+      : parseJSON(p.photos);
+
+    const brMatch = (p.room_type || '').match(/(\d+)\s*BR/i);
+    const bedrooms = brMatch ? parseInt(brMatch[1]) : ((p.room_type || '').toLowerCase().includes('studio') ? 0 : null);
+
+    const sqmMatch = (p.sqm || '').toString().replace(/,/g, '').match(/[\d.]+/);
+    const size_sqm = sqmMatch ? parseFloat(sqmMatch[0]) : null;
+
+    const priceNum = parseInt((p.price || '').toString().replace(/[^0-9]/g, '')) || null;
+
+    return {
+      id:             String(p.id),
+      name_en:        p.title || '',
+      name_fr:        p.title || '',
+      location:       p.zone || '',
+      city:           'Bangkok',
+      listing_type:   'rent',
+      price_rent:     priceNum,
+      price_sale:     null,
+      property_type:  p.room_type || '',
+      bedrooms,
+      bathrooms:      null,
+      size_sqm,
+      floor:          p.floor || '',
+      image_urls:     photos.map(ph => ph.thumbnail || ph.url || ph).filter(Boolean),
+      status:         'available',
+      badges:         [],
+      description_en: p.description || '',
+      description_fr: p.description || '',
+    };
+  });
+
+  res.json(properties);
+}
+
+router.publicHandler = publicHandler;
 module.exports = router;

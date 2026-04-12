@@ -20,6 +20,9 @@ const requireAuth = (req, res, next) => {
 app.use('/api/auth',    require('./routes/auth'));
 app.use('/api/listing', require('./routes/listing'));
 
+// Public properties endpoint for HSC website (no auth)
+app.get('/api/properties/public', require('./routes/properties').publicHandler);
+
 // Public listing page
 app.get('/listing/:token', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'listing.html'));
