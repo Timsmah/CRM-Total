@@ -1,6 +1,7 @@
 const Finance = {
   data: [],
   selectedMonth: '',
+  _unlocked: false,   // in-memory only — resets on every page refresh
 
   // ── Exchange rate (auto-refreshed daily, editable override) ───────────────
   get eurRate() {
@@ -56,7 +57,7 @@ const Finance = {
 
   // ── Lock / unlock ──────────────────────────────────────────────────────────
   async init() {
-    if (sessionStorage.getItem('finance_unlocked') !== '1') {
+    if (!this._unlocked) {
       this.showLock(); return;
     }
     await Promise.all([this.load(), this.fetchRate()]);
@@ -87,8 +88,8 @@ const Finance = {
     errEl.classList.add('hidden');
     try {
       await api.post('/auth/finance-unlock', { password: pw });
-      sessionStorage.setItem('finance_unlocked', '1');
-      await this.load();
+      this._unlocked = true;
+      await Promise.all([this.load(), this.fetchRate()]);
       this.render();
     } catch {
       errEl.classList.remove('hidden');
