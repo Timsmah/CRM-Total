@@ -101,9 +101,9 @@ const Dashboard = {
         <div class="pipeline-row">
           <span class="pipeline-lbl">${d.label}</span>
           <div class="pipeline-track">
-            <div class="pipeline-fill" style="width:${d.count ? Math.max(d.count/max*100, 5) : 0}%;background:${d.color}"></div>
+            <div class="pipeline-fill" style="width:${d.count ? Math.max(d.count/max*100, 4) : 0}%;background:#FF6B00"></div>
           </div>
-          <span class="pipeline-num" style="color:${d.color}">${d.count}</span>
+          <span class="pipeline-num">${d.count}</span>
         </div>`).join('')}
     </div>`;
   },
@@ -142,7 +142,7 @@ const Dashboard = {
           </div>
           <div class="dash-top-divider"></div>
           <div class="dash-top-stat">
-            <span class="dash-top-val" style="color:var(--accent)">${Math.round(kpis.revenueMonth/1000)}k ฿</span>
+            <span class="dash-top-val" style="color:#FF6B00">${Math.round(kpis.revenueMonth/1000)}k ฿</span>
             <span class="dash-top-label">This month</span>
           </div>
         </div>
@@ -271,9 +271,9 @@ const Dashboard = {
         labels: data.labels,
         datasets: [{
           data: data.values,
-          borderColor: '#C9922A',
+          borderColor: '#FF6B00',
           borderWidth: 3,
-          pointBackgroundColor: '#C9922A',
+          pointBackgroundColor: '#FF6B00',
           pointBorderColor: '#fff',
           pointBorderWidth: 2,
           pointRadius: 5,
@@ -284,8 +284,8 @@ const Dashboard = {
             const c = ctx2.chart, { ctx: c2, chartArea } = c;
             if (!chartArea) return 'transparent';
             const g = c2.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-            g.addColorStop(0, 'rgba(201,146,42,.35)');
-            g.addColorStop(1, 'rgba(201,146,42,0)');
+            g.addColorStop(0, 'rgba(255,107,0,.30)');
+            g.addColorStop(1, 'rgba(255,107,0,0)');
             return g;
           }
         }]
@@ -310,8 +310,8 @@ const Dashboard = {
     if (this.charts.zones) this.charts.zones.destroy();
     const ctx = document.getElementById('chart-zones');
     if (!ctx) return;
-    // Solid colors — no transparency
-    const colors = ['#C9922A','#3B82F6','#16A34A','#8B5CF6','#EF4444','#06B6D4','#F59E0B','#10B981'];
+    // 2-color family: orange spectrum + béton spectrum
+    const colors = ['#FF6B00','#3D3D3D','#FF8C33','#5A5A5A','#FFAD66','#787878','#CC5500','#A0A0A0'];
     this.charts.zones = new Chart(ctx, {
       type: 'doughnut',
       data: {
