@@ -310,9 +310,9 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-2); font-weight: 500; padding: 0 14px; }
 .legend-sep { width: 1px; height: 12px; background: var(--border); flex-shrink: 0; }
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-red    { background: var(--red); }
-.dot-amber  { background: var(--amber); }
-.dot-yellow { background: #D97706; }
+.dot-red    { background: #DC2626; }
+.dot-amber  { background: #D97706; }
+.dot-yellow { background: #EAB308; }
 .legend-clock { font-size: 12px; }
 
 .kanban-board {
@@ -433,9 +433,9 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 }
 .cs-select:focus { outline: none; border-color: var(--accent); }
 
-.urgent-red    { color: var(--red)   !important; font-weight: 600; }
-.urgent-amber  { color: var(--amber) !important; font-weight: 600; }
-.urgent-yellow { color: #B45309     !important; font-weight: 600; }
+.urgent-red    { color: #DC2626 !important; font-weight: 600; }
+.urgent-amber  { color: #D97706 !important; font-weight: 600; }
+.urgent-yellow { color: #EAB308 !important; font-weight: 600; }
 
 /* ── DETAIL MODAL ────────────────────────────────── */
 .detail-grid { display: flex; flex-direction: column; gap: 10px; }
@@ -799,9 +799,9 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   flex-shrink: 0; padding: 6px 12px; border-radius: 10px; text-align: center; gap: 1px;
 }
-.urgent-red    { color: var(--red); }
-.urgent-amber  { color: var(--amber); }
-.urgent-yellow { color: #D97706; }
+.urgent-red    { color: #DC2626; }
+.urgent-amber  { color: #D97706; }
+.urgent-yellow { color: #EAB308; }
 
 @media (max-width: 1100px) {
   .dash-kpis   { grid-template-columns: 1fr 1fr; }
