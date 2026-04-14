@@ -154,7 +154,7 @@ const Clients = {
       : null;
     const urgency = this.urgencyClass(c.move_in_date);
     const daysAgo = this.daysAgo(c);
-    const urgencyIcon = urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟠' : urgency === 'urgent-yellow' ? ' 🟡' : '';
+    const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
 
     return `
       <div class="card kanban-card" draggable="true"
@@ -175,7 +175,7 @@ const Clients = {
         <div class="client-details">
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
-          ${c.move_in_date ? `<p class="${urgency}">📅 Arrival: ${formatDate(c.move_in_date)}${urgencyIcon}</p>` : ''}
+          ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 Arrival: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
           ${c.duration ? `<p>⏱ Duration: ${tr(c.duration)}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
@@ -268,7 +268,7 @@ const Clients = {
     const c = this.data.find(x => x.id === id);
     if (!c) return;
     const urgency = this.urgencyClass(c.move_in_date);
-    const urgencyIcon = urgency === 'urgent-red' ? ' 🔴' : urgency === 'urgent-amber' ? ' 🟠' : urgency === 'urgent-yellow' ? ' 🟡' : '';
+    const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px;vertical-align:middle;flex-shrink:0"></span>` : '';
     const budgetLine = c.budget_max
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : '—';
@@ -278,7 +278,7 @@ const Clients = {
         ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 Phone</span><span>${c.whatsapp}</span></div>` : ''}
         <div class="detail-row"><span class="detail-label">💰 Budget</span><span>${budgetLine}</span></div>
         ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 Zones</span><span>${c.zones}</span></div>` : ''}
-        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 Arrival</span><span class="${urgency}">${formatDate(c.move_in_date)}${urgencyIcon}</span></div>` : ''}
+        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 Arrival</span><span class="${urgency}" style="display:flex;align-items:center">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
         ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ Duration</span><span>${tr(c.duration)}</span></div>` : ''}
         ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 Type</span><span>${c.property_type}</span></div>` : ''}
         ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 Bedrooms</span><span>${c.bedrooms}</span></div>` : ''}
