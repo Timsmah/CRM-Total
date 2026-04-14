@@ -199,7 +199,7 @@ const Clients = {
         </div>
         <div class="action-tags-row" onclick="event.stopPropagation()">
           <div class="action-tags-display">${this.tagsHTML(this.getTags(c))}</div>
-          <button class="add-tag-btn" onclick="Clients.openTagPopover(${c.id}, this)" title="Add tag">＋</button>
+          <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
         </div>
         <div class="card-actions">
           <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">Edit</button>
@@ -233,39 +233,36 @@ const Clients = {
     }).join('');
   },
 
-  _tagPopover: null,
+  _tagPopoverClientId: null,
   _closeTagHandler: null,
 
-  openTagPopover(id, btnEl) {
-    this.closeTagPopover();
+  toggleTagPanel(id, btnEl) {
+    // Remove any existing panel
+    document.querySelectorAll('.tags-popover').forEach(p => p.remove());
+    document.removeEventListener('click', this._closeTagHandler);
+    // Toggle off if same card
+    if (this._tagPopoverClientId === id) { this._tagPopoverClientId = null; return; }
+    this._tagPopoverClientId = id;
     const c = this.data.find(x => x.id === id);
     if (!c) return;
     const tags = this.getTags(c);
-    const rect = btnEl.getBoundingClientRect();
-    const popover = document.createElement('div');
-    popover.className = 'tags-popover';
-    popover.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${Math.max(8, rect.right - 240)}px;width:240px;z-index:9999`;
-    popover.innerHTML = ACTION_TAGS.map(t => `
+    const panel = document.createElement('div');
+    panel.className = 'tags-popover';
+    panel.innerHTML = ACTION_TAGS.map(t => `
       <button class="tag-option ${tags.includes(t.key) ? 'active' : ''}"
-        onclick="Clients.toggleTag(${id}, '${t.key}', this)">
+        onclick="event.stopPropagation(); Clients.toggleTag(${id}, '${t.key}', this)">
         ${t.emoji} ${t.label}
       </button>`).join('');
-    document.body.appendChild(popover);
-    this._tagPopover = popover;
-    this._tagPopoverClientId = id;
+    const rect = btnEl.getBoundingClientRect();
+    panel.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${Math.max(8, rect.right - 244)}px;width:244px;z-index:9999`;
+    document.body.appendChild(panel);
     setTimeout(() => {
-      document.addEventListener('click', this._closeTagHandler = (ev) => {
-        if (!popover.contains(ev.target) && ev.target !== btnEl) this.closeTagPopover();
+      document.addEventListener('click', this._closeTagHandler = () => {
+        panel.remove();
+        this._tagPopoverClientId = null;
+        document.removeEventListener('click', this._closeTagHandler);
       });
-    }, 0);
-  },
-
-  closeTagPopover() {
-    if (this._tagPopover) {
-      this._tagPopover.remove();
-      this._tagPopover = null;
-      document.removeEventListener('click', this._closeTagHandler);
-    }
+    }, 50);
   },
 
   async toggleTag(id, key, btn) {
