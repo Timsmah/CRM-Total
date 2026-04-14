@@ -419,7 +419,7 @@ const Clients = {
         ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 Phone</span><span>${c.whatsapp}</span></div>` : ''}
         <div class="detail-row"><span class="detail-label">💰 Budget</span><span>${budgetLine}</span></div>
         ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 Zones</span><span>${c.zones}</span></div>` : ''}
-        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 Arrival</span><span class="${urgency}" style="display:flex;align-items:center">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
+        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 Arrival</span><span style="display:flex;align-items:center;gap:6px">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
         ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ Duration</span><span>${tr(c.duration)}</span></div>` : ''}
         ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 Type</span><span>${c.property_type}</span></div>` : ''}
         ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 Bedrooms</span><span>${c.bedrooms}</span></div>` : ''}
