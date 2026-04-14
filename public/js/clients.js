@@ -27,15 +27,14 @@ const ACTION_TAGS = [
   { key: 'rappeler', emoji: '🔄', label: 'À rappeler',          desc: 'Relance planifiée' },
   { key: 'rep',      emoji: '💬', label: 'En attente réponse',  desc: 'Message envoyé, on attend leur réponse' },
   { key: 'payer',    emoji: '💳', label: 'À faire payer',       desc: 'Frais de recherche non réglés' },
-  { key: 'devis',    emoji: '🧾', label: 'Devis envoyé',        desc: 'Attend la validation du devis' },
   { key: 'visite',   emoji: '🏠', label: 'Visite à planifier',  desc: 'Des propriétés à faire visiter' },
-  { key: 'dossier',  emoji: '📋', label: 'Dossier incomplet',   desc: 'Documents manquants côté client' },
   { key: 'contrat',  emoji: '📝', label: 'Contrat à signer',    desc: 'Prêt à signer, en attente de signature' },
   { key: 'nego',     emoji: '🤝', label: 'En négociation',      desc: 'Propriété trouvée, on négocie les termes' },
   { key: 'client',   emoji: '⏳', label: 'En attente client',   desc: 'Action requise de leur côté' },
-  { key: 'rdv',      emoji: '✅', label: 'RDV confirmé',        desc: 'Meeting calé' },
   { key: 'stop',     emoji: '🚫', label: 'Ne pas contacter',    desc: 'Pause ou indisponible temporairement' },
   { key: 'hot',      emoji: '🔥', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
+  { key: 'animals',  emoji: '🐕', label: 'Animaux',             desc: 'Client avec animaux, vérifie la politique' },
+  { key: 'pool',     emoji: '🏊', label: 'Piscine requise',     desc: 'Piscine obligatoire dans les critères' },
   { key: 'alex',     emoji: '📲', label: 'Alex à appeler',      desc: 'À transmettre à Alex pour qu\'il appelle' },
 ];
 
@@ -85,6 +84,8 @@ const Clients = {
         <span class="legend-item"><span class="legend-dot dot-amber"></span>Move-in &lt; 30 days</span>
         <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-dot dot-yellow"></span>Move-in &lt; 60 days</span>
+        <span class="legend-sep"></span>
+        <span class="legend-item"><span class="legend-dot dot-future"></span>Move-in &gt; 60 days</span>
         <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-clock">🕐</span>Days since form submitted</span>
         <button class="legend-help-btn" onclick="Clients.showTagsLegend(event)" title="Badges legend">?</button>
@@ -163,6 +164,7 @@ const Clients = {
     if (days <= 14) return 'urgent-red';
     if (days <= 30) return 'urgent-amber';
     if (days <= 60) return 'urgent-yellow';
+    if (days > 60) return 'urgent-future';
     return '';
   },
 
@@ -254,7 +256,9 @@ const Clients = {
         ${t.emoji} ${t.label}
       </button>`).join('');
     const rect = btnEl.getBoundingClientRect();
-    panel.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${Math.max(8, rect.right - 244)}px;width:244px;z-index:9999`;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const topPos = spaceBelow < 220 ? rect.top - 220 : rect.bottom + 6;
+    panel.style.cssText = `position:fixed;top:${Math.max(8, topPos)}px;left:${Math.max(8, rect.right - 244)}px;width:244px;z-index:9999;max-height:220px;overflow-y:auto`;
     document.body.appendChild(panel);
     setTimeout(() => {
       document.addEventListener('click', this._closeTagHandler = () => {
