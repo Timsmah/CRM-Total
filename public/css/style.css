@@ -488,7 +488,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 
 .urgent-red    { color: #DC2626 !important; font-weight: 600; }
 .urgent-amber  { color: #D97706 !important; font-weight: 600; }
-.urgent-yellow { color: #FCD53F !important; font-weight: 600; }
+.urgent-yellow { color: #CA8A04 !important; font-weight: 600; }
 
 /* ── DETAIL MODAL ────────────────────────────────── */
 .detail-grid { display: flex; flex-direction: column; gap: 10px; }
