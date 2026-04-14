@@ -14,16 +14,12 @@ const Finance = {
   },
 
   async fetchRate() {
-    const ts  = parseInt(localStorage.getItem('eur_rate_ts') || '0');
-    const age = Date.now() - ts;
-    if (age < 86400000) return; // less than 24h old → skip
     try {
       const r = await fetch('https://api.frankfurter.app/latest?from=EUR&to=THB');
       const j = await r.json();
       const rate = j?.rates?.THB;
       if (rate) {
-        localStorage.setItem('eur_rate', String(Math.round(rate * 10) / 10));
-        localStorage.setItem('eur_rate_ts', Date.now());
+        localStorage.setItem('eur_rate', String(Math.round(rate * 100) / 100));
       }
     } catch { /* silent — keep last known rate */ }
   },
@@ -309,8 +305,10 @@ const Finance = {
 
   editRate() {
     const r = prompt(`Exchange rate (THB per €)\nCurrent: 1€ = ${this.eurRate} ฿`, this.eurRate);
-    if (r && !isNaN(parseFloat(r))) {
-      this.eurRate = parseFloat(r);
+    if (!r) return;
+    const val = parseFloat(r.replace(',', '.'));
+    if (!isNaN(val) && val > 0) {
+      this.eurRate = val;
       this.render();
       setTimeout(() => this.drawRevenueChart(), 60);
     }
