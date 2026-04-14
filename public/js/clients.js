@@ -199,7 +199,7 @@ const Clients = {
         </div>
         <div class="action-tags-row" onclick="event.stopPropagation()">
           <div class="action-tags-display">${this.tagsHTML(this.getTags(c))}</div>
-          <button class="add-tag-btn" onclick="Clients.openTagPopover(${c.id}, event)" title="Add tag">＋</button>
+          <button class="add-tag-btn" onclick="Clients.openTagPopover(${c.id}, this)" title="Add tag">＋</button>
         </div>
         <div class="card-actions">
           <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">Edit</button>
@@ -236,13 +236,11 @@ const Clients = {
   _tagPopover: null,
   _closeTagHandler: null,
 
-  openTagPopover(id, e) {
-    e.stopPropagation();
+  openTagPopover(id, btnEl) {
     this.closeTagPopover();
     const c = this.data.find(x => x.id === id);
     if (!c) return;
     const tags = this.getTags(c);
-    const btn = e.currentTarget;
     const popover = document.createElement('div');
     popover.className = 'tags-popover';
     popover.innerHTML = ACTION_TAGS.map(t => `
@@ -250,7 +248,7 @@ const Clients = {
         onclick="Clients.toggleTag(${id}, '${t.key}', this)">
         ${t.emoji} ${t.label}
       </button>`).join('');
-    btn.closest('.kanban-card').appendChild(popover);
+    btnEl.closest('.kanban-card').appendChild(popover);
     this._tagPopover = popover;
     setTimeout(() => {
       document.addEventListener('click', this._closeTagHandler = (ev) => {
