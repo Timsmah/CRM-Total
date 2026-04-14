@@ -175,7 +175,7 @@ const Clients = {
     const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
 
     return `
-      <div class="card kanban-card" draggable="true"
+      <div class="card kanban-card" data-cid="${c.id}" draggable="true"
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)"
         onclick="Clients.openDetailModal(${c.id}, event)">
@@ -241,18 +241,21 @@ const Clients = {
     const c = this.data.find(x => x.id === id);
     if (!c) return;
     const tags = this.getTags(c);
+    const rect = btnEl.getBoundingClientRect();
     const popover = document.createElement('div');
     popover.className = 'tags-popover';
+    popover.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${Math.max(8, rect.right - 240)}px;width:240px;z-index:9999`;
     popover.innerHTML = ACTION_TAGS.map(t => `
       <button class="tag-option ${tags.includes(t.key) ? 'active' : ''}"
         onclick="Clients.toggleTag(${id}, '${t.key}', this)">
         ${t.emoji} ${t.label}
       </button>`).join('');
-    btnEl.closest('.kanban-card').appendChild(popover);
+    document.body.appendChild(popover);
     this._tagPopover = popover;
+    this._tagPopoverClientId = id;
     setTimeout(() => {
       document.addEventListener('click', this._closeTagHandler = (ev) => {
-        if (!popover.contains(ev.target)) this.closeTagPopover();
+        if (!popover.contains(ev.target) && ev.target !== btnEl) this.closeTagPopover();
       });
     }, 0);
   },
@@ -278,12 +281,9 @@ const Clients = {
     }
     c.action_tags = JSON.stringify(tags);
     await api.patch(`/clients/${id}/tags`, { action_tags: tags });
-    // Update the display without full re-render
-    const card = btn.closest('.kanban-card');
-    if (card) {
-      const display = card.querySelector('.action-tags-display');
-      if (display) display.innerHTML = this.tagsHTML(tags);
-    }
+    // Update display on the card directly
+    const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
+    if (display) display.innerHTML = this.tagsHTML(tags);
   },
 
   showTagsLegend(e) {
