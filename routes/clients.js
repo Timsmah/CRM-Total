@@ -60,6 +60,16 @@ router.patch('/:id/contact-status', async (req, res) => {
   res.json({ contact_status });
 });
 
+router.patch('/:id/note', async (req, res) => {
+  const { note_tim, note_alex } = req.body;
+  const update = {};
+  if (note_tim !== undefined) update.note_tim = note_tim || null;
+  if (note_alex !== undefined) update.note_alex = note_alex || null;
+  const { error } = await db.from('clients').update(update).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(update);
+});
+
 router.patch('/:id/tags', async (req, res) => {
   const { action_tags } = req.body;
   const val = Array.isArray(action_tags) ? JSON.stringify(action_tags) : action_tags;

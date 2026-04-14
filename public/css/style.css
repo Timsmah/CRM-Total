@@ -443,6 +443,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .action-tag.tag-hot   { background: #FEE2E2; color: #DC2626; }
 .action-tag.tag-payer { background: #FEF3C7; color: #B45309; }
 .action-tag.tag-stop  { background: #F3F4F6; color: #6B7280; }
+.action-tag.tag-note  { background: #EFF6FF; color: #2563EB; cursor: pointer; }
+.tag-option-note      { background: #EFF6FF !important; color: #2563EB !important; border-color: #BFDBFE !important; }
 .no-tags { font-size: 10px; color: var(--text-3); font-style: italic; line-height: 20px; }
 .add-tag-btn {
   flex-shrink: 0; width: 20px; height: 20px;
@@ -490,7 +492,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .urgent-red    { color: #DC2626 !important; font-weight: 600; }
 .urgent-amber  { color: #D97706 !important; font-weight: 600; }
 .urgent-yellow { color: #CA8A04 !important; font-weight: 600; }
-.urgent-future { color: #60A5FA !important; font-weight: 500; }
+.urgent-future { color: #60A5FA !important; font-weight: 600; }
 
 /* ── DETAIL MODAL ────────────────────────────────── */
 .detail-grid { display: flex; flex-direction: column; gap: 10px; }

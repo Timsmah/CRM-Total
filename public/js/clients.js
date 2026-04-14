@@ -36,6 +36,7 @@ const ACTION_TAGS = [
   { key: 'animals',  emoji: '🐕', label: 'Animaux',             desc: 'Client avec animaux, vérifie la politique' },
   { key: 'pool',     emoji: '🏊', label: 'Piscine requise',     desc: 'Piscine obligatoire dans les critères' },
   { key: 'alex',     emoji: '📲', label: 'Alex à appeler',      desc: 'À transmettre à Alex pour qu\'il appelle' },
+  { key: 'tim',      emoji: '👤', label: 'Tim',                 desc: 'À traiter par Tim' },
 ];
 
 const CONTACT_COLS = [
@@ -200,7 +201,11 @@ const Clients = {
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
         <div class="action-tags-row" onclick="event.stopPropagation()">
-          <div class="action-tags-display">${this.tagsHTML(this.getTags(c))}</div>
+          <div class="action-tags-display">
+            ${this.tagsHTML(this.getTags(c))}
+            ${c.note_tim ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : ''}
+            ${c.note_alex ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Alex</span>` : ''}
+          </div>
           <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
         </div>
         <div class="card-actions">
@@ -254,7 +259,16 @@ const Clients = {
       <button class="tag-option ${tags.includes(t.key) ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.toggleTag(${id}, '${t.key}', this)">
         ${t.emoji} ${t.label}
-      </button>`).join('');
+      </button>`).join('') + `
+      <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
+      <button class="tag-option tag-option-note ${c.note_tim ? 'active' : ''}"
+        onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_tim')">
+        📝 Note de Tim
+      </button>
+      <button class="tag-option tag-option-note ${c.note_alex ? 'active' : ''}"
+        onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_alex')">
+        📝 Note d'Alex
+      </button>`;
     const rect = btnEl.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
     const topPos = spaceBelow < 220 ? rect.top - 220 : rect.bottom + 6;
@@ -285,6 +299,32 @@ const Clients = {
     // Update display on the card directly
     const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
     if (display) display.innerHTML = this.tagsHTML(tags);
+  },
+
+  openNoteModal(id, noteKey) {
+    document.querySelectorAll('.tags-popover').forEach(p => p.remove());
+    document.removeEventListener('click', this._closeTagHandler);
+    this._tagPopoverClientId = null;
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const label = noteKey === 'note_tim' ? 'Tim' : 'Alex';
+    const current = c[noteKey] || '';
+    Modal.open(`📝 Note de ${label}`, `
+      <textarea id="note-input" rows="6" placeholder="Écris ta note ici…"
+        style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box">${current}</textarea>
+      <div class="form-actions" style="margin-top:12px">
+        <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
+        ${current ? `<button class="btn btn-ghost" onclick="Clients.saveNote(${id},'${noteKey}','')">🗑 Supprimer</button>` : ''}
+        <button class="btn btn-primary" onclick="Clients.saveNote(${id},'${noteKey}',document.getElementById('note-input').value)">Enregistrer</button>
+      </div>`);
+  },
+
+  async saveNote(id, noteKey, value) {
+    Modal.close();
+    const c = this.data.find(x => x.id === id);
+    if (c) c[noteKey] = value || null;
+    await api.patch(`/clients/${id}/note`, { [noteKey]: value || null });
+    this.render();
   },
 
   showTagsLegend(e) {
