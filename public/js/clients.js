@@ -36,6 +36,7 @@ const ACTION_TAGS = [
   { key: 'rdv',      emoji: '✅', label: 'RDV confirmé',        desc: 'Meeting calé' },
   { key: 'stop',     emoji: '🚫', label: 'Ne pas contacter',    desc: 'Pause ou indisponible temporairement' },
   { key: 'hot',      emoji: '🔥', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
+  { key: 'alex',     emoji: '📲', label: 'Alex à appeler',      desc: 'À transmettre à Alex pour qu\'il appelle' },
 ];
 
 const CONTACT_COLS = [
