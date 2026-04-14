@@ -79,24 +79,28 @@ router.post('/sync/sheets', async (req, res) => {
 
     const { rows = [] } = await response.json();
 
+    // Sheets exports #ERROR!, #REF!, #VALUE! etc. when a cell formula fails
+    // (e.g. phone numbers starting with '+' are parsed as formulas)
+    const clean = v => (typeof v === 'string' && v.startsWith('#')) ? '' : (v || '');
+
     const payload = rows
-      .filter(r => r.name && r.name.trim())
+      .filter(r => r.name && r.name.trim() && !r.name.startsWith('#'))
       .map(r => ({
-        name             : r.name,
-        whatsapp         : r.phone || '',
-        budget_max       : parseInt(r.budgetThb) || null,
-        budget_eur       : parseInt(r.budgetEur) || null,
-        zones            : r.zones || r.location || '',
-        criteria         : r.criteria || '',
-        property_type    : r.propertyType || '',
-        city             : r.city || '',
-        bedrooms         : r.bedrooms || '',
-        move_in_date     : r.moveInDate || null,
-        duration         : r.duration || '',
-        project          : r.project || '',
+        name             : clean(r.name),
+        whatsapp         : clean(r.phone),
+        budget_max       : parseInt(clean(r.budgetThb)) || null,
+        budget_eur       : parseInt(clean(r.budgetEur)) || null,
+        zones            : clean(r.zones) || clean(r.location),
+        criteria         : clean(r.criteria),
+        property_type    : clean(r.propertyType),
+        city             : clean(r.city),
+        bedrooms         : clean(r.bedrooms),
+        move_in_date     : clean(r.moveInDate) || null,
+        duration         : clean(r.duration),
+        project          : clean(r.project),
         source           : 'Formulaire',
         sheet_row        : r.sheetRow,
-        form_submitted_at: r.date || null
+        form_submitted_at: clean(r.date) || null
       }));
 
     if (!payload.length) return res.json({ imported: 0, updated: 0, total: 0 });
