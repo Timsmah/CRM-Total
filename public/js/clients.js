@@ -22,6 +22,22 @@ function tr(val) {
   return FR_TO_EN[val] || FR_TO_EN[val.trim()] || val;
 }
 
+const ACTION_TAGS = [
+  { key: 'appeler',  emoji: '📞', label: 'À appeler',          desc: 'Premier contact à passer' },
+  { key: 'rappeler', emoji: '🔄', label: 'À rappeler',          desc: 'Relance planifiée' },
+  { key: 'rep',      emoji: '💬', label: 'En attente réponse',  desc: 'Message envoyé, on attend leur réponse' },
+  { key: 'payer',    emoji: '💳', label: 'À faire payer',       desc: 'Frais de recherche non réglés' },
+  { key: 'devis',    emoji: '🧾', label: 'Devis envoyé',        desc: 'Attend la validation du devis' },
+  { key: 'visite',   emoji: '🏠', label: 'Visite à planifier',  desc: 'Des propriétés à faire visiter' },
+  { key: 'dossier',  emoji: '📋', label: 'Dossier incomplet',   desc: 'Documents manquants côté client' },
+  { key: 'contrat',  emoji: '📝', label: 'Contrat à signer',    desc: 'Prêt à signer, en attente de signature' },
+  { key: 'nego',     emoji: '🤝', label: 'En négociation',      desc: 'Propriété trouvée, on négocie les termes' },
+  { key: 'client',   emoji: '⏳', label: 'En attente client',   desc: 'Action requise de leur côté' },
+  { key: 'rdv',      emoji: '✅', label: 'RDV confirmé',        desc: 'Meeting calé' },
+  { key: 'stop',     emoji: '🚫', label: 'Ne pas contacter',    desc: 'Pause ou indisponible temporairement' },
+  { key: 'hot',      emoji: '🔥', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
+];
+
 const CONTACT_COLS = [
   { key: 'À contacter',      label: '🆕 Prospect',        cls: 'col-to-contact'  },
   { key: 'Contacté',         label: '🎯 To Close',         cls: 'col-contacted'   },
@@ -70,6 +86,7 @@ const Clients = {
         <span class="legend-item"><span class="legend-dot dot-yellow"></span>Move-in &lt; 60 days</span>
         <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-clock">🕐</span>Days since form submitted</span>
+        <button class="legend-help-btn" onclick="Clients.showTagsLegend(event)" title="Badges legend">?</button>
       </div>
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
         ${CONTACT_COLS.map(col => this.columnHTML(col)).join('')}
@@ -179,12 +196,10 @@ const Clients = {
           ${c.duration ? `<p>⏱ Duration: ${tr(c.duration)}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
-        <select class="cs-select" onchange="Clients.setContactStatus(${c.id}, this.value)"
-          ${c.research_fees_paid && c.status === 'Recherche active' ? 'disabled title="Auto: Fees paid + Active Search"' : ''}>
-          ${CONTACT_COLS.map(col =>
-            `<option value="${col.key}" ${this.effectiveContactStatus(c) === col.key ? 'selected' : ''}>${col.label}</option>`
-          ).join('')}
-        </select>
+        <div class="action-tags-row" onclick="event.stopPropagation()">
+          <div class="action-tags-display">${this.tagsHTML(this.getTags(c))}</div>
+          <button class="add-tag-btn" onclick="Clients.openTagPopover(${c.id}, event)" title="Add tag">＋</button>
+        </div>
         <div class="card-actions">
           <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="Clients.archive(${c.id})">
@@ -199,6 +214,92 @@ const Clients = {
     const c = this.data.find(x => x.id === id);
     if (c) c.contact_status = status;
     this.render();
+  },
+
+  // ── Action Tags ──────────────────────────────────
+  getTags(c) {
+    if (!c.action_tags) return [];
+    try { return JSON.parse(c.action_tags); } catch { return []; }
+  },
+
+  tagsHTML(tags) {
+    if (!tags || !tags.length) return '<span class="no-tags">No tags</span>';
+    return tags.map(key => {
+      const t = ACTION_TAGS.find(x => x.key === key);
+      if (!t) return '';
+      const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : '';
+      return `<span class="action-tag${extra}">${t.emoji} ${t.label}</span>`;
+    }).join('');
+  },
+
+  _tagPopover: null,
+  _closeTagHandler: null,
+
+  openTagPopover(id, e) {
+    e.stopPropagation();
+    this.closeTagPopover();
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const tags = this.getTags(c);
+    const btn = e.currentTarget;
+    const popover = document.createElement('div');
+    popover.className = 'tags-popover';
+    popover.innerHTML = ACTION_TAGS.map(t => `
+      <button class="tag-option ${tags.includes(t.key) ? 'active' : ''}"
+        onclick="Clients.toggleTag(${id}, '${t.key}', this)">
+        ${t.emoji} ${t.label}
+      </button>`).join('');
+    btn.closest('.kanban-card').appendChild(popover);
+    this._tagPopover = popover;
+    setTimeout(() => {
+      document.addEventListener('click', this._closeTagHandler = (ev) => {
+        if (!popover.contains(ev.target)) this.closeTagPopover();
+      });
+    }, 0);
+  },
+
+  closeTagPopover() {
+    if (this._tagPopover) {
+      this._tagPopover.remove();
+      this._tagPopover = null;
+      document.removeEventListener('click', this._closeTagHandler);
+    }
+  },
+
+  async toggleTag(id, key, btn) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    let tags = this.getTags(c);
+    if (tags.includes(key)) {
+      tags = tags.filter(t => t !== key);
+      btn.classList.remove('active');
+    } else {
+      tags.push(key);
+      btn.classList.add('active');
+    }
+    c.action_tags = JSON.stringify(tags);
+    await api.patch(`/clients/${id}/tags`, { action_tags: tags });
+    // Update the display without full re-render
+    const card = btn.closest('.kanban-card');
+    if (card) {
+      const display = card.querySelector('.action-tags-display');
+      if (display) display.innerHTML = this.tagsHTML(tags);
+    }
+  },
+
+  showTagsLegend(e) {
+    e.stopPropagation();
+    Modal.open('Badges legend', `
+      <div class="tags-legend-grid">
+        ${ACTION_TAGS.map(t => `
+          <div class="tags-legend-item">
+            <span class="action-tag">${t.emoji} ${t.label}</span>
+            <span class="tags-legend-desc">${t.desc}</span>
+          </div>`).join('')}
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-ghost" onclick="Modal.close()">Close</button>
+      </div>`);
   },
 
   toggleSort(e) {
@@ -264,7 +365,7 @@ const Clients = {
   },
 
   openDetailModal(id, e) {
-    if (e && (e.target.closest('button') || e.target.closest('select'))) return;
+    if (e && (e.target.closest('button') || e.target.closest('select') || e.target.closest('.action-tags-row') || e.target.closest('.tags-popover'))) return;
     const c = this.data.find(x => x.id === id);
     if (!c) return;
     const urgency = this.urgencyClass(c.move_in_date);

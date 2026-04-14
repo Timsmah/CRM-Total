@@ -60,6 +60,14 @@ router.patch('/:id/contact-status', async (req, res) => {
   res.json({ contact_status });
 });
 
+router.patch('/:id/tags', async (req, res) => {
+  const { action_tags } = req.body;
+  const val = Array.isArray(action_tags) ? JSON.stringify(action_tags) : action_tags;
+  const { error } = await db.from('clients').update({ action_tags: val }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ action_tags: val });
+});
+
 router.patch('/:id/fees', async (req, res) => {
   const { data: client, error: fetchErr } = await db.from('clients').select('research_fees_paid').eq('id', req.params.id).single();
   if (fetchErr) return res.status(404).json({ error: 'Client non trouvé' });

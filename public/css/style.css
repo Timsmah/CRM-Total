@@ -422,16 +422,70 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 
 .kanban-card { cursor: pointer; }
 
-.cs-select {
-  width: 100%; margin-top: 8px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-2);
-  font-size: 11px; padding: 4px 7px;
-  cursor: pointer; font-family: inherit;
+/* ── ACTION TAGS ─────────────────────────────────── */
+.action-tags-row {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
-.cs-select:focus { outline: none; border-color: var(--accent); }
+.action-tags-display {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  flex: 1; min-height: 20px;
+}
+.action-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 20px;
+  background: var(--surface-3); color: var(--text);
+  white-space: nowrap; line-height: 1.4;
+}
+.action-tag.tag-hot   { background: #FEE2E2; color: #DC2626; }
+.action-tag.tag-payer { background: #FEF3C7; color: #B45309; }
+.action-tag.tag-stop  { background: #F3F4F6; color: #6B7280; }
+.no-tags { font-size: 10px; color: var(--text-3); font-style: italic; line-height: 20px; }
+.add-tag-btn {
+  flex-shrink: 0; width: 20px; height: 20px;
+  border-radius: 50%; border: 1.5px dashed var(--border);
+  background: transparent; color: var(--text-3);
+  font-size: 15px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; transition: all 0.15s;
+}
+.add-tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Tags Popover */
+.kanban-card { position: relative; }
+.tags-popover {
+  position: absolute; bottom: calc(100% + 4px); left: 0; right: 0;
+  background: white; border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px; display: flex; flex-wrap: wrap; gap: 4px;
+  z-index: 200; box-shadow: var(--shadow-md);
+}
+.tag-option {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2); color: var(--text-2);
+  cursor: pointer; transition: all 0.12s; white-space: nowrap;
+}
+.tag-option:hover { border-color: var(--accent); color: var(--accent); }
+.tag-option.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* Legend help button */
+.legend-help-btn {
+  margin-left: 14px; width: 20px; height: 20px;
+  border-radius: 50%; border: 1.5px solid var(--border);
+  background: transparent; color: var(--text-3);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.12s;
+}
+.legend-help-btn:hover { border-color: var(--text-2); color: var(--text); }
+
+/* Tags legend modal */
+.tags-legend-grid { display: flex; flex-direction: column; gap: 10px; }
+.tags-legend-item { display: flex; align-items: center; gap: 12px; }
+.tags-legend-desc { font-size: 12px; color: var(--text-2); flex: 1; }
 
 .urgent-red    { color: #DC2626 !important; font-weight: 600; }
 .urgent-amber  { color: #D97706 !important; font-weight: 600; }
