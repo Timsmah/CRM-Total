@@ -39,13 +39,16 @@ const ACTION_TAGS = [
   { key: 'tim',      emoji: '👤', label: 'Tim',                 desc: 'À traiter par Tim' },
 ];
 
-const CONTACT_COLS = [
-  { key: 'À contacter',      label: '🆕 Prospect',        cls: 'col-to-contact'  },
-  { key: 'Contacté',         label: '🎯 To Close',         cls: 'col-contacted'   },
-  { key: 'Property to Find', label: '🔍 Active Search',    cls: 'col-meeting'     },
-  { key: 'Urgent Sending',   label: '📤 Proposal Sent',    cls: 'col-urgent'      },
-  { key: 'Rappeler',         label: '📅 Visit Planned',    cls: 'col-callback'    },
-];
+function getContactCols() {
+  return [
+    { key: 'À contacter',      label: t('col_prospect'), cls: 'col-to-contact' },
+    { key: 'Contacté',         label: t('col_toclose'),  cls: 'col-contacted'  },
+    { key: 'Property to Find', label: t('col_search'),   cls: 'col-meeting'    },
+    { key: 'Urgent Sending',   label: t('col_proposal'), cls: 'col-urgent'     },
+    { key: 'Rappeler',         label: t('col_visit'),    cls: 'col-callback'   },
+  ];
+}
+const CONTACT_COLS = getContactCols(); // kept for compatibility, refreshed in render()
 
 const Clients = {
   data: [],
@@ -72,27 +75,27 @@ const Clients = {
       <div class="section-header">
         <h2>Clients</h2>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Add</button>
-          <button class="btn btn-secondary" onclick="Clients.syncSheets()">↻ Sheets</button>
+          <button class="btn btn-primary" onclick="Clients.openAddModal()">${t('clients_add')}</button>
+          <button class="btn btn-secondary" onclick="Clients.syncSheets()">${t('clients_sync')}</button>
           <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
-            ${this.showArchived ? '← Active' : '🗃 Archived'}
+            ${this.showArchived ? t('clients_active') : t('clients_archived')}
           </button>
         </div>
       </div>
       <div class="kanban-legend">
-        <span class="legend-item"><span class="legend-dot dot-red"></span>Move-in &lt; 14 days</span>
+        <span class="legend-item"><span class="legend-dot dot-red"></span>${t('clients_legend_14')}</span>
         <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-dot dot-amber"></span>Move-in &lt; 30 days</span>
+        <span class="legend-item"><span class="legend-dot dot-amber"></span>${t('clients_legend_30')}</span>
         <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-dot dot-yellow"></span>Move-in &lt; 60 days</span>
+        <span class="legend-item"><span class="legend-dot dot-yellow"></span>${t('clients_legend_60')}</span>
         <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-dot dot-future"></span>Move-in &gt; 60 days</span>
+        <span class="legend-item"><span class="legend-dot dot-future"></span>${t('clients_legend_future')}</span>
         <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-clock">🕐</span>Days since form submitted</span>
+        <span class="legend-item"><span class="legend-clock">🕐</span>${t('clients_legend_days')}</span>
         <button class="legend-help-btn" onclick="Clients.showTagsLegend(event)" title="Badges legend">?</button>
       </div>
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
-        ${CONTACT_COLS.map(col => this.columnHTML(col)).join('')}
+        ${getContactCols().map(col => this.columnHTML(col)).join('')}
       </div>`;
   },
 
@@ -188,7 +191,7 @@ const Clients = {
             ${daysAgo ? `<span class="days-ago-badge">🕐 ${daysAgo}</span>` : ''}
             <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
               onclick="Clients.toggleFees(${c.id})" title="Research fees">
-              ${c.research_fees_paid ? '✓ Fees' : '○ Fees'}
+              ${c.research_fees_paid ? t('clients_fees_paid') : t('clients_fees_unpaid')}
             </button>
           </div>
         </div>
@@ -196,8 +199,8 @@ const Clients = {
         <div class="client-details">
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
-          ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 Arrival: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
-          ${c.duration ? `<p>⏱ Duration: ${tr(c.duration)}</p>` : ''}
+          ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
+          ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
         </div>
         <div class="action-tags-row" onclick="event.stopPropagation()">
@@ -209,9 +212,9 @@ const Clients = {
           <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
         </div>
         <div class="card-actions">
-          <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">Edit</button>
+          <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">${t('clients_edit')}</button>
           <button class="btn btn-ghost btn-sm" onclick="Clients.archive(${c.id})">
-            ${this.showArchived ? 'Unarchive' : 'Archive'}
+            ${this.showArchived ? t('clients_unarchive') : t('clients_archive')}
           </button>
         </div>
       </div>`;
@@ -231,12 +234,13 @@ const Clients = {
   },
 
   tagsHTML(tags) {
-    if (!tags || !tags.length) return '<span class="no-tags">No tags</span>';
+    if (!tags || !tags.length) return `<span class="no-tags">${t('clients_no_tags')}</span>`;
     return tags.map(key => {
-      const t = ACTION_TAGS.find(x => x.key === key);
-      if (!t) return '';
+      const tag = ACTION_TAGS.find(x => x.key === key);
+      if (!tag) return '';
+      const label = getLang() === 'en' ? (TAG_EN[key] || tag.label) : tag.label;
       const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : '';
-      return `<span class="action-tag${extra}">${t.emoji} ${t.label}</span>`;
+      return `<span class="action-tag${extra}">${tag.emoji} ${label}</span>`;
     }).join('');
   },
 
@@ -255,11 +259,13 @@ const Clients = {
     const tags = this.getTags(c);
     const panel = document.createElement('div');
     panel.className = 'tags-popover';
-    panel.innerHTML = ACTION_TAGS.map(t => `
-      <button class="tag-option ${tags.includes(t.key) ? 'active' : ''}"
-        onclick="event.stopPropagation(); Clients.toggleTag(${id}, '${t.key}', this)">
-        ${t.emoji} ${t.label}
-      </button>`).join('') + `
+    panel.innerHTML = ACTION_TAGS.map(tag => {
+      const label = getLang() === 'en' ? (TAG_EN[tag.key] || tag.label) : tag.label;
+      return `<button class="tag-option ${tags.includes(tag.key) ? 'active' : ''}"
+        onclick="event.stopPropagation(); Clients.toggleTag(${id}, '${tag.key}', this)">
+        ${tag.emoji} ${label}
+      </button>`;
+    }).join('') + `
       <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
       <button class="tag-option tag-option-note ${c.note_tim ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_tim')">
@@ -310,12 +316,12 @@ const Clients = {
     const label = noteKey === 'note_tim' ? 'Tim' : 'Alex';
     const current = c[noteKey] || '';
     Modal.open(`📝 Note de ${label}`, `
-      <textarea id="note-input" rows="6" placeholder="Écris ta note ici…"
+      <textarea id="note-input" rows="6" placeholder="${t('note_write')}"
         style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box">${current}</textarea>
       <div class="form-actions" style="margin-top:12px">
-        <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
-        ${current ? `<button class="btn btn-ghost" onclick="Clients.saveNote(${id},'${noteKey}','')">🗑 Supprimer</button>` : ''}
-        <button class="btn btn-primary" onclick="Clients.saveNote(${id},'${noteKey}',document.getElementById('note-input').value)">Enregistrer</button>
+        <button class="btn btn-ghost" onclick="Modal.close()">${t('note_cancel')}</button>
+        ${current ? `<button class="btn btn-ghost" onclick="Clients.saveNote(${id},'${noteKey}','')">${t('note_delete')}</button>` : ''}
+        <button class="btn btn-primary" onclick="Clients.saveNote(${id},'${noteKey}',document.getElementById('note-input').value)">${t('note_save')}</button>
       </div>`);
   },
 
@@ -329,16 +335,18 @@ const Clients = {
 
   showTagsLegend(e) {
     e.stopPropagation();
-    Modal.open('Badges legend', `
+    Modal.open(t('clients_tags_legend'), `
       <div class="tags-legend-grid">
-        ${ACTION_TAGS.map(t => `
-          <div class="tags-legend-item">
-            <span class="action-tag">${t.emoji} ${t.label}</span>
-            <span class="tags-legend-desc">${t.desc}</span>
-          </div>`).join('')}
+        ${ACTION_TAGS.map(tag => {
+          const label = getLang() === 'en' ? (TAG_EN[tag.key] || tag.label) : tag.label;
+          return `<div class="tags-legend-item">
+            <span class="action-tag">${tag.emoji} ${label}</span>
+            <span class="tags-legend-desc">${tag.desc}</span>
+          </div>`;
+        }).join('')}
       </div>
       <div class="form-actions" style="margin-top:16px">
-        <button class="btn btn-ghost" onclick="Modal.close()">Close</button>
+        <button class="btn btn-ghost" onclick="Modal.close()">${t('clients_close')}</button>
       </div>`);
   },
 
@@ -367,7 +375,7 @@ const Clients = {
     await api.patch(`/clients/${id}/archive`);
     this.data = this.data.filter(c => c.id !== id);
     this.render();
-    Toast.show(this.showArchived ? 'Client unarchived' : 'Client archived');
+    Toast.show(this.showArchived ? t('toast_unarchived') : t('toast_archived'));
   },
 
   toggleFocus(colKey) {
@@ -415,21 +423,21 @@ const Clients = {
       : '—';
     Modal.open(c.name, `
       <div class="detail-grid">
-        <div class="detail-row">${badge(c.status)}${c.research_fees_paid ? '<span class="fees-btn paid">✓ Fees paid</span>' : ''}</div>
-        ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 Phone</span><span>${c.whatsapp}</span></div>` : ''}
-        <div class="detail-row"><span class="detail-label">💰 Budget</span><span>${budgetLine}</span></div>
-        ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 Zones</span><span>${c.zones}</span></div>` : ''}
-        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 Arrival</span><span class="${urgency}" style="display:flex;align-items:center;gap:6px">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
-        ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ Duration</span><span>${tr(c.duration)}</span></div>` : ''}
-        ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 Type</span><span>${c.property_type}</span></div>` : ''}
-        ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 Bedrooms</span><span>${c.bedrooms}</span></div>` : ''}
-        ${c.criteria ? `<div class="detail-row"><span class="detail-label">📝 Criteria</span><span>${c.criteria}</span></div>` : ''}
-        ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 Source</span><span>${tr(c.source)}</span></div>` : ''}
+        <div class="detail-row">${badge(c.status)}${c.research_fees_paid ? `<span class="fees-btn paid">${t('detail_fees_paid')}</span>` : ''}</div>
+        ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 ${t('detail_phone')}</span><span>${c.whatsapp}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label">💰 ${t('detail_budget')}</span><span>${budgetLine}</span></div>
+        ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 ${t('detail_zones')}</span><span>${c.zones}</span></div>` : ''}
+        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 ${t('detail_arrival')}</span><span class="${urgency}" style="display:flex;align-items:center;gap:6px">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
+        ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ ${t('detail_duration')}</span><span>${tr(c.duration)}</span></div>` : ''}
+        ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 ${t('detail_type')}</span><span>${c.property_type}</span></div>` : ''}
+        ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 ${t('detail_bedrooms')}</span><span>${c.bedrooms}</span></div>` : ''}
+        ${c.criteria ? `<div class="detail-row"><span class="detail-label">📝 ${t('detail_criteria')}</span><span>${c.criteria}</span></div>` : ''}
+        ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
       </div>
       <div class="form-actions" style="margin-top:16px">
-        <button class="btn btn-ghost" onclick="Modal.close()">Close</button>
-        <button class="btn btn-secondary" onclick="Modal.close(); Clients.openEditModal(${c.id})">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="Modal.close(); Clients.archive(${c.id})">${this.showArchived ? 'Unarchive' : 'Archive'}</button>
+        <button class="btn btn-ghost" onclick="Modal.close()">${t('clients_close')}</button>
+        <button class="btn btn-secondary" onclick="Modal.close(); Clients.openEditModal(${c.id})">${t('clients_edit')}</button>
+        <button class="btn btn-danger btn-sm" onclick="Modal.close(); Clients.archive(${c.id})">${this.showArchived ? t('clients_unarchive') : t('clients_archive')}</button>
       </div>`);
   },
 
@@ -445,48 +453,48 @@ const Clients = {
     return `
       <form onsubmit="Clients.submit(event, ${c ? c.id : 'null'})">
         <div class="form-row">
-          <label>Name *</label>
+          <label>${t('form_name')}</label>
           <input name="name" required value="${c?.name || ''}">
         </div>
         <div class="form-row">
-          <label>WhatsApp</label>
+          <label>${t('form_whatsapp')}</label>
           <input name="whatsapp" placeholder="+66 XX XXX XXXX" value="${c?.whatsapp || ''}">
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>Min budget (THB)</label>
+            <label>${t('form_budget_min')}</label>
             <input name="budget_min" type="number" value="${c?.budget_min || ''}">
           </div>
           <div class="form-row">
-            <label>Max budget (THB)</label>
+            <label>${t('form_budget_max')}</label>
             <input name="budget_max" type="number" value="${c?.budget_max || ''}">
           </div>
         </div>
         <div class="form-row">
-          <label>Desired zones</label>
+          <label>${t('form_zones')}</label>
           <input name="zones" placeholder="Sukhumvit, Thonglor, Ari…" value="${c?.zones || ''}">
         </div>
         <div class="form-row">
-          <label>Criteria</label>
+          <label>${t('form_criteria')}</label>
           <textarea name="criteria" rows="2" placeholder="2 BR, balcony, pool…">${c?.criteria || ''}</textarea>
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>Source</label>
+            <label>${t('form_source')}</label>
             <select name="source">
               ${sources.map(s => `<option ${c?.source === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
-            <label>Pipeline status</label>
+            <label>${t('form_pipeline')}</label>
             <select name="status">
               ${statuses.map(s => `<option ${c?.status === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="form-actions">
-          <button type="button" class="btn btn-ghost" onclick="Modal.close()">Cancel</button>
-          <button type="submit" class="btn btn-primary">${c ? 'Save' : 'Add'}</button>
+          <button type="button" class="btn btn-ghost" onclick="Modal.close()">${t('clients_cancel')}</button>
+          <button type="submit" class="btn btn-primary">${c ? t('clients_save') : t('clients_add_btn')}</button>
         </div>
       </form>`;
   },

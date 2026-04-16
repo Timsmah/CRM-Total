@@ -6,6 +6,7 @@
   <title>CRM Bangkok</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/js/i18n.js"></script>
 </head>
 <body>
 
@@ -32,21 +33,25 @@
         <span class="logo-text">Tim<span>THLD</span></span>
       </div>
       <nav>
-        <span class="nav-section-label">Workspace</span>
+        <span class="nav-section-label" data-i18n="nav_workspace">Workspace</span>
         <a href="#dashboard" class="nav-item" data-section="dashboard">
-          <span class="nav-icon">📊</span><span>Dashboard</span>
+          <span class="nav-icon">📊</span><span data-i18n="nav_dashboard">Dashboard</span>
         </a>
         <a href="#clients" class="nav-item" data-section="clients">
-          <span class="nav-icon">👥</span><span>Clients</span>
+          <span class="nav-icon">👥</span><span data-i18n="nav_clients">Clients</span>
         </a>
         <a href="#properties" class="nav-item" data-section="properties">
-          <span class="nav-icon">🏠</span><span>Properties</span>
+          <span class="nav-icon">🏠</span><span data-i18n="nav_properties">Properties</span>
         </a>
         <a href="#finance" class="nav-item" data-section="finance">
-          <span class="nav-icon">💰</span><span>Finance</span>
+          <span class="nav-icon">💰</span><span data-i18n="nav_finance">Finance</span>
         </a>
       </nav>
-      <button id="logout-btn">⎋ Log out</button>
+      <button id="lang-toggle" onclick="setLang(getLang()==='en'?'fr':'en')"
+        style="margin-top:auto;background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:6px;width:100%;margin-bottom:8px">
+        🇫🇷 Français
+      </button>
+      <button id="logout-btn" data-i18n="nav_logout">⎋ Log out</button>
     </aside>
 
     <main id="content"></main>

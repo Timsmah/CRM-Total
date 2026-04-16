@@ -15,9 +15,9 @@ const Dashboard = {
 
   greeting() {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return t('dash_morning');
+    if (h < 18) return t('dash_afternoon');
+    return t('dash_evening');
   },
 
   kpis() {
@@ -48,11 +48,11 @@ const Dashboard = {
 
   pipelineData() {
     const cols = [
-      { key: 'À contacter',      label: '🆕 Prospect',      color: '#D97706' },
-      { key: 'Contacté',         label: '🎯 To Close',       color: '#2563EB' },
-      { key: 'Property to Find', label: '🔍 Active Search',  color: '#16A34A' },
-      { key: 'Urgent Sending',   label: '📤 Proposal Sent',  color: '#7C3AED' },
-      { key: 'Rappeler',         label: '📅 Visit Planned',  color: '#DC2626' },
+      { key: 'À contacter',      label: t('col_prospect'), color: '#D97706' },
+      { key: 'Contacté',         label: t('col_toclose'),  color: '#2563EB' },
+      { key: 'Property to Find', label: t('col_search'),   color: '#16A34A' },
+      { key: 'Urgent Sending',   label: t('col_proposal'), color: '#7C3AED' },
+      { key: 'Rappeler',         label: t('col_visit'),    color: '#DC2626' },
     ];
     return cols.map(col => ({
       ...col,
@@ -169,7 +169,7 @@ const Dashboard = {
 
         <!-- Revenue hero -->
         <div class="kpi-card kpi-hero">
-          <div class="kpi-hero-eyebrow">💰 Revenue this week</div>
+          <div class="kpi-hero-eyebrow">💰 ${t('dash_revenue_week')}</div>
           <div class="kpi-hero-val" data-target="${kpis.revenueWeek}" data-format="thb">0</div>
           <div class="kpi-hero-eur">≈ ${revEUR} €</div>
           ${trendPct !== null ? `
@@ -182,28 +182,28 @@ const Dashboard = {
         <div class="kpi-card kpi-sm kpi-blue">
           <div class="kpi-sm-icon">🧑‍💼</div>
           <div class="kpi-sm-val" data-target="${kpis.activeClients}">0</div>
-          <div class="kpi-sm-label">Active Clients</div>
+          <div class="kpi-sm-label">${t('dash_active_clients')}</div>
         </div>
 
         <!-- Properties -->
         <div class="kpi-card kpi-sm kpi-green">
           <div class="kpi-sm-icon">🏠</div>
           <div class="kpi-sm-val" data-target="${kpis.availableProps}">0</div>
-          <div class="kpi-sm-label">Available Props</div>
+          <div class="kpi-sm-label">${t('dash_available_props')}</div>
         </div>
 
         <!-- Urgent -->
         <div class="kpi-card kpi-sm ${kpis.urgentMoveIns > 0 ? 'kpi-red' : 'kpi-neutral'}">
           <div class="kpi-sm-icon">📅</div>
           <div class="kpi-sm-val" data-target="${kpis.urgentMoveIns}">0</div>
-          <div class="kpi-sm-label">Move-ins &lt; 30d</div>
+          <div class="kpi-sm-label">${t('dash_urgent_movein')}</div>
         </div>
       </div>
 
       <!-- ── Row 2: Pipeline + Revenue ── -->
       <div class="dash-charts">
         <div class="dash-card">
-          <div class="dash-card-title">Pipeline</div>
+          <div class="dash-card-title">${t('dash_pipeline')}</div>
           ${this.pipelineHTML(pipeline)}
         </div>
         <div class="dash-card">
@@ -217,7 +217,7 @@ const Dashboard = {
       <!-- ── Row 3: Zones + Move-ins ── -->
       <div class="dash-charts">
         <div class="dash-card">
-          <div class="dash-card-title">Most Requested Zones</div>
+          <div class="dash-card-title">${t('dash_zones')}</div>
           ${zones.labels.length
             ? `<div style="height:240px;position:relative"><canvas id="chart-zones"></canvas></div>`
             : '<p class="empty" style="padding:60px 0;text-align:center;color:var(--text-3)">No client data yet</p>'}

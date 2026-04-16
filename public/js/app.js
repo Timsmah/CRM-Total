@@ -58,13 +58,22 @@ const STATUS_LABEL = {
   'Prospect': 'Prospect', 'Onboarding': 'Onboarding',
   'Recherche active': 'Active Search', 'Signé': 'Signed', 'Perdu': 'Lost',
   'Disponible': 'Available', 'Proposé': 'Proposed', 'Loué': 'Rented',
-  'En cours': 'In Progress', 'Envoyé au client': 'Sent', 'Signé': 'Signed',
+  'En cours': 'In Progress', 'Envoyé au client': 'Sent',
   'Visite planifiée': 'Visit Scheduled', 'Annulé': 'Cancelled'
 };
 
+const STATUS_LABEL_FR = {
+  'Prospect': 'Prospect', 'Onboarding': 'Onboarding',
+  'Recherche active': 'Recherche active', 'Signé': 'Signé', 'Perdu': 'Perdu',
+  'Disponible': 'Disponible', 'Proposé': 'Proposé', 'Loué': 'Loué',
+  'En cours': 'En cours', 'Envoyé au client': 'Envoyé',
+  'Visite planifiée': 'Visite planifiée', 'Annulé': 'Annulé'
+};
+
 function badge(status) {
-  const cls   = STATUS_CLASS[status] || 'ongoing';
-  const label = STATUS_LABEL[status] || status;
+  const cls    = STATUS_CLASS[status] || 'ongoing';
+  const labels = (typeof getLang === 'function' && getLang() === 'fr') ? STATUS_LABEL_FR : STATUS_LABEL;
+  const label  = labels[status] || status;
   return `<span class="badge b-${cls}">${label}</span>`;
 }
 
@@ -167,6 +176,12 @@ const App = {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') Modal.close();
     });
+
+    // Init lang toggle button label
+    const langBtn = document.getElementById('lang-toggle');
+    if (langBtn) langBtn.textContent = getLang() === 'en' ? '🇫🇷 Français' : '🇬🇧 English';
+    // Apply saved lang to static nav labels
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
     // Route
     const hash = window.location.hash.slice(1);
