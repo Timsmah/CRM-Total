@@ -13,13 +13,25 @@ const FR_TO_EN = {
   '10 mois': '10 months', '11 mois': '11 months', '12 mois': '12 months',
   'Autre': 'Other', 'autre': 'Other',
   'Non précisé': 'Not specified', 'non précisé': 'Not specified',
+  'Je ne sais pas encore': 'Not decided yet', 'je ne sais pas encore': 'Not decided yet',
+  'À l\'étranger': 'Abroad', 'a l\'etranger': 'Abroad',
+  'Pas encore décidé': 'Not decided yet',
   'Oui': 'Yes', 'Non': 'No',
   'Formulaire': 'Form', 'Location': 'Rental', 'Achat': 'Purchase',
+  'Instagram DM': 'Instagram DM',
 };
 
 function tr(val) {
   if (!val) return val;
+  if (typeof getLang === 'function' && getLang() === 'fr') return val;
   return FR_TO_EN[val] || FR_TO_EN[val.trim()] || val;
+}
+
+// Translate zone string (may contain multiple comma-separated zones)
+function trZone(val) {
+  if (!val) return val;
+  if (typeof getLang === 'function' && getLang() === 'fr') return val;
+  return val.split(/,\s*/).map(z => FR_TO_EN[z.trim()] || z.trim()).join(', ');
 }
 
 const ACTION_TAGS = [
@@ -198,7 +210,7 @@ const Clients = {
         <div class="client-name">${c.name}</div>
         <div class="client-details">
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
-          ${c.zones ? `<p>📍 ${c.zones}</p>` : ''}
+          ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
           ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
           ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
@@ -426,7 +438,7 @@ const Clients = {
         <div class="detail-row">${badge(c.status)}${c.research_fees_paid ? `<span class="fees-btn paid">${t('detail_fees_paid')}</span>` : ''}</div>
         ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 ${t('detail_phone')}</span><span>${c.whatsapp}</span></div>` : ''}
         <div class="detail-row"><span class="detail-label">💰 ${t('detail_budget')}</span><span>${budgetLine}</span></div>
-        ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 ${t('detail_zones')}</span><span>${c.zones}</span></div>` : ''}
+        ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 ${t('detail_zones')}</span><span>${trZone(c.zones)}</span></div>` : ''}
         ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 ${t('detail_arrival')}</span><span class="${urgency}" style="display:flex;align-items:center;gap:6px">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
         ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ ${t('detail_duration')}</span><span>${tr(c.duration)}</span></div>` : ''}
         ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 ${t('detail_type')}</span><span>${c.property_type}</span></div>` : ''}
