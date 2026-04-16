@@ -96,6 +96,41 @@ const I18N = {
     col_proposal:        '📤 Proposal Sent',
     col_visit:           '📅 Visit Planned',
     lang_switch:         '🇫🇷 Français',
+    // Notes
+    note_write:          'Write a note…',
+    note_cancel:         'Cancel',
+    note_delete:         '🗑 Delete',
+    note_save:           'Save',
+    clients_save:        'Save',
+    clients_add_btn:     'Add',
+    // Reminders
+    reminder_title:      '🔔 Reminder',
+    reminder_date_lbl:   'Date',
+    reminder_note_lbl:   'Note',
+    reminder_save:       'Save',
+    reminder_cancel:     'Cancel',
+    reminder_delete:     '🗑 Delete',
+    reminder_tag:        '🔔 Reminder',
+    // Matching
+    match_title:         'Matching properties',
+    match_none:          'No available property matches this client\'s criteria.',
+    match_budget:        'Budget',
+    // Proposals
+    proposals_title:     'Proposals history',
+    proposals_add:       'Propose a property',
+    proposals_none:      'No proposals yet.',
+    proposals_pick:      'Pick a property to propose',
+    proposals_sent:      '📤 Sent',
+    proposals_visit:     '📅 Visit scheduled',
+    proposals_refused:   '❌ Refused',
+    proposals_signed:    '✅ Signed',
+    // Today
+    today_title:         'My Day',
+    today_reminders:     '🔔 Reminders',
+    today_urgent:        '🚨 Urgent move-ins',
+    today_no_reminders:  'No reminders for today.',
+    today_no_urgent:     'No urgent arrivals.',
+    today_open:          'Open',
   },
   fr: {
     nav_workspace:       'Espace de travail',
@@ -193,6 +228,41 @@ const I18N = {
     col_proposal:        '📤 Proposition envoyée',
     col_visit:           '📅 Visite planifiée',
     lang_switch:         '🇬🇧 English',
+    // Notes
+    note_write:          'Écrire une note…',
+    note_cancel:         'Annuler',
+    note_delete:         '🗑 Supprimer',
+    note_save:           'Enregistrer',
+    clients_save:        'Enregistrer',
+    clients_add_btn:     'Ajouter',
+    // Reminders
+    reminder_title:      '🔔 Rappel',
+    reminder_date_lbl:   'Date',
+    reminder_note_lbl:   'Note',
+    reminder_save:       'Enregistrer',
+    reminder_cancel:     'Annuler',
+    reminder_delete:     '🗑 Supprimer',
+    reminder_tag:        '🔔 Rappel',
+    // Matching
+    match_title:         'Biens compatibles',
+    match_none:          'Aucun bien disponible ne correspond aux critères de ce client.',
+    match_budget:        'Budget',
+    // Proposals
+    proposals_title:     'Historique des propositions',
+    proposals_add:       'Proposer un bien',
+    proposals_none:      'Aucune proposition pour l\'instant.',
+    proposals_pick:      'Choisir un bien à proposer',
+    proposals_sent:      '📤 Envoyé',
+    proposals_visit:     '📅 Visite planifiée',
+    proposals_refused:   '❌ Refusé',
+    proposals_signed:    '✅ Signé',
+    // Today
+    today_title:         'Mon Jour',
+    today_reminders:     '🔔 Rappels',
+    today_urgent:        '🚨 Arrivées urgentes',
+    today_no_reminders:  'Aucun rappel pour aujourd\'hui.',
+    today_no_urgent:     'Aucune arrivée urgente.',
+    today_open:          'Ouvrir',
   }
 };
 

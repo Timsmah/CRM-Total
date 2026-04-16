@@ -43,6 +43,7 @@ app.use('/api/clients',    requireAuth, require('./routes/clients'));
 app.use('/api/properties', requireAuth, require('./routes/properties'));
 app.use('/api/deals',      requireAuth, require('./routes/deals'));
 app.use('/api/finance',    requireAuth, require('./routes/finance'));
+app.use('/api/proposals',  requireAuth, require('./routes/proposals'));
 
 // Static files & SPA fallback
 app.use(express.static(path.join(__dirname, 'public')));

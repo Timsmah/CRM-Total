@@ -78,6 +78,17 @@ router.patch('/:id/tags', async (req, res) => {
   res.json({ action_tags: val });
 });
 
+router.patch('/:id/reminder', async (req, res) => {
+  const { reminder_date, reminder_note } = req.body;
+  const update = {
+    reminder_date: reminder_date || null,
+    reminder_note: reminder_note || null
+  };
+  const { error } = await db.from('clients').update(update).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(update);
+});
+
 router.patch('/:id/fees', async (req, res) => {
   const { data: client, error: fetchErr } = await db.from('clients').select('research_fees_paid').eq('id', req.params.id).single();
   if (fetchErr) return res.status(404).json({ error: 'Client non trouvé' });

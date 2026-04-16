@@ -32,8 +32,21 @@
         <span class="logo-icon">🏙️</span>
         <span class="logo-text">Tim<span>THLD</span></span>
       </div>
+
+      <!-- Global search -->
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="🔍 Search…" autocomplete="off"
+          oninput="Search.query(this.value)"
+          onfocus="Search.query(this.value)"
+          onkeydown="if(event.key==='Escape'){Search.hide();this.value='';}">
+        <div id="search-panel" class="search-panel hidden"></div>
+      </div>
+
       <nav>
         <span class="nav-section-label" data-i18n="nav_workspace">Workspace</span>
+        <a href="#today" class="nav-item" data-section="today">
+          <span class="nav-icon">☀️</span><span data-i18n="today_title">My Day</span>
+        </a>
         <a href="#dashboard" class="nav-item" data-section="dashboard">
           <span class="nav-icon">📊</span><span data-i18n="nav_dashboard">Dashboard</span>
         </a>
@@ -77,5 +90,6 @@
   <script src="/js/properties.js"></script>
   <script src="/js/deals.js"></script>
   <script src="/js/finance.js"></script>
+  <script src="/js/today.js"></script>
 </body>
 </html>

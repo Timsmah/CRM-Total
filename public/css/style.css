@@ -706,6 +706,121 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .toast-info    { background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; }
 @keyframes slide-in { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* ── GLOBAL SEARCH ───────────────────────────────── */
+.search-wrap {
+  position: relative;
+  margin: 0 0 8px;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.search-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(201,146,42,.1);
+}
+.search-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  z-index: 5000;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.search-group {
+  font-size: 10px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  padding: 4px 8px 2px;
+}
+.search-item {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 7px 10px; border-radius: 7px;
+  cursor: pointer; transition: background 0.1s;
+}
+.search-item:hover { background: var(--surface-2); }
+.search-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.search-sub  { font-size: 11px; color: var(--text-3); }
+.search-empty { font-size: 12px; color: var(--text-3); padding: 10px; text-align: center; }
+
+/* ── DETAIL MODAL EXTRAS ─────────────────────────── */
+.modal-sep { height: 1px; background: var(--border); margin: 16px 0 12px; }
+.modal-sub-title {
+  font-size: 12px; font-weight: 700; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+.sub-list-slot { display: flex; flex-direction: column; gap: 6px; min-height: 30px; }
+.sub-empty { font-size: 12px; color: var(--text-3); font-style: italic; }
+.spinner-sm { font-size: 12px; color: var(--text-3); }
+
+.match-item, .proposal-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; background: var(--surface-2);
+  border-radius: 8px; border: 1px solid var(--border);
+}
+.match-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.match-title { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.match-sub   { font-size: 11px; color: var(--text-3); }
+.proposal-status-sel {
+  font-size: 11px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 6px; background: var(--surface);
+  color: var(--text); cursor: pointer; outline: none;
+}
+
+/* ── REMINDER CHIP ───────────────────────────────── */
+.tag-reminder { background: #EEF2FF; color: #4F46E5; }
+.tag-option-reminder { background: #EEF2FF !important; color: #4F46E5 !important; border-color: #C7D2FE !important; }
+
+/* ── TODAY SECTION ───────────────────────────────── */
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: flex-start;
+}
+.today-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.today-section-title {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.1px; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.today-section-subtitle {
+  font-size: 11px; font-weight: 600; color: var(--text-2);
+  margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);
+}
+.today-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px; padding: 12px;
+  cursor: pointer; transition: box-shadow 0.15s, transform 0.15s;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.today-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.today-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.today-client-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.today-note { font-size: 12px; color: var(--text-2); }
+
 /* ── LOGIN ───────────────────────────────────────── */
 #login-screen { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
 .login-card {

@@ -86,11 +86,89 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// ── Global Search ─────────────────────────────────────────────────────────────
+const Search = {
+  _cache: null,
+  _debounce: null,
+
+  async query(q) {
+    const panel = document.getElementById('search-panel');
+    if (!q || q.length < 2) { panel.classList.add('hidden'); return; }
+    clearTimeout(this._debounce);
+    this._debounce = setTimeout(async () => {
+      if (!this._cache) {
+        try {
+          const [cl, pr] = await Promise.all([
+            api.get('/clients?archived=false'),
+            api.get('/properties?archived=false')
+          ]);
+          this._cache = { clients: cl, properties: pr };
+        } catch { this._cache = { clients: [], properties: [] }; }
+      }
+      const lq = q.toLowerCase();
+      const clients = this._cache.clients.filter(c =>
+        (c.name||'').toLowerCase().includes(lq) ||
+        (c.zones||'').toLowerCase().includes(lq) ||
+        (c.criteria||'').toLowerCase().includes(lq)
+      ).slice(0, 5);
+      const props = this._cache.properties.filter(p =>
+        (p.title||'').toLowerCase().includes(lq) ||
+        (p.zone||'').toLowerCase().includes(lq)
+      ).slice(0, 5);
+      this.renderPanel(panel, clients, props);
+    }, 180);
+  },
+
+  renderPanel(panel, clients, props) {
+    if (!clients.length && !props.length) {
+      panel.innerHTML = '<p class="search-empty">No results</p>';
+    } else {
+      panel.innerHTML =
+        (clients.length ? `<div class="search-group">${getLang()==='fr'?'Clients':'Clients'}</div>` +
+          clients.map(c => `<div class="search-item" onclick="Search.goClient(${c.id})">
+            <span class="search-name">${c.name}</span>
+            ${c.zones?`<span class="search-sub">${c.zones}</span>`:''}
+          </div>`).join('') : '') +
+        (props.length ? `<div class="search-group">${getLang()==='fr'?'Biens':'Properties'}</div>` +
+          props.map(p => `<div class="search-item" onclick="Search.goProp(${p.id})">
+            <span class="search-name">${p.title}</span>
+            ${p.zone?`<span class="search-sub">${p.zone}${p.price?' · '+Number(p.price).toLocaleString('fr-FR')+' ฿':''}</span>`:''}
+          </div>`).join('') : '');
+    }
+    panel.classList.remove('hidden');
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function h(e) {
+        if (!e.target.closest('.search-wrap')) { panel.classList.add('hidden'); document.removeEventListener('click', h); }
+      });
+    }, 50);
+  },
+
+  hide() { document.getElementById('search-panel')?.classList.add('hidden'); },
+
+  async goClient(id) {
+    this.hide(); document.getElementById('search-input').value = '';
+    this._cache = null; // invalidate so next search re-fetches
+    await Router.navigate('clients');
+    const try_ = (n=0) => { const c = Clients.data.find(x=>x.id===id); if(c) Clients.openDetailModal(id); else if(n<12) setTimeout(()=>try_(n+1),120); };
+    setTimeout(()=>try_(), 250);
+  },
+
+  async goProp(id) {
+    this.hide(); document.getElementById('search-input').value = '';
+    this._cache = null;
+    await Router.navigate('properties');
+    setTimeout(() => { Properties.openDetailModal(id); }, 300);
+  },
+
+  invalidate() { this._cache = null; }
+};
+
 // ── Router ────────────────────────────────────────────────────────────────────
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, deals: Deals, finance: Finance };
+    const sections = { today: Today, dashboard: Dashboard, clients: Clients, properties: Properties, deals: Deals, finance: Finance };
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
@@ -185,7 +263,7 @@ const App = {
 
     // Route
     const hash = window.location.hash.slice(1);
-    Router.navigate(hash || 'clients');
+    Router.navigate(hash || 'today');
 
     window.addEventListener('hashchange', () => {
       const s = window.location.hash.slice(1);

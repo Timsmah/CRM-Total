@@ -218,8 +218,9 @@ const Clients = {
         <div class="action-tags-row" onclick="event.stopPropagation()">
           <div class="action-tags-display">
             ${this.tagsHTML(this.getTags(c))}
-            ${c.note_tim ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : ''}
-            ${c.note_alex ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Alex</span>` : ''}
+            ${this.noteChipsHTML(c)}
+            ${this.reminderChipHTML(c)}
+            ${this.allTagsEmpty(c) ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
           </div>
           <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
         </div>
@@ -246,7 +247,7 @@ const Clients = {
   },
 
   tagsHTML(tags) {
-    if (!tags || !tags.length) return `<span class="no-tags">${t('clients_no_tags')}</span>`;
+    if (!tags || !tags.length) return '';
     return tags.map(key => {
       const tag = ACTION_TAGS.find(x => x.key === key);
       if (!tag) return '';
@@ -254,6 +255,26 @@ const Clients = {
       const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : '';
       return `<span class="action-tag${extra}">${tag.emoji} ${label}</span>`;
     }).join('');
+  },
+
+  noteChipsHTML(c) {
+    return (c.note_tim ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
+         + (c.note_alex ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Alex</span>` : '');
+  },
+
+  reminderChipHTML(c) {
+    if (!c.reminder_date) return '';
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = c.reminder_date === today;
+    const isPast  = c.reminder_date < today;
+    const cls     = isPast ? ' tag-hot' : isToday ? ' tag-payer' : ' tag-reminder';
+    const dateStr = fmtDate(c.reminder_date);
+    return `<span class="action-tag${cls} reminder-chip" onclick="event.stopPropagation();Clients.openReminderModal(${c.id})" title="${c.reminder_note || ''}">🔔 ${dateStr}</span>`;
+  },
+
+  allTagsEmpty(c) {
+    const tags = this.getTags(c);
+    return !tags.length && !c.note_tim && !c.note_alex && !c.reminder_date;
   },
 
   _tagPopoverClientId: null,
@@ -286,6 +307,10 @@ const Clients = {
       <button class="tag-option tag-option-note ${c.note_alex ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_alex')">
         📝 Note d'Alex
+      </button>
+      <button class="tag-option tag-option-reminder ${c.reminder_date ? 'active' : ''}"
+        onclick="event.stopPropagation(); Clients.openReminderModal(${id})">
+        🔔 ${t('reminder_tag')}
       </button>`;
     const rect = btnEl.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -335,6 +360,49 @@ const Clients = {
         ${current ? `<button class="btn btn-ghost" onclick="Clients.saveNote(${id},'${noteKey}','')">${t('note_delete')}</button>` : ''}
         <button class="btn btn-primary" onclick="Clients.saveNote(${id},'${noteKey}',document.getElementById('note-input').value)">${t('note_save')}</button>
       </div>`);
+  },
+
+  // ── Reminders ────────────────────────────────────
+  openReminderModal(id) {
+    document.querySelectorAll('.tags-popover').forEach(p => p.remove());
+    document.removeEventListener('click', this._closeTagHandler);
+    this._tagPopoverClientId = null;
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const today = new Date().toISOString().split('T')[0];
+    const curDate = c.reminder_date || today;
+    const curNote = c.reminder_note || '';
+    Modal.open(t('reminder_title'), `
+      <div class="form-row">
+        <label>${t('reminder_date_lbl')}</label>
+        <input type="date" id="rem-date" value="${curDate}" style="font-family:inherit">
+      </div>
+      <div class="form-row">
+        <label>${t('reminder_note_lbl')}</label>
+        <textarea id="rem-note" rows="3" placeholder="Relancer pour…" style="font-family:inherit">${curNote}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="Modal.close()">${t('reminder_cancel')}</button>
+        ${c.reminder_date ? `<button class="btn btn-ghost" onclick="Clients.saveReminder(${id},'','')">${t('reminder_delete')}</button>` : ''}
+        <button class="btn btn-primary" onclick="Clients.saveReminder(${id},document.getElementById('rem-date').value,document.getElementById('rem-note').value)">${t('reminder_save')}</button>
+      </div>`);
+  },
+
+  async saveReminder(id, date, note) {
+    Modal.close();
+    const c = this.data.find(x => x.id === id);
+    if (c) { c.reminder_date = date || null; c.reminder_note = note || null; }
+    await api.patch(`/clients/${id}/reminder`, { reminder_date: date || null, reminder_note: note || null });
+    // Update card chip in-place
+    const cardEl = document.querySelector(`.kanban-card[data-cid="${id}"] .reminder-chip`);
+    const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
+    if (display && c) {
+      // Re-render just the tags display
+      const tags = this.getTags(c);
+      display.innerHTML = this.tagsHTML(tags) + this.noteChipsHTML(c) + this.reminderChipHTML(c);
+    }
+    // Also refresh Today if visible
+    if (typeof Today !== 'undefined' && Router.current === 'today') Today.init();
   },
 
   async saveNote(id, noteKey, value) {
@@ -445,12 +513,122 @@ const Clients = {
         ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 ${t('detail_bedrooms')}</span><span>${c.bedrooms}</span></div>` : ''}
         ${c.criteria ? `<div class="detail-row"><span class="detail-label">📝 ${t('detail_criteria')}</span><span>${c.criteria}</span></div>` : ''}
         ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
+        ${c.reminder_date ? `<div class="detail-row"><span class="detail-label">🔔 ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
       </div>
+
+      <div class="modal-sep"></div>
+      <div class="modal-sub-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>🏠 ${t('match_title')}</span>
+      </div>
+      <div id="matching-slot-${id}" class="sub-list-slot"><span class="spinner-sm">…</span></div>
+
+      <div class="modal-sep"></div>
+      <div class="modal-sub-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📋 ${t('proposals_title')}</span>
+        <button class="btn btn-sm btn-secondary" onclick="Clients.openProposalPickModal(${id})">+ ${t('proposals_add')}</button>
+      </div>
+      <div id="proposals-slot-${id}" class="sub-list-slot"><span class="spinner-sm">…</span></div>
+
       <div class="form-actions" style="margin-top:16px">
         <button class="btn btn-ghost" onclick="Modal.close()">${t('clients_close')}</button>
         <button class="btn btn-secondary" onclick="Modal.close(); Clients.openEditModal(${c.id})">${t('clients_edit')}</button>
         <button class="btn btn-danger btn-sm" onclick="Modal.close(); Clients.archive(${c.id})">${this.showArchived ? t('clients_unarchive') : t('clients_archive')}</button>
       </div>`);
+    // Async-load matching + proposals
+    this._loadMatching(id, c);
+    this._loadProposals(id);
+  },
+
+  // ── Matching auto ────────────────────────────────
+  async _loadMatching(clientId, c) {
+    const slot = document.getElementById(`matching-slot-${clientId}`);
+    if (!slot) return;
+    try {
+      const props = await api.get('/properties?archived=false');
+      const available = props.filter(p => p.status === 'Disponible');
+      const matches = available.filter(p => {
+        if (c.budget_max && p.price && p.price > Number(c.budget_max)) return false;
+        if (c.zones && p.zone) {
+          const cZones = c.zones.split(/,\s*/).map(z => z.toLowerCase().trim());
+          const pZone  = p.zone.toLowerCase().trim();
+          if (!cZones.some(z => pZone.includes(z) || z.includes(pZone))) return false;
+        }
+        return true;
+      });
+      if (!matches.length) { slot.innerHTML = `<p class="sub-empty">${t('match_none')}</p>`; return; }
+      slot.innerHTML = matches.slice(0, 6).map(p => `
+        <div class="match-item">
+          <div class="match-info">
+            <span class="match-title">${p.title}</span>
+            <span class="match-sub">${p.zone || ''}${p.price ? ' · ' + Number(p.price).toLocaleString('fr-FR') + ' ฿' : ''}</span>
+          </div>
+          <button class="btn btn-sm btn-secondary" onclick="Clients.proposeProperty(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)">📤</button>
+        </div>`).join('');
+    } catch { slot.innerHTML = '<p class="sub-empty">—</p>'; }
+  },
+
+  async proposeProperty(clientId, propertyId, propTitle, btn) {
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      await api.post('/proposals', { client_id: clientId, property_id: propertyId });
+      btn.textContent = '✓'; btn.classList.add('btn-success');
+      this._loadProposals(clientId);
+      Toast.show('📤 Proposition enregistrée');
+    } catch (err) { Toast.show(err.message, 'error'); btn.disabled = false; btn.textContent = '📤'; }
+  },
+
+  // ── Proposals history ─────────────────────────────
+  async _loadProposals(clientId) {
+    const slot = document.getElementById(`proposals-slot-${clientId}`);
+    if (!slot) return;
+    try {
+      const rows = await api.get(`/proposals?client_id=${clientId}`);
+      if (!rows.length) { slot.innerHTML = `<p class="sub-empty">${t('proposals_none')}</p>`; return; }
+      const statusLabels = { 'Envoyé': t('proposals_sent'), 'Visite': t('proposals_visit'), 'Refusé': t('proposals_refused'), 'Signé': t('proposals_signed') };
+      slot.innerHTML = rows.map(r => `
+        <div class="proposal-item">
+          <div class="match-info">
+            <span class="match-title">${r.properties?.title || '—'}</span>
+            <span class="match-sub">${r.properties?.zone || ''}${r.properties?.price ? ' · ' + Number(r.properties.price).toLocaleString('fr-FR') + ' ฿' : ''} · ${fmtDate(r.proposed_at)}</span>
+          </div>
+          <select class="proposal-status-sel" onchange="Clients.updateProposalStatus(${r.id},this.value)">
+            ${['Envoyé','Visite','Refusé','Signé'].map(s => `<option value="${s}" ${r.status===s?'selected':''}>${statusLabels[s]||s}</option>`).join('')}
+          </select>
+        </div>`).join('');
+    } catch { slot.innerHTML = '<p class="sub-empty">—</p>'; }
+  },
+
+  async openProposalPickModal(clientId) {
+    const props = await api.get('/properties?archived=false');
+    const available = props.filter(p => p.status === 'Disponible');
+    Modal.open(t('proposals_pick'), `
+      <div class="sub-list-slot" style="max-height:340px;overflow-y:auto">
+        ${available.length ? available.map(p => `
+          <div class="match-item">
+            <div class="match-info">
+              <span class="match-title">${p.title}</span>
+              <span class="match-sub">${p.zone || ''}${p.price ? ' · ' + Number(p.price).toLocaleString('fr-FR') + ' ฿' : ''}</span>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="Clients.proposeFromPick(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)">📤</button>
+          </div>`).join('') : `<p class="sub-empty">${t('match_none')}</p>`}
+      </div>
+      <div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">${t('clients_close')}</button></div>`);
+  },
+
+  async proposeFromPick(clientId, propertyId, title, btn) {
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      await api.post('/proposals', { client_id: clientId, property_id: propertyId });
+      btn.textContent = '✓'; btn.classList.add('btn-success');
+      Toast.show('📤 Proposition enregistrée');
+    } catch (err) { Toast.show(err.message, 'error'); btn.disabled = false; btn.textContent = '📤'; }
+  },
+
+  async updateProposalStatus(proposalId, status) {
+    try {
+      await api.patch(`/proposals/${proposalId}/status`, { status });
+      Toast.show('✓ Statut mis à jour');
+    } catch (err) { Toast.show(err.message, 'error'); }
   },
 
   openAddModal() { Modal.open('Add client', this.formHTML(null)); },
