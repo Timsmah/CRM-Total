@@ -312,8 +312,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-red    { background: #DC2626; }
 .dot-amber  { background: #D97706; }
-.dot-yellow  { background: #FCD53F; }
-.dot-future  { background: #60A5FA; }
+.dot-yellow  { background: #CA8A04; }
+.dot-future  { background: #3B82F6; }
 .legend-clock { font-size: 12px; }
 
 .kanban-board {
@@ -492,7 +492,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .urgent-red    { color: #DC2626 !important; font-weight: 600; }
 .urgent-amber  { color: #D97706 !important; font-weight: 600; }
 .urgent-yellow { color: #CA8A04 !important; font-weight: 600; }
-.urgent-future { color: #60A5FA !important; font-weight: 600; }
+.urgent-future { color: #3B82F6 !important; font-weight: 600; }
 
 /* ── DETAIL MODAL ────────────────────────────────── */
 .detail-grid { display: flex; flex-direction: column; gap: 10px; }

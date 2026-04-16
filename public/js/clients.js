@@ -547,7 +547,7 @@ const Clients = {
       const props = await api.get('/properties?archived=false');
       const available = props.filter(p => p.status === 'Disponible');
       const matches = available.filter(p => {
-        if (c.budget_max && p.price && p.price > Number(c.budget_max)) return false;
+        if (c.budget_max && p.price && p.price > Number(c.budget_max) + 5000) return false;
         if (c.zones && p.zone) {
           const cZones = c.zones.split(/,\s*/).map(z => z.toLowerCase().trim());
           const pZone  = p.zone.toLowerCase().trim();
