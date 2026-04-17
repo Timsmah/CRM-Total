@@ -673,6 +673,21 @@ const Clients = {
             </select>
           </div>
         </div>
+        <div class="form-2">
+          <div class="form-row">
+            <label>⏱ ${t('form_duration')}</label>
+            <select name="duration">
+              <option value="" ${!c?.duration ? 'selected' : ''}>—</option>
+              ${['1 mois','2 mois','3 mois','4 mois','5 mois','6 mois','7 mois','8 mois','9 mois','10 mois','11 mois','12 mois','1 an','2 ans','3 ans','Autre'].map(d =>
+                `<option value="${d}" ${c?.duration === d ? 'selected' : ''}>${d}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-row">
+            <label>📅 ${t('form_move_in')}</label>
+            <input type="date" name="move_in_date" value="${c?.move_in_date || ''}">
+          </div>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="Modal.close()">${t('clients_cancel')}</button>
           <button type="submit" class="btn btn-primary">${c ? t('clients_save') : t('clients_add_btn')}</button>

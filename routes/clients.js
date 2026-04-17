@@ -28,10 +28,12 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const { name, whatsapp, budget_min, budget_max, zones, criteria, source, status, research_fees_paid, archived } = req.body;
+  const { name, whatsapp, budget_min, budget_max, zones, criteria, source, status, research_fees_paid, archived, duration, move_in_date } = req.body;
   const { data, error } = await db.from('clients')
     .update({ name, whatsapp, budget_min: budget_min || null, budget_max: budget_max || null,
               zones, criteria, source, status,
+              duration: duration || null,
+              move_in_date: move_in_date || null,
               research_fees_paid: research_fees_paid ? 1 : 0,
               archived: archived ? 1 : 0 })
     .eq('id', req.params.id).select().single();

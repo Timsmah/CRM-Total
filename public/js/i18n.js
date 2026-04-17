@@ -97,6 +97,8 @@ const I18N = {
     col_visit:           '📅 Visit Planned',
     lang_switch:         '🇫🇷 Français',
     // Notes
+    form_duration:       'Duration',
+    form_move_in:        'Move-in date',
     note_write:          'Write a note…',
     note_cancel:         'Cancel',
     note_delete:         '🗑 Delete',
@@ -229,6 +231,8 @@ const I18N = {
     col_visit:           '📅 Visite planifiée',
     lang_switch:         '🇬🇧 English',
     // Notes
+    form_duration:       'Durée',
+    form_move_in:        'Date d\'arrivée',
     note_write:          'Écrire une note…',
     note_cancel:         'Annuler',
     note_delete:         '🗑 Supprimer',
