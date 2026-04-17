@@ -112,7 +112,6 @@ const Clients = {
   },
 
   effectiveContactStatus(c) {
-    if (c.research_fees_paid && c.status === 'Recherche active') return 'Property to Find';
     return c.contact_status || 'À contacter';
   },
 
@@ -122,14 +121,6 @@ const Clients = {
   },
 
   columnHTML(col) {
-    // Auto-save any client that should be in 'Property to Find' but isn't stored as such
-    this.filtered().forEach(c => {
-      const effective = this.effectiveContactStatus(c);
-      if (effective !== (c.contact_status || 'À contacter') && c.contact_status !== effective) {
-        c.contact_status = effective;
-        api.patch(`/clients/${c.id}/contact-status`, { contact_status: effective }).catch(() => {});
-      }
-    });
 
     const daysAgoNum = (c) => {
       const dateStr = c.form_submitted_at || c.created_at;
