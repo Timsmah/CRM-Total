@@ -539,20 +539,28 @@ const Clients = {
       // Case-insensitive status check
       const available = props.filter(p => (p.status || '').toLowerCase() === 'disponible');
 
+      // Normalize + alias Bangkok zone names (handles typos & spelling variants)
+      const ZONE_ALIASES = { 'thonglhor':'thonglor','thonglor':'thonglor','sathon':'sathorn','silom/sathon':'sathorn','silom':'silom','sathorn':'sathorn','onnut':'onnut','onut':'onnut','phrompong':'phromphong','phromphong':'phromphong','promphong':'phromphong','ekkamai':'ekkamai','asoke':'asoke','ploenchit':'ploenchit','ari':'ari','ratchada':'ratchada','sukhumvit':'sukhumvit' };
+      const normZone = z => { const n = z.toLowerCase().replace(/[\s\-_\.]/g, ''); return ZONE_ALIASES[n] || n; };
+
+      // Zones the client entered that mean "no preference" → skip zone filter
+      const NO_PREF = ['nonprécisé', 'nonprecise', 'jesaispasencore', 'pasencoredécidé', ''];
+      const clientHasZonePref = c.zones && !NO_PREF.includes(normZone(c.zones));
+
       const matches = available.filter(p => {
         // Budget : seulement si le client ET le bien ont une valeur
         if (c.budget_max && p.price && Number(p.price) > Number(c.budget_max) + 5000) return false;
-        // Zone : seulement si les deux ont une zone renseignée
-        if (c.zones && p.zone) {
-          const cZones = c.zones.split(/,\s*/).map(z => z.toLowerCase().trim());
-          const pZone  = p.zone.toLowerCase().trim();
-          if (!cZones.some(z => pZone.includes(z) || z.includes(pZone))) return false;
+        // Zone : uniquement si le client a une préférence ET le bien a une zone
+        if (clientHasZonePref && p.zone) {
+          const cZones = c.zones.split(/,\s*/).map(z => normZone(z));
+          const pZone  = normZone(p.zone);
+          if (!cZones.some(z => z && (pZone.includes(z) || z.includes(pZone)))) return false;
         }
         return true;
       });
 
       // Debug info
-      const debugLine = `<p style="font-size:10px;color:var(--text-3);margin-bottom:6px">${available.length} bien(s) disponible(s) · ${matches.length} match(s)${c.budget_max ? ' · budget ≤ ' + Number(Number(c.budget_max)+5000).toLocaleString('fr-FR') + ' ฿' : ''}${c.zones ? ' · zones: ' + c.zones : ''}</p>`;
+      const debugLine = `<p style="font-size:10px;color:var(--text-3);margin-bottom:6px">${available.length} dispo · ${matches.length} match${c.budget_max ? ' · ≤ ' + Number(Number(c.budget_max)+5000).toLocaleString('fr-FR') + ' ฿' : ''}${clientHasZonePref ? ' · zones: ' + c.zones : ' · zones: toutes'}</p>`;
 
       if (!matches.length) {
         slot.innerHTML = debugLine + `<p class="sub-empty">${t('match_none')}</p>`;
