@@ -536,9 +536,13 @@ const Clients = {
     if (!slot) return;
     try {
       const props = await api.get('/properties?archived=false');
-      const available = props.filter(p => p.status === 'Disponible');
+      // Case-insensitive status check
+      const available = props.filter(p => (p.status || '').toLowerCase() === 'disponible');
+
       const matches = available.filter(p => {
-        if (c.budget_max && p.price && p.price > Number(c.budget_max) + 5000) return false;
+        // Budget : seulement si le client ET le bien ont une valeur
+        if (c.budget_max && p.price && Number(p.price) > Number(c.budget_max) + 5000) return false;
+        // Zone : seulement si les deux ont une zone renseignée
         if (c.zones && p.zone) {
           const cZones = c.zones.split(/,\s*/).map(z => z.toLowerCase().trim());
           const pZone  = p.zone.toLowerCase().trim();
@@ -546,16 +550,23 @@ const Clients = {
         }
         return true;
       });
-      if (!matches.length) { slot.innerHTML = `<p class="sub-empty">${t('match_none')}</p>`; return; }
-      slot.innerHTML = matches.slice(0, 6).map(p => `
+
+      // Debug info
+      const debugLine = `<p style="font-size:10px;color:var(--text-3);margin-bottom:6px">${available.length} bien(s) disponible(s) · ${matches.length} match(s)${c.budget_max ? ' · budget ≤ ' + Number(Number(c.budget_max)+5000).toLocaleString('fr-FR') + ' ฿' : ''}${c.zones ? ' · zones: ' + c.zones : ''}</p>`;
+
+      if (!matches.length) {
+        slot.innerHTML = debugLine + `<p class="sub-empty">${t('match_none')}</p>`;
+        return;
+      }
+      slot.innerHTML = debugLine + matches.slice(0, 8).map(p => `
         <div class="match-item">
           <div class="match-info">
             <span class="match-title">${p.title}</span>
-            <span class="match-sub">${p.zone || ''}${p.price ? ' · ' + Number(p.price).toLocaleString('fr-FR') + ' ฿' : ''}</span>
+            <span class="match-sub">${p.zone || '—'}${p.price ? ' · ' + Number(p.price).toLocaleString('fr-FR') + ' ฿' : ' · prix non renseigné'}</span>
           </div>
           <button class="btn btn-sm btn-secondary" onclick="Clients.proposeProperty(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)">📤</button>
         </div>`).join('');
-    } catch { slot.innerHTML = '<p class="sub-empty">—</p>'; }
+    } catch(err) { slot.innerHTML = `<p class="sub-empty">Erreur: ${err.message}</p>`; }
   },
 
   async proposeProperty(clientId, propertyId, propTitle, btn) {
