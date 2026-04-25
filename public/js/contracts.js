@@ -81,6 +81,7 @@ const Contracts = {
   cardHTML(d) {
     const days = this.daysLeft(d.lease_end);
     const { bg, text, label } = this.urgencyColor(days);
+    const propName = d.property_title || d.property_custom || '—';
     const rent = d.monthly_rent || d.property_price;
     const commFmt = d.commission_amount ? Number(d.commission_amount).toLocaleString('fr-FR') + ' ฿' : '—';
 
@@ -94,7 +95,7 @@ const Contracts = {
           <div class="contract-title">
             <span class="contract-client">${d.client_name || '—'}</span>
             <span style="color:var(--text-3);margin:0 6px">→</span>
-            <span class="contract-property">${d.property_title || '—'}</span>
+            <span class="contract-property">${propName}</span>
             ${d.property_zone ? `<span class="contract-zone">· ${d.property_zone}</span>` : ''}
           </div>
           <div class="contract-meta">
@@ -119,6 +120,18 @@ const Contracts = {
       </div>`;
   },
 
+  // Match typed property name against known properties → populate hidden id
+  _matchProp(val) {
+    const idInput = document.getElementById('prop-id-hidden');
+    if (!idInput) return;
+    const v = val.toLowerCase().trim();
+    const match = this.properties.find(p => {
+      const label = (p.title + (p.zone ? ' — ' + p.zone : '')).toLowerCase();
+      return label === v || p.title.toLowerCase() === v;
+    });
+    idInput.value = match ? match.id : '';
+  },
+
   setFilter(f) { this.filterStatus = f; this.render(); },
 
   openAddModal()  { Modal.open('New contract', this.formHTML(null)); },
@@ -139,11 +152,16 @@ const Contracts = {
           </select>
         </div>
         <div class="form-row">
-          <label>Property *</label>
-          <select name="property_id" required>
-            <option value="">Select a property…</option>
-            ${this.properties.map(p => `<option value="${p.id}" ${d?.property_id==p.id?'selected':''}>${p.title}${p.zone?' — '+p.zone:''}</option>`).join('')}
-          </select>
+          <label>Property</label>
+          <input type="text" id="prop-name-input" name="property_name" list="prop-datalist"
+            placeholder="Type or select a property…"
+            value="${d?.property_title || d?.property_custom || ''}"
+            autocomplete="off"
+            oninput="Contracts._matchProp(this.value)">
+          <datalist id="prop-datalist">
+            ${this.properties.map(p => `<option value="${p.title}${p.zone ? ' — ' + p.zone : ''}"></option>`).join('')}
+          </datalist>
+          <input type="hidden" name="property_id" id="prop-id-hidden" value="${d?.property_id || ''}">
         </div>
         <div class="form-row">
           <label>Status</label>
@@ -190,6 +208,12 @@ const Contracts = {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
     fd.commission_paid = !!fd.commission_paid;
+    // If no matched property_id, store the typed name as custom
+    if (!fd.property_id) {
+      fd.property_custom = fd.property_name || null;
+      fd.property_id = null;
+    }
+    delete fd.property_name;
     try {
       if (id) { await api.put(`/deals/${id}`, fd); Toast.show('Contract updated'); }
       else     { await api.post('/deals', fd);      Toast.show('Contract created'); }
