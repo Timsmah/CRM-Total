@@ -101,7 +101,7 @@ const Contracts = {
           <div class="contract-meta">
             ${d.lease_start ? `📅 ${fmtDate(d.lease_start)} → ${fmtDate(d.lease_end)}` : '<span style="color:var(--text-3);font-style:italic">No dates set</span>'}
             ${rent ? ` · <strong>${Number(rent).toLocaleString('fr-FR')} ฿/mo</strong>` : ''}
-            ${d.deposit ? ` · 🔒 Dépôt: <strong>${Number(d.deposit).toLocaleString('fr-FR')} ฿</strong>` : ''}
+            ${d.deposit ? ` · 🔒 Caution / Deposit: <strong>${Number(d.deposit).toLocaleString('fr-FR')} ฿</strong>` : ''}
           </div>
           <div class="contract-commission">
             <span>💰 Commission: ${commFmt}</span>
@@ -218,7 +218,7 @@ const Contracts = {
             <input type="number" name="monthly_rent" placeholder="53000" value="${d?.monthly_rent||d?.property_price||''}">
           </div>
           <div class="form-row">
-            <label>🔒 Dépôt (฿)</label>
+            <label>🔒 Caution / Deposit (฿)</label>
             <input type="number" name="deposit" placeholder="106000" value="${d?.deposit||''}">
           </div>
         </div>
