@@ -120,6 +120,15 @@ const Contracts = {
       </div>`;
   },
 
+  // Match typed client name against known clients → populate hidden id
+  _matchClient(val) {
+    const idInput = document.getElementById('client-id-hidden');
+    if (!idInput) return;
+    const v = val.toLowerCase().trim();
+    const match = this.clients.find(c => c.name.toLowerCase() === v);
+    idInput.value = match ? match.id : '';
+  },
+
   // Match typed property name against known properties → populate hidden id
   _matchProp(val) {
     const idInput = document.getElementById('prop-id-hidden');
@@ -141,15 +150,20 @@ const Contracts = {
   },
 
   formHTML(d) {
-    const statuses = ['En cours','Signé','Annulé'];
+    const statuses = ['En cours','Signé','Annulé','Terminé'];
     return `
       <form onsubmit="Contracts.submit(event, ${d ? d.id : 'null'})">
         <div class="form-row">
-          <label>Client *</label>
-          <select name="client_id" required>
-            <option value="">Select a client…</option>
-            ${this.clients.map(c => `<option value="${c.id}" ${d?.client_id==c.id?'selected':''}>${c.name}</option>`).join('')}
-          </select>
+          <label>Client</label>
+          <input type="text" id="client-name-input" name="client_name" list="client-datalist"
+            placeholder="Type or select a client…"
+            value="${d?.client_name || ''}"
+            autocomplete="off"
+            oninput="Contracts._matchClient(this.value)">
+          <datalist id="client-datalist">
+            ${this.clients.map(c => `<option value="${c.name}"></option>`).join('')}
+          </datalist>
+          <input type="hidden" name="client_id" id="client-id-hidden" value="${d?.client_id || ''}">
         </div>
         <div class="form-row">
           <label>Property</label>
@@ -208,6 +222,12 @@ const Contracts = {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
     fd.commission_paid = !!fd.commission_paid;
+    // Client: use matched id if any, otherwise store typed name as client_custom
+    if (!fd.client_id) {
+      fd.client_custom = fd.client_name || null;
+      fd.client_id = null;
+    }
+    delete fd.client_name;
     // If no matched property_id, store the typed name as custom
     if (!fd.property_id) {
       fd.property_custom = fd.property_name || null;

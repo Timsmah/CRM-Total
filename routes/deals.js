@@ -6,14 +6,14 @@ const PDFDocument = require('pdfkit');
 function flattenDeal(d) {
   return {
     ...d,
-    client_name         : d.clients?.name,
+    client_name         : d.clients?.name || d.client_custom,
     client_whatsapp     : d.clients?.whatsapp,
     property_title      : d.properties?.title,
     property_price      : d.properties?.price,
     property_zone       : d.properties?.zone,
     property_description: d.properties?.description,
     property_photos     : d.properties?.photos,
-    // property_custom already in ...d
+    // property_custom and client_custom already in ...d
     clients             : undefined,
     properties          : undefined,
   };
@@ -29,9 +29,10 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { client_id, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
+  const { client_id, client_custom, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
   const { data, error } = await db.from('deals')
-    .insert({ client_id, property_id: property_id || null, property_custom: property_custom || null,
+    .insert({ client_id: client_id || null, client_custom: client_id ? null : (client_custom || null),
+      property_id: property_id || null, property_custom: property_custom || null,
       status: status || 'En cours', notes: notes || '',
       lease_start: lease_start || null, lease_end: lease_end || null,
       monthly_rent: monthly_rent || null, commission_amount: commission_amount || null,
@@ -43,9 +44,10 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const { client_id, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
+  const { client_id, client_custom, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
   const { data, error } = await db.from('deals')
-    .update({ client_id, property_id: property_id || null, property_custom: property_custom || null,
+    .update({ client_id: client_id || null, client_custom: client_id ? null : (client_custom || null),
+      property_id: property_id || null, property_custom: property_custom || null,
       status, notes: notes || '',
       lease_start: lease_start || null, lease_end: lease_end || null,
       monthly_rent: monthly_rent || null, commission_amount: commission_amount || null,
