@@ -29,13 +29,14 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { client_id, client_custom, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
+  const { client_id, client_custom, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, deposit, commission_amount, commission_paid } = req.body;
   const { data, error } = await db.from('deals')
     .insert({ client_id: client_id || null, client_custom: client_id ? null : (client_custom || null),
       property_id: property_id || null, property_custom: property_custom || null,
       status: status || 'En cours', notes: notes || '',
       lease_start: lease_start || null, lease_end: lease_end || null,
-      monthly_rent: monthly_rent || null, commission_amount: commission_amount || null,
+      monthly_rent: monthly_rent || null, deposit: deposit || null,
+      commission_amount: commission_amount || null,
       commission_paid: commission_paid ? true : false })
     .select(dealSelect).single();
   if (error) return res.status(500).json({ error: error.message });
@@ -44,13 +45,14 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const { client_id, client_custom, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
+  const { client_id, client_custom, property_id, property_custom, status, notes, lease_start, lease_end, monthly_rent, deposit, commission_amount, commission_paid } = req.body;
   const { data, error } = await db.from('deals')
     .update({ client_id: client_id || null, client_custom: client_id ? null : (client_custom || null),
       property_id: property_id || null, property_custom: property_custom || null,
       status, notes: notes || '',
       lease_start: lease_start || null, lease_end: lease_end || null,
-      monthly_rent: monthly_rent || null, commission_amount: commission_amount || null,
+      monthly_rent: monthly_rent || null, deposit: deposit || null,
+      commission_amount: commission_amount || null,
       commission_paid: commission_paid ? true : false,
       updated_at: new Date().toISOString() })
     .eq('id', req.params.id).select(dealSelect).single();

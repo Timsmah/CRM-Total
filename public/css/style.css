@@ -816,6 +816,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .comm-badge.unpaid { background: #FEE2E2; color: #991B1B; }
 .comm-badge:hover  { opacity: .75; }
 .contract-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; padding: 14px 16px; border-left: 1px solid var(--border); }
+.duration-btns { display: flex; gap: 6px; margin-bottom: 4px; }
+.duration-btns .btn { font-size: 12px; padding: 4px 10px; }
 
 /* ── ACTIVITY LOG ────────────────────────────────── */
 .activity-quick-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }

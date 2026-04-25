@@ -101,6 +101,7 @@ const Contracts = {
           <div class="contract-meta">
             ${d.lease_start ? `📅 ${fmtDate(d.lease_start)} → ${fmtDate(d.lease_end)}` : '<span style="color:var(--text-3);font-style:italic">No dates set</span>'}
             ${rent ? ` · <strong>${Number(rent).toLocaleString('fr-FR')} ฿/mo</strong>` : ''}
+            ${d.deposit ? ` · 🔒 Dépôt: <strong>${Number(d.deposit).toLocaleString('fr-FR')} ฿</strong>` : ''}
           </div>
           <div class="contract-commission">
             <span>💰 Commission: ${commFmt}</span>
@@ -118,6 +119,20 @@ const Contracts = {
           <button class="btn btn-sm btn-ghost" onclick="Contracts.remove(${d.id})" title="Delete">✕</button>
         </div>
       </div>`;
+  },
+
+  _setDuration(months) {
+    const startEl = document.getElementById('lease-start');
+    const endEl   = document.getElementById('lease-end');
+    if (!startEl || !startEl.value) { Toast.show('Choisis d\'abord une date de début', 'error'); return; }
+    const d = new Date(startEl.value);
+    d.setMonth(d.getMonth() + months);
+    endEl.value = d.toISOString().split('T')[0];
+  },
+
+  _autoEnd() {
+    // réinitialise la fin si on change le début (pour forcer un choix de durée)
+    // on laisse la valeur existante en place, l'utilisateur reclick les boutons
   },
 
   // Match typed client name against known clients → populate hidden id
@@ -183,29 +198,39 @@ const Contracts = {
             ${statuses.map(s => `<option ${d?.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
-        <div class="form-2">
-          <div class="form-row">
-            <label>📅 Lease start</label>
-            <input type="date" name="lease_start" value="${d?.lease_start||''}">
+        <div class="form-row">
+          <label>📅 Date de début</label>
+          <input type="date" name="lease_start" id="lease-start" value="${d?.lease_start||''}"
+            oninput="Contracts._autoEnd()">
+        </div>
+        <div class="form-row">
+          <div class="duration-btns">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="Contracts._setDuration(3)">3 mois</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="Contracts._setDuration(6)">6 mois</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="Contracts._setDuration(12)">1 an</button>
           </div>
-          <div class="form-row">
-            <label>📅 Lease end</label>
-            <input type="date" name="lease_end" value="${d?.lease_end||''}">
-          </div>
+          <label style="font-size:11px;color:var(--text-3);margin-top:8px;display:block">📅 Date de fin (manuelle)</label>
+          <input type="date" name="lease_end" id="lease-end" value="${d?.lease_end||''}">
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>💰 Monthly rent (฿)</label>
+            <label>💰 Loyer mensuel (฿)</label>
             <input type="number" name="monthly_rent" placeholder="53000" value="${d?.monthly_rent||d?.property_price||''}">
           </div>
+          <div class="form-row">
+            <label>🔒 Dépôt (฿)</label>
+            <input type="number" name="deposit" placeholder="106000" value="${d?.deposit||''}">
+          </div>
+        </div>
+        <div class="form-2">
           <div class="form-row">
             <label>🏆 Commission (฿)</label>
             <input type="number" name="commission_amount" placeholder="53000" value="${d?.commission_amount||''}">
           </div>
-        </div>
-        <div class="form-row" style="display:flex;align-items:center;gap:10px">
-          <input type="checkbox" name="commission_paid" id="comm-paid" ${d?.commission_paid?'checked':''} style="width:auto">
-          <label for="comm-paid" style="margin:0">Commission paid ✅</label>
+          <div class="form-row" style="display:flex;align-items:center;gap:10px;padding-top:22px">
+            <input type="checkbox" name="commission_paid" id="comm-paid" ${d?.commission_paid?'checked':''} style="width:auto">
+            <label for="comm-paid" style="margin:0">Commission payée ✅</label>
+          </div>
         </div>
         <div class="form-row">
           <label>Notes</label>
