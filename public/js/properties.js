@@ -114,55 +114,34 @@ const Properties = {
         </div>
       </div>
 
-      <div class="filters-block">
-        <div class="filter-group">
-          <span class="filter-label">Status</span>
-          <div class="filter-pills">
-            ${[['tous','All'],['disponible','Available'],['proposé','Proposed'],['loué','Rented']].map(([val,lbl]) =>
-              `<button class="pill ${this.filterStatus === val ? 'active' : ''}"
-                onclick="Properties.setFilter('status','${val}')">${lbl}</button>`
-            ).join('')}
-          </div>
-        </div>
-
+      <div class="filter-bar" style="margin-bottom:20px">
+        <select class="filter-select" onchange="Properties.setFilter('status',this.value)">
+          <option value="tous">All statuses</option>
+          <option value="disponible" ${this.filterStatus==='disponible'?'selected':''}>Available</option>
+          <option value="proposé"    ${this.filterStatus==='proposé'?'selected':''}>Proposed</option>
+          <option value="loué"       ${this.filterStatus==='loué'?'selected':''}>Rented</option>
+        </select>
         ${zones.length ? `
-        <div class="filter-group">
-          <span class="filter-label">Zone</span>
-          <div class="filter-pills">
-            <button class="pill ${this.filterZone === 'toutes' ? 'active' : ''}"
-              onclick="Properties.setFilter('zone','toutes')">All</button>
-            ${zones.map(z =>
-              `<button class="pill ${this.filterZone === z ? 'active' : ''}"
-                onclick="Properties.setFilter('zone','${z}')">${z}</button>`
-            ).join('')}
-          </div>
-        </div>` : ''}
-
+        <select class="filter-select" onchange="Properties.setFilter('zone',this.value)">
+          <option value="toutes">All zones</option>
+          ${zones.map(z => `<option value="${z}" ${this.filterZone===z?'selected':''}>${z}</option>`).join('')}
+        </select>` : ''}
         ${beds.length ? `
-        <div class="filter-group">
-          <span class="filter-label">Bedrooms</span>
-          <div class="filter-pills">
-            <button class="pill ${this.filterBeds === 'tous' ? 'active' : ''}"
-              onclick="Properties.setFilter('beds','tous')">All</button>
-            ${beds.map(b =>
-              `<button class="pill ${this.filterBeds === b ? 'active' : ''}"
-                onclick="Properties.setFilter('beds','${b}')">${b} BR</button>`
-            ).join('')}
-          </div>
-        </div>` : ''}
-
-        <div class="filter-group">
-          <span class="filter-label">Max price</span>
-          <div class="price-slider-wrap">
-            <input type="range" min="0" max="250000" step="5000"
-              value="${this.filterPriceMax}"
-              oninput="Properties.setFilter('price', this.value)"
-              class="price-slider">
-            <span class="price-slider-val">
-              ${this.filterPriceMax >= 250000 ? 'No limit' : Number(this.filterPriceMax).toLocaleString('fr-FR') + ' ฿'}
-            </span>
-          </div>
+        <select class="filter-select" onchange="Properties.setFilter('beds',this.value)">
+          <option value="tous">All bedrooms</option>
+          ${beds.map(b => `<option value="${b}" ${this.filterBeds===b?'selected':''}>${b} BR</option>`).join('')}
+        </select>` : ''}
+        <div class="price-slider-wrap">
+          <span style="font-size:12px;color:var(--text-3);white-space:nowrap">Max price</span>
+          <input type="range" min="0" max="250000" step="5000"
+            value="${this.filterPriceMax}"
+            oninput="Properties.setFilter('price', this.value)"
+            class="price-slider">
+          <span class="price-slider-val">
+            ${this.filterPriceMax >= 250000 ? 'No limit' : Number(this.filterPriceMax).toLocaleString('fr-FR') + ' ฿'}
+          </span>
         </div>
+        <span style="margin-left:auto;font-size:12px;color:var(--text-3)">${this.filtered().length} properties</span>
       </div>
 
       <div class="cards-grid">

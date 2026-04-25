@@ -168,7 +168,7 @@ const Search = {
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { today: Today, dashboard: Dashboard, clients: Clients, properties: Properties, deals: Deals, finance: Finance };
+    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance };
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
@@ -263,7 +263,7 @@ const App = {
 
     // Route
     const hash = window.location.hash.slice(1);
-    Router.navigate(hash || 'today');
+    Router.navigate(hash || 'dashboard');
 
     window.addEventListener('hashchange', () => {
       const s = window.location.hash.slice(1);

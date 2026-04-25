@@ -67,7 +67,8 @@ const Clients = {
   filter: 'tous',
   showArchived: false,
   focusedCol: null,
-  sortDir: 'desc', // 'desc' = plus récent en premier, 'asc' = plus vieux en premier
+  sortDir: 'desc',
+  clientFilters: { status: '', zone: '', tag: '', urgency: '' },
 
   async init() {
     // Affiche un placeholder rapide
@@ -106,9 +107,67 @@ const Clients = {
         <span class="legend-item"><span class="legend-clock">🕐</span>${t('clients_legend_days')}</span>
         <button class="legend-help-btn" onclick="Clients.showTagsLegend(event)" title="Badges legend">?</button>
       </div>
+      ${this.filterBarHTML()}
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
         ${getContactCols().map(col => this.columnHTML(col)).join('')}
       </div>`;
+  },
+
+  filterBarHTML() {
+    const SKIP = /non\s*pr[eé]cis[eé]|je ne sais|pas encore|autre/i;
+    const zones = [...new Set(
+      this.data.flatMap(c => (c.zones||'').split(/,\s*/).map(z => z.trim()).filter(z => z && !SKIP.test(z)))
+    )].sort();
+    const statuses = ['Prospect','Onboarding','Recherche active','Signé','Perdu'];
+    const f = this.clientFilters;
+    const active = Object.values(f).some(v => v);
+    return `
+      <div class="filter-bar">
+        <select class="filter-select" onchange="Clients.setClientFilter('status',this.value)">
+          <option value="">All statuses</option>
+          ${statuses.map(s => `<option value="${s}" ${f.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <select class="filter-select" onchange="Clients.setClientFilter('zone',this.value)">
+          <option value="">All zones</option>
+          ${zones.map(z => `<option value="${z}" ${f.zone===z?'selected':''}>${z}</option>`).join('')}
+        </select>
+        <select class="filter-select" onchange="Clients.setClientFilter('tag',this.value)">
+          <option value="">All tags</option>
+          ${ACTION_TAGS.map(tag => `<option value="${tag.key}" ${f.tag===tag.key?'selected':''}>${tag.emoji} ${tag.label}</option>`).join('')}
+        </select>
+        <select class="filter-select" onchange="Clients.setClientFilter('urgency',this.value)">
+          <option value="">All urgencies</option>
+          <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>🔴 &lt;14 days</option>
+          <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>🟠 &lt;30 days</option>
+          <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>🟡 &lt;60 days</option>
+          <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>🔵 &gt;60 days</option>
+        </select>
+        ${active ? `<button class="btn btn-ghost btn-sm" onclick="Clients.clearClientFilters()">✕ Clear</button>` : ''}
+        <span style="margin-left:auto;font-size:12px;color:var(--text-3)">${this.countFiltered()} clients</span>
+      </div>`;
+  },
+
+  countFiltered() {
+    return this.data.filter(c => this._matchClientFilters(c)).length;
+  },
+
+  _matchClientFilters(c) {
+    const f = this.clientFilters;
+    if (f.status && c.status !== f.status) return false;
+    if (f.zone && !(c.zones||'').toLowerCase().includes(f.zone.toLowerCase())) return false;
+    if (f.tag && !this.getTags(c).includes(f.tag)) return false;
+    if (f.urgency && this.urgencyClass(c.move_in_date) !== f.urgency) return false;
+    return true;
+  },
+
+  setClientFilter(key, val) {
+    this.clientFilters[key] = val;
+    this.render();
+  },
+
+  clearClientFilters() {
+    this.clientFilters = { status: '', zone: '', tag: '', urgency: '' };
+    this.render();
   },
 
   effectiveContactStatus(c) {
@@ -130,6 +189,7 @@ const Clients = {
 
     const cards = this.filtered()
       .filter(c => this.effectiveContactStatus(c) === col.key)
+      .filter(c => this._matchClientFilters(c))
       .sort((a, b) => this.sortDir === 'desc'
         ? daysAgoNum(a) - daysAgoNum(b)   // récent en premier (peu de jours)
         : daysAgoNum(b) - daysAgoNum(a)); // vieux en premier (beaucoup de jours)
@@ -520,14 +580,25 @@ const Clients = {
       </div>
       <div id="proposals-slot-${id}" class="sub-list-slot"><span class="spinner-sm">…</span></div>
 
+      <div class="modal-sep"></div>
+      <div class="modal-sub-title">📓 Activity log</div>
+      <div class="activity-quick-btns">
+        ${[['call','📞','Called'],['whatsapp','💬','WhatsApp'],['visit','🏠','Visit'],['email','✉️','Email'],['note','📝','Note']].map(([type,emoji,label]) =>
+          `<button class="activity-quick-btn" onclick="Clients.showActivityInput(${id},'${type}','${emoji} ${label}')">${emoji} ${label}</button>`
+        ).join('')}
+      </div>
+      <div id="activity-input-${id}" class="activity-input-wrap hidden"></div>
+      <div id="activity-slot-${id}" class="activity-timeline"><span class="spinner-sm">…</span></div>
+
       <div class="form-actions" style="margin-top:16px">
         <button class="btn btn-ghost" onclick="Modal.close()">${t('clients_close')}</button>
         <button class="btn btn-secondary" onclick="Modal.close(); Clients.openEditModal(${c.id})">${t('clients_edit')}</button>
         <button class="btn btn-danger btn-sm" onclick="Modal.close(); Clients.archive(${c.id})">${this.showArchived ? t('clients_unarchive') : t('clients_archive')}</button>
       </div>`);
-    // Async-load matching + proposals
+    // Async-load all sections
     this._loadMatching(id, c);
     this._loadProposals(id);
+    this._loadActivities(id);
   },
 
   // ── Matching auto ────────────────────────────────
@@ -639,6 +710,70 @@ const Clients = {
       await api.patch(`/proposals/${proposalId}/status`, { status });
       Toast.show('✓ Statut mis à jour');
     } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  // ── Activity log ─────────────────────────────────
+  async _loadActivities(clientId) {
+    const slot = document.getElementById(`activity-slot-${clientId}`);
+    if (!slot) return;
+    try {
+      const rows = await api.get(`/activities?client_id=${clientId}`);
+      if (!rows.length) { slot.innerHTML = `<p class="sub-empty">No activity yet. Log your first interaction above.</p>`; return; }
+      const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
+      slot.innerHTML = rows.map(r => `
+        <div class="activity-entry">
+          <span class="activity-icon">${ICONS[r.type]||'📌'}</span>
+          <div class="activity-content">
+            <span class="activity-author">${r.author}</span>
+            <span class="activity-time">${this._relativeTime(r.created_at)}</span>
+            ${r.content ? `<p class="activity-text">${r.content}</p>` : ''}
+          </div>
+          <button class="activity-del" onclick="Clients.deleteActivity(${r.id},${clientId})" title="Delete">✕</button>
+        </div>`).join('');
+    } catch { slot.innerHTML = '<p class="sub-empty">—</p>'; }
+  },
+
+  showActivityInput(clientId, type, label) {
+    const wrap = document.getElementById(`activity-input-${clientId}`);
+    if (!wrap) return;
+    wrap.classList.remove('hidden');
+    wrap.innerHTML = `
+      <div class="activity-input-row">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${label}</span>
+        <input id="act-note-${clientId}" type="text" placeholder="Add a note (optional)…"
+          class="activity-note-input" onkeydown="if(event.key==='Enter')Clients.logActivity(${clientId},'${type}',this.value)">
+        <button class="btn btn-sm btn-primary" onclick="Clients.logActivity(${clientId},'${type}',document.getElementById('act-note-${clientId}').value)">Log</button>
+        <button class="btn btn-sm btn-ghost" onclick="document.getElementById('activity-input-${clientId}').classList.add('hidden')">✕</button>
+      </div>`;
+    setTimeout(() => document.getElementById(`act-note-${clientId}`)?.focus(), 50);
+  },
+
+  async logActivity(clientId, type, content) {
+    const author = getLang() === 'fr' ? 'Tim' : 'Tim'; // TODO: user system
+    try {
+      await api.post('/activities', { client_id: clientId, type, content: content || null, author });
+      const wrap = document.getElementById(`activity-input-${clientId}`);
+      if (wrap) wrap.classList.add('hidden');
+      this._loadActivities(clientId);
+      Toast.show('✓ Activity logged');
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  async deleteActivity(activityId, clientId) {
+    await api.del(`/activities/${activityId}`);
+    this._loadActivities(clientId);
+  },
+
+  _relativeTime(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return 'Just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 7)  return `${d}d ago`;
+    return fmtDate(iso);
   },
 
   openAddModal() { Modal.open('Add client', this.formHTML(null)); },

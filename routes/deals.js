@@ -28,33 +28,38 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { client_id, property_id, status, notes } = req.body;
+  const { client_id, property_id, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
   const { data, error } = await db.from('deals')
-    .insert({ client_id, property_id, status: status || 'En cours', notes: notes || '' })
+    .insert({ client_id, property_id, status: status || 'En cours', notes: notes || '',
+      lease_start: lease_start || null, lease_end: lease_end || null,
+      monthly_rent: monthly_rent || null, commission_amount: commission_amount || null,
+      commission_paid: commission_paid ? true : false })
     .select(dealSelect).single();
   if (error) return res.status(500).json({ error: error.message });
-
-  if (status === 'Signé') {
-    await db.from('properties').update({ status: 'Loué' }).eq('id', property_id);
-  }
-
+  if (status === 'Signé') await db.from('properties').update({ status: 'Loué' }).eq('id', property_id);
   res.json(flattenDeal(data));
 });
 
 router.put('/:id', async (req, res) => {
-  const { client_id, property_id, status, notes } = req.body;
+  const { client_id, property_id, status, notes, lease_start, lease_end, monthly_rent, commission_amount, commission_paid } = req.body;
   const { data, error } = await db.from('deals')
-    .update({ client_id, property_id, status, notes, updated_at: new Date().toISOString() })
+    .update({ client_id, property_id, status, notes: notes || '',
+      lease_start: lease_start || null, lease_end: lease_end || null,
+      monthly_rent: monthly_rent || null, commission_amount: commission_amount || null,
+      commission_paid: commission_paid ? true : false,
+      updated_at: new Date().toISOString() })
     .eq('id', req.params.id).select(dealSelect).single();
   if (error) return res.status(500).json({ error: error.message });
-
-  if (status === 'Signé') {
-    await db.from('properties').update({ status: 'Loué' }).eq('id', property_id);
-  } else if (status === 'Annulé') {
-    await db.from('properties').update({ status: 'Disponible' }).eq('id', property_id);
-  }
-
+  if (status === 'Signé') await db.from('properties').update({ status: 'Loué' }).eq('id', property_id);
+  else if (status === 'Annulé') await db.from('properties').update({ status: 'Disponible' }).eq('id', property_id);
   res.json(flattenDeal(data));
+});
+
+router.patch('/:id/commission', async (req, res) => {
+  const { commission_paid } = req.body;
+  const { error } = await db.from('deals').update({ commission_paid }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ commission_paid });
 });
 
 router.delete('/:id', async (req, res) => {
