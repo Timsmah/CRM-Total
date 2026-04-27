@@ -363,6 +363,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .col-no-response { color: var(--text-2); }
 .col-urgent      { color: #7C3AED; }
 .col-callback    { color: var(--red); }
+.col-closed      { color: #16A34A; }
 .col-meeting     { color: var(--green); }
 
 .kanban-cards {

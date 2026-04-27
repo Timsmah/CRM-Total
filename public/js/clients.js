@@ -58,6 +58,7 @@ function getContactCols() {
     { key: 'Property to Find', label: t('col_search'),   cls: 'col-meeting'    },
     { key: 'Urgent Sending',   label: t('col_proposal'), cls: 'col-urgent'     },
     { key: 'Rappeler',         label: t('col_visit'),    cls: 'col-callback'   },
+    { key: 'Closed',           label: 'Closed',          cls: 'col-closed'     },
   ];
 }
 const CONTACT_COLS = getContactCols(); // kept for compatibility, refreshed in render()
@@ -541,6 +542,25 @@ const Clients = {
     const id = Number(e.dataTransfer.getData('clientId'));
     if (!id) return;
     await this.setContactStatus(id, colKey);
+    if (colKey === 'Closed') await this._createContractFromClient(id);
+  },
+
+  async _createContractFromClient(clientId) {
+    const c = this.data.find(x => x.id === clientId);
+    if (!c) return;
+    // Check if an active contract already exists for this client
+    try {
+      const deals = await api.get('/deals');
+      const existing = deals.find(d => d.client_id === clientId && d.status === 'En cours');
+      if (existing) {
+        Toast.show(`📋 Contrat déjà existant pour ${c.name}`);
+        return;
+      }
+      await api.post('/deals', { client_id: clientId, status: 'En cours' });
+      Toast.show(`✅ Contrat créé pour ${c.name} — voir l'onglet Contracts`);
+    } catch (err) {
+      Toast.show('Erreur création contrat : ' + err.message, 'error');
+    }
   },
 
   openDetailModal(id, e) {
