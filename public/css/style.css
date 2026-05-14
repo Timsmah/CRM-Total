@@ -441,8 +441,13 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   border-top: 1px solid var(--border);
 }
 .action-tags-display {
-  display: flex; flex-wrap: wrap; gap: 4px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
   flex: 1; min-height: 20px;
+}
+.tags-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tags-divider {
+  width: 1px; height: 16px; background: var(--border);
+  margin: 0 4px; flex-shrink: 0;
 }
 .action-tag {
   display: inline-flex; align-items: center; gap: 3px;

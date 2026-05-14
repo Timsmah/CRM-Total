@@ -280,12 +280,18 @@ const Clients = {
           ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
         </div>
 
-        <!-- #5 — tags sur une ligne propre, séparés du bouton + -->
+        <!-- tags : actions | personnes -->
         <div class="action-tags-row" onclick="event.stopPropagation()">
           <div class="action-tags-display">
-            ${this.tagsHTML(this.getTags(c))}
-            ${this.noteChipsHTML(c)}
-            ${this.reminderChipHTML(c)}
+            <div class="tags-group tags-group-actions">
+              ${this.actionTagsHTML(this.getTags(c))}
+              ${this.reminderChipHTML(c)}
+            </div>
+            ${this.personTagsHTML(this.getTags(c), c) ? `
+              <div class="tags-divider"></div>
+              <div class="tags-group tags-group-people">
+                ${this.personTagsHTML(this.getTags(c), c)}
+              </div>` : ''}
             ${this.allTagsEmpty(c) ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
           </div>
           <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
@@ -307,15 +313,34 @@ const Clients = {
     try { return JSON.parse(c.action_tags); } catch { return []; }
   },
 
+  _PERSON_KEYS: ['tim', 'nono', 'alex'],
+
+  _tagHTML(key) {
+    const tag = ACTION_TAGS.find(x => x.key === key);
+    if (!tag) return '';
+    const label = getLang() === 'en' ? (TAG_EN[key] || tag.label) : tag.label;
+    const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : key === 'tim' ? ' tag-tim' : key === 'alex' || key === 'nono' ? ' tag-nono' : '';
+    return `<span class="action-tag${extra}">${tag.emoji} ${label}</span>`;
+  },
+
+  // Tags d'action (À appeler, En attente, etc.) — hors personnes
+  actionTagsHTML(tags) {
+    if (!tags || !tags.length) return '';
+    return tags.filter(k => !this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
+  },
+
+  // Tags personnes (Tim, Nono) + notes associées
+  personTagsHTML(tags, c) {
+    const personTags = (tags || []).filter(k => this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
+    const notes = (c.note_tim ? `<span class="action-tag tag-tim" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
+                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
+    return personTags + notes;
+  },
+
+  // Gardé pour compatibilité (legend, etc.)
   tagsHTML(tags) {
     if (!tags || !tags.length) return '';
-    return tags.map(key => {
-      const tag = ACTION_TAGS.find(x => x.key === key);
-      if (!tag) return '';
-      const label = getLang() === 'en' ? (TAG_EN[key] || tag.label) : tag.label;
-      const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : key === 'tim' ? ' tag-tim' : key === 'alex' || key === 'nono' ? ' tag-nono' : '';
-      return `<span class="action-tag${extra}">${tag.emoji} ${label}</span>`;
-    }).join('');
+    return tags.map(k => this._tagHTML(k)).join('');
   },
 
   noteChipsHTML(c) {
