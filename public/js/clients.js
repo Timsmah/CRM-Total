@@ -770,7 +770,7 @@ const Clients = {
   },
 
   async logActivity(clientId, type, content) {
-    const author = getLang() === 'fr' ? 'Tim' : 'Tim'; // TODO: user system
+    const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
     try {
       await api.post('/activities', { client_id: clientId, type, content: content || null, author });
       const wrap = document.getElementById(`activity-input-${clientId}`);
