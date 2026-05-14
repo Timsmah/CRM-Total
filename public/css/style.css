@@ -374,15 +374,25 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 }
 .kanban-cards::-webkit-scrollbar { display: none; }
 
-.kanban-card { padding: 12px; border-radius: 9px; }
-.kanban-card .client-name { font-size: 13.5px; }
+.kanban-card { padding: 12px; border-radius: 9px; border-left: 3px solid transparent; }
+.kanban-card .client-name { font-size: 15px; font-weight: 700; }
 .kanban-card .client-details p { font-size: 12px; margin-bottom: 2px; }
 
+/* #6 — bord gauche coloré par urgence */
+.kanban-card.card-border-red    { border-left-color: #DC2626; }
+.kanban-card.card-border-amber  { border-left-color: #D97706; }
+.kanban-card.card-border-yellow { border-left-color: #CA8A04; }
+.kanban-card.card-border-blue   { border-left-color: #3B82F6; }
+
+/* #4 — critères sur 1 ligne avec tooltip au hover */
 .card-criteria {
   color: var(--text-2); font-size: 11px; font-style: italic;
   margin-top: 4px;
+}
+.card-criteria-clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+  cursor: help;
 }
 
 .kanban-empty { color: var(--text-3); font-size: 12px; padding: 6px 4px; }

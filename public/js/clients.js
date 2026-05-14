@@ -145,7 +145,11 @@ const Clients = {
           <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>🔵 &gt;60 days</option>
         </select>
         ${active ? `<button class="btn btn-ghost btn-sm" onclick="Clients.clearClientFilters()">✕ Clear</button>` : ''}
-        <span style="margin-left:auto;font-size:12px;color:var(--text-3)">${this.countFiltered()} clients</span>
+        <span style="margin-left:auto;font-size:12px;color:var(--text-3)">
+          ${active
+            ? `<strong style="color:var(--accent)">${this.countFiltered()}</strong> / ${this.data.length} clients`
+            : `${this.data.length} clients`}
+        </span>
       </div>`;
   },
 
@@ -245,8 +249,14 @@ const Clients = {
     const daysAgo = this.daysAgo(c);
     const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
 
+    // #6 — bord gauche coloré selon urgence
+    const borderCls = urgency === 'urgent-red' ? 'card-border-red'
+                    : urgency === 'urgent-amber' ? 'card-border-amber'
+                    : urgency === 'urgent-yellow' ? 'card-border-yellow'
+                    : urgency === 'urgent-future' ? 'card-border-blue' : '';
+
     return `
-      <div class="card kanban-card" data-cid="${c.id}" draggable="true"
+      <div class="card kanban-card ${borderCls}" data-cid="${c.id}" draggable="true"
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)"
         onclick="Clients.openDetailModal(${c.id}, event)">
@@ -260,14 +270,18 @@ const Clients = {
             </button>
           </div>
         </div>
+
+        <!-- #4 — nom en plus gros, critères masqués par défaut -->
         <div class="client-name">${c.name}</div>
         <div class="client-details">
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
           ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
-          ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
-          ${c.criteria ? `<p class="card-criteria">${c.criteria}</p>` : ''}
+          ${c.duration ? `<p>⏱ ${tr(c.duration)}</p>` : ''}
+          ${c.criteria ? `<p class="card-criteria card-criteria-clamp" title="${c.criteria}">${c.criteria}</p>` : ''}
         </div>
+
+        <!-- #5 — tags sur une ligne propre, séparés du bouton + -->
         <div class="action-tags-row" onclick="event.stopPropagation()">
           <div class="action-tags-display">
             ${this.tagsHTML(this.getTags(c))}
@@ -277,12 +291,7 @@ const Clients = {
           </div>
           <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
         </div>
-        <div class="card-actions">
-          <button class="btn btn-secondary btn-sm" onclick="Clients.openEditModal(${c.id})">${t('clients_edit')}</button>
-          <button class="btn btn-ghost btn-sm" onclick="Clients.archive(${c.id})">
-            ${this.showArchived ? t('clients_unarchive') : t('clients_archive')}
-          </button>
-        </div>
+        <!-- #2 — boutons Modifier/Archiver supprimés de la carte -->
       </div>`;
   },
 
