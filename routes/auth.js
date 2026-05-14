@@ -10,10 +10,14 @@ const COOKIE_OPTS = {
 
 router.post('/login', (req, res) => {
   const { password } = req.body;
-  const correct = process.env.CRM_PASSWORD || 'admin';
-  if (password === correct) {
-    res.cookie('crm_auth', '1', COOKIE_OPTS);
-    res.json({ success: true });
+  const adminPw = process.env.CRM_PASSWORD || 'admin';
+  const guestPw = process.env.GUEST_PASSWORD;
+  if (password === adminPw) {
+    res.cookie('crm_auth', 'admin', COOKIE_OPTS);
+    res.json({ success: true, role: 'admin' });
+  } else if (guestPw && password === guestPw) {
+    res.cookie('crm_auth', 'guest', COOKIE_OPTS);
+    res.json({ success: true, role: 'guest' });
   } else {
     res.status(401).json({ error: 'Mot de passe incorrect' });
   }
@@ -25,8 +29,9 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/check', (req, res) => {
-  const authenticated = !!(req.signedCookies && req.signedCookies.crm_auth === '1');
-  res.json({ authenticated });
+  const role = req.signedCookies?.crm_auth; // 'admin' | 'guest' | undefined
+  const authenticated = role === 'admin' || role === 'guest';
+  res.json({ authenticated, role: role || null });
 });
 
 router.post('/finance-unlock', (req, res) => {

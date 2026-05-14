@@ -197,10 +197,13 @@ const Router = {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 const App = {
+  role: 'admin',
+
   async init() {
     try {
-      const { authenticated } = await api.get('/auth/check');
-      authenticated ? this.showApp() : this.showLogin();
+      const { authenticated, role } = await api.get('/auth/check');
+      if (authenticated) { this.role = role || 'admin'; this.showApp(); }
+      else this.showLogin();
     } catch {
       this.showLogin();
     }
@@ -219,7 +222,8 @@ const App = {
       const errEl = document.getElementById('login-error');
       errEl.classList.add('hidden');
       try {
-        await api.post('/auth/login', { password: pw });
+        const { role } = await api.post('/auth/login', { password: pw });
+        this.role = role || 'admin';
         document.getElementById('login-screen').classList.add('hidden');
         this.showApp();
       } catch {
@@ -232,10 +236,19 @@ const App = {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
 
+    // Restrict guest: hide dashboard, contracts, finance
+    const guestOnly = ['clients', 'properties'];
+    if (this.role === 'guest') {
+      document.querySelectorAll('.nav-item').forEach(el => {
+        if (!guestOnly.includes(el.dataset.section)) el.style.display = 'none';
+      });
+    }
+
     // Nav clicks
     document.querySelectorAll('.nav-item').forEach(el => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
+        if (this.role === 'guest' && !guestOnly.includes(el.dataset.section)) return;
         Router.navigate(el.dataset.section);
       });
     });
@@ -261,9 +274,10 @@ const App = {
     // Apply saved lang to static nav labels
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
-    // Route
+    // Route (guest always starts on clients)
     const hash = window.location.hash.slice(1);
-    Router.navigate(hash || 'dashboard');
+    const startSection = (this.role === 'guest') ? 'clients' : (hash || 'dashboard');
+    Router.navigate(startSection);
 
     window.addEventListener('hashchange', () => {
       const s = window.location.hash.slice(1);

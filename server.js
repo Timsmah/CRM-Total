@@ -12,8 +12,15 @@ app.use(cookieParser(SECRET));
 
 // ── Auth middleware (signed cookie, works across serverless instances) ──────
 const requireAuth = (req, res, next) => {
-  if (req.signedCookies && req.signedCookies.crm_auth === '1') return next();
+  const role = req.signedCookies?.crm_auth;
+  if (role === 'admin' || role === 'guest') return next();
   res.status(401).json({ error: 'Non autorisé' });
+};
+
+// Admin-only routes (finance, contracts)
+const requireAdmin = (req, res, next) => {
+  if (req.signedCookies?.crm_auth === 'admin') return next();
+  res.status(403).json({ error: 'Accès réservé à l\'administrateur' });
 };
 
 // Auth & public routes
@@ -41,8 +48,8 @@ app.post('/api/properties/import', (req, res, next) => {
 app.use('/api/drive',      requireAuth, require('./routes/drive'));
 app.use('/api/clients',    requireAuth, require('./routes/clients'));
 app.use('/api/properties', requireAuth, require('./routes/properties'));
-app.use('/api/deals',      requireAuth, require('./routes/deals'));
-app.use('/api/finance',    requireAuth, require('./routes/finance'));
+app.use('/api/deals',      requireAdmin, require('./routes/deals'));
+app.use('/api/finance',    requireAdmin, require('./routes/finance'));
 app.use('/api/proposals',  requireAuth, require('./routes/proposals'));
 app.use('/api/activities', requireAuth, require('./routes/activities'));
 
