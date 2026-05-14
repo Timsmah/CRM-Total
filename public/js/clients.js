@@ -277,7 +277,7 @@ const Clients = {
           ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
           ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
-          ${c.duration ? `<p>⏱ ${tr(c.duration)}</p>` : ''}
+          ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
           ${c.criteria ? `<p class="card-criteria card-criteria-clamp" title="${c.criteria}">${c.criteria}</p>` : ''}
         </div>
 
