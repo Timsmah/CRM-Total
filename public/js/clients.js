@@ -73,12 +73,39 @@ const Clients = {
   clientFilters: { status: '', zone: '', tag: '', urgency: '' },
 
   async init() {
-    // Affiche un placeholder rapide
     document.getElementById('content').innerHTML = '<p class="spinner">Syncing…</p>';
-    // Sync silencieux au chargement
     try { await api.post('/clients/sync/sheets', {}); } catch {}
     await this.load();
     this.render();
+    this._checkReminders();
+  },
+
+  _checkReminders() {
+    const today = new Date().toISOString().split('T')[0];
+    const due = this.data.filter(c => c.reminder_date && c.reminder_date <= today);
+    if (!due.length) return;
+
+    // Notification navigateur
+    const send = () => {
+      due.forEach(c => {
+        const isPast = c.reminder_date < today;
+        const title = isPast ? `⏰ Rappel en retard — ${c.name}` : `🔔 Rappel aujourd'hui — ${c.name}`;
+        const body  = c.reminder_note || 'Pas de note';
+        new Notification(title, { body, icon: '/favicon.svg' });
+      });
+    };
+
+    if (Notification.permission === 'granted') {
+      send();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(p => { if (p === 'granted') send(); });
+    }
+
+    // Toast récap dans l'app
+    const label = due.length === 1
+      ? `🔔 1 rappel aujourd'hui : ${due[0].name}`
+      : `🔔 ${due.length} rappels en attente`;
+    Toast.show(label, 'info');
   },
 
   async load() {
