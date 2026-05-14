@@ -47,8 +47,7 @@ const ACTION_TAGS = [
   { key: 'hot',      emoji: '🔥', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
   { key: 'animals',  emoji: '🐕', label: 'Animaux',             desc: 'Client avec animaux, vérifie la politique' },
   { key: 'pool',     emoji: '🏊', label: 'Piscine requise',     desc: 'Piscine obligatoire dans les critères' },
-  { key: 'alex',     emoji: '📲', label: 'Nono à appeler',      desc: 'À transmettre à Nono pour qu\'il appelle' },
-  { key: 'nono',     emoji: '👤', label: 'Nono',                desc: 'À traiter par Nono' },
+  { key: 'nono',     emoji: '📲', label: 'Nono à appeler',      desc: 'À transmettre à Nono pour qu\'il appelle' },
   { key: 'tim',      emoji: '👤', label: 'Tim',                 desc: 'À traiter par Tim' },
 ];
 
@@ -339,13 +338,13 @@ const Clients = {
     try { return JSON.parse(c.action_tags); } catch { return []; }
   },
 
-  _PERSON_KEYS: ['tim', 'nono', 'alex'],
+  _PERSON_KEYS: ['tim', 'nono'],
 
   _tagHTML(key) {
     const tag = ACTION_TAGS.find(x => x.key === key);
     if (!tag) return '';
     const label = getLang() === 'en' ? (TAG_EN[key] || tag.label) : tag.label;
-    const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : key === 'tim' ? ' tag-tim' : key === 'alex' || key === 'nono' ? ' tag-nono' : '';
+    const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : key === 'tim' ? ' tag-tim' : key === 'nono' ? ' tag-nono' : '';
     return `<span class="action-tag${extra}">${tag.emoji} ${label}</span>`;
   },
 
@@ -355,14 +354,13 @@ const Clients = {
     return tags.filter(k => !this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
   },
 
-  // Tags personnes : Tim voit ses tags, Nono voit les siens
+  // Tags personnes (tout le monde voit tout, admin inclus)
   personTagsHTML(tags, c) {
-    const isNono = typeof App !== 'undefined' && App.role === 'guest';
-    const myKeys  = isNono ? ['alex', 'nono'] : ['tim'];
-    const personTags = (tags || []).filter(k => myKeys.includes(k)).map(k => this._tagHTML(k)).join('');
-    const notes = isNono
-      ? (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '')
-      : (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')"  title="${c.note_tim}">📝 Tim</span>`  : '');
+    // Migration : alex → nono pour les anciens tags
+    const normalized = (tags || []).map(k => k === 'alex' ? 'nono' : k);
+    const personTags = normalized.filter(k => this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
+    const notes = (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')"  title="${c.note_tim}">📝 Tim</span>`  : '')
+                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
     return personTags + notes;
   },
 
