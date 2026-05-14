@@ -355,11 +355,14 @@ const Clients = {
     return tags.filter(k => !this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
   },
 
-  // Tags personnes (Tim, Nono) + notes associées
+  // Tags personnes : Tim voit ses tags, Nono voit les siens
   personTagsHTML(tags, c) {
-    const personTags = (tags || []).filter(k => this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
-    const notes = (c.note_tim ? `<span class="action-tag tag-tim" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
-                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
+    const isNono = typeof App !== 'undefined' && App.role === 'guest';
+    const myKeys  = isNono ? ['alex', 'nono'] : ['tim'];
+    const personTags = (tags || []).filter(k => myKeys.includes(k)).map(k => this._tagHTML(k)).join('');
+    const notes = isNono
+      ? (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '')
+      : (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')"  title="${c.note_tim}">📝 Tim</span>`  : '');
     return personTags + notes;
   },
 
