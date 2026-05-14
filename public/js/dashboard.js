@@ -104,7 +104,7 @@ const Dashboard = {
       if (!c.move_in_date) return false;
       const d = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
       return d >= 0 && d <= 60;
-    }).sort((a,b) => new Date(a.move_in_date) - new Date(b.move_in_date)).slice(0,8);
+    }).sort((a,b) => new Date(a.move_in_date) - new Date(b.move_in_date));
   },
 
   // ── Pipeline as HTML bars ────────────────────────────────────────────────
@@ -164,10 +164,8 @@ const Dashboard = {
         </div>
       </div>
 
-      <!-- ── KPI cards ── -->
-      <div class="dash-kpis">
-
-        <!-- Revenue hero -->
+      <!-- ── KPI : Revenue seul ── -->
+      <div class="dash-kpis dash-kpis-solo">
         <div class="kpi-card kpi-hero">
           <div class="kpi-hero-eyebrow">💰 ${t('dash_revenue_week')}</div>
           <div class="kpi-hero-val" data-target="${kpis.revenueWeek}" data-format="thb">0</div>
@@ -177,30 +175,9 @@ const Dashboard = {
               ${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}% vs last week
             </div>` : ''}
         </div>
-
-        <!-- Active clients -->
-        <div class="kpi-card kpi-sm kpi-blue">
-          <div class="kpi-sm-icon">🧑‍💼</div>
-          <div class="kpi-sm-val" data-target="${kpis.activeClients}">0</div>
-          <div class="kpi-sm-label">${t('dash_active_clients')}</div>
-        </div>
-
-        <!-- Properties -->
-        <div class="kpi-card kpi-sm kpi-green">
-          <div class="kpi-sm-icon">🏠</div>
-          <div class="kpi-sm-val" data-target="${kpis.availableProps}">0</div>
-          <div class="kpi-sm-label">${t('dash_available_props')}</div>
-        </div>
-
-        <!-- Urgent -->
-        <div class="kpi-card kpi-sm ${kpis.urgentMoveIns > 0 ? 'kpi-red' : 'kpi-neutral'}">
-          <div class="kpi-sm-icon">📅</div>
-          <div class="kpi-sm-val" data-target="${kpis.urgentMoveIns}">0</div>
-          <div class="kpi-sm-label">${t('dash_urgent_movein')}</div>
-        </div>
       </div>
 
-      <!-- ── Row 2: Pipeline + Revenue ── -->
+      <!-- ── Row 1: Pipeline + Revenue chart ── -->
       <div class="dash-charts">
         <div class="dash-card">
           <div class="dash-card-title">${t('dash_pipeline')}</div>
@@ -214,36 +191,24 @@ const Dashboard = {
         </div>
       </div>
 
-      <!-- ── Row 3: Zones + Move-ins ── -->
-      <div class="dash-charts">
-        <div class="dash-card">
-          <div class="dash-card-title">${t('dash_zones')}</div>
-          ${zones.labels.length
-            ? `<div style="height:240px;position:relative"><canvas id="chart-zones"></canvas></div>`
-            : '<p class="empty" style="padding:60px 0;text-align:center;color:var(--text-3)">No client data yet</p>'}
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-title">Upcoming Move-ins <span class="dash-card-sub">next 60 days</span></div>
-          ${urgent.length ? `<div class="move-in-list">${urgent.map(c => {
-            const days = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
-            const color = days <= 14 ? '#DC2626' : days <= 30 ? '#D97706' : '#16A34A';
-            const bg    = days <= 14 ? '#FEF2F2' : days <= 30 ? '#FEF3C7' : '#F0FDF4';
-            const ini   = c.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-            const dateLbl = new Date(c.move_in_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-            return `<div class="dash-move-in">
-              <div class="move-in-avatar">${ini}</div>
-              <div style="flex:1;min-width:0">
-                <div class="move-in-name">${c.name}</div>
-                <div class="move-in-zone">${c.zones||'—'}</div>
-              </div>
-              <div class="move-in-pill" style="background:${bg};color:${color}">
-                <span style="font-size:16px;font-weight:900;line-height:1">${days}</span>
-                <span style="font-size:10px;font-weight:700">days · ${dateLbl}</span>
-              </div>
-            </div>`;
-          }).join('')}</div>`
-          : '<p class="empty" style="padding:60px 0;text-align:center;color:var(--text-3)">No upcoming move-ins</p>'}
-        </div>
+      <!-- ── Row 2: Upcoming Move-ins tuiles ── -->
+      <div class="dash-card" style="margin-top:20px">
+        <div class="dash-card-title">Upcoming Move-ins <span class="dash-card-sub">next 60 days</span></div>
+        ${urgent.length ? `<div class="movein-grid">${urgent.map(c => {
+          const days    = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
+          const color   = days <= 7  ? '#DC2626' : days <= 14 ? '#EA580C' : days <= 30 ? '#D97706' : '#16A34A';
+          const bg      = days <= 7  ? '#FEF2F2' : days <= 14 ? '#FFF7ED' : days <= 30 ? '#FFFBEB' : '#F0FDF4';
+          const border  = days <= 7  ? '#FECACA' : days <= 14 ? '#FED7AA' : days <= 30 ? '#FDE68A' : '#BBF7D0';
+          const firstName = c.name.split(' ')[0];
+          const dateLbl = new Date(c.move_in_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+          return `<div class="movein-tile" style="background:${bg};border-color:${border}">
+            <div class="movein-tile-days" style="color:${color}">${days}</div>
+            <div class="movein-tile-unit" style="color:${color}">jours</div>
+            <div class="movein-tile-name">${firstName}</div>
+            <div class="movein-tile-date">${dateLbl}</div>
+          </div>`;
+        }).join('')}</div>`
+        : '<p class="empty" style="padding:40px 0;text-align:center;color:var(--text-3)">Aucune arrivée dans les 60 prochains jours</p>'}
       </div>`;
 
     // Animated counters
@@ -272,7 +237,6 @@ const Dashboard = {
 
     setTimeout(() => {
       this.drawRevenue(revenue);
-      if (zones.labels.length) this.drawZones(zones);
     }, 60);
   },
 

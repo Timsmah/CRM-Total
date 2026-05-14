@@ -1016,6 +1016,57 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   gap: 14px;
   margin-bottom: 16px;
 }
+.dash-kpis-solo {
+  grid-template-columns: 1fr;
+  max-width: 360px;
+}
+
+/* ── Move-in tiles (proposition 3) ── */
+.movein-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.movein-tile {
+  border-radius: 14px;
+  border: 1.5px solid;
+  padding: 16px 8px 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  transition: transform .15s;
+}
+.movein-tile:hover { transform: translateY(-2px); }
+.movein-tile-days {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+}
+.movein-tile-unit {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  opacity: 0.8;
+}
+.movein-tile-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.movein-tile-date {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
 .kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
