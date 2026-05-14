@@ -304,14 +304,14 @@ const Clients = {
       const tag = ACTION_TAGS.find(x => x.key === key);
       if (!tag) return '';
       const label = getLang() === 'en' ? (TAG_EN[key] || tag.label) : tag.label;
-      const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : '';
+      const extra = key === 'hot' ? ' tag-hot' : key === 'payer' ? ' tag-payer' : key === 'stop' ? ' tag-stop' : key === 'tim' ? ' tag-tim' : key === 'alex' ? ' tag-nono' : '';
       return `<span class="action-tag${extra}">${tag.emoji} ${label}</span>`;
     }).join('');
   },
 
   noteChipsHTML(c) {
-    return (c.note_tim ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
-         + (c.note_alex ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
+    return (c.note_tim ? `<span class="action-tag tag-tim" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
+         + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
   },
 
   reminderChipHTML(c) {
