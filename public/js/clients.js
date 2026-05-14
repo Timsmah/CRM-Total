@@ -337,6 +337,18 @@ const Clients = {
     return personTags + notes;
   },
 
+  // Rendu complet des tags avec séparation action | personnes (pour mise à jour live)
+  fullTagsHTML(c) {
+    const tags = this.getTags(c);
+    const actionHtml = this.actionTagsHTML(tags) + this.reminderChipHTML(c);
+    const personHtml = this.personTagsHTML(tags, c);
+    const isEmpty = !actionHtml && !personHtml;
+    return `
+      <div class="tags-group tags-group-actions">${actionHtml}</div>
+      ${personHtml ? `<div class="tags-divider"></div><div class="tags-group tags-group-people">${personHtml}</div>` : ''}
+      ${isEmpty ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}`;
+  },
+
   // Gardé pour compatibilité (legend, etc.)
   tagsHTML(tags) {
     if (!tags || !tags.length) return '';
@@ -427,7 +439,7 @@ const Clients = {
     await api.patch(`/clients/${id}/tags`, { action_tags: tags });
     // Update display on the card directly
     const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
-    if (display) display.innerHTML = this.tagsHTML(tags);
+    if (display) display.innerHTML = this.fullTagsHTML(c);
   },
 
   openNoteModal(id, noteKey) {
@@ -485,7 +497,7 @@ const Clients = {
     if (display && c) {
       // Re-render just the tags display
       const tags = this.getTags(c);
-      display.innerHTML = this.tagsHTML(tags) + this.noteChipsHTML(c) + this.reminderChipHTML(c);
+      display.innerHTML = this.fullTagsHTML(c);
     }
     // Also refresh Today if visible
     if (typeof Today !== 'undefined' && Router.current === 'today') Today.init();
