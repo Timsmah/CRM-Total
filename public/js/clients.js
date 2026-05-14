@@ -307,19 +307,18 @@ const Clients = {
           ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
         </div>
 
-        <!-- tags : actions | personnes -->
+        <!-- tags : actions / personnes sur 2 rangées -->
         <div class="action-tags-row" onclick="event.stopPropagation()">
           <div class="action-tags-display">
             <div class="tags-group tags-group-actions">
               ${this.actionTagsHTML(this.getTags(c))}
               ${this.reminderChipHTML(c)}
+              ${this.allTagsEmpty(c) ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
             </div>
             ${this.personTagsHTML(this.getTags(c), c) ? `
-              <div class="tags-divider"></div>
               <div class="tags-group tags-group-people">
                 ${this.personTagsHTML(this.getTags(c), c)}
               </div>` : ''}
-            ${this.allTagsEmpty(c) ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
           </div>
           <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
         </div>
@@ -371,9 +370,11 @@ const Clients = {
     const personHtml = this.personTagsHTML(tags, c);
     const isEmpty = !actionHtml && !personHtml;
     return `
-      <div class="tags-group tags-group-actions">${actionHtml}</div>
-      ${personHtml ? `<div class="tags-divider"></div><div class="tags-group tags-group-people">${personHtml}</div>` : ''}
-      ${isEmpty ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}`;
+      <div class="tags-group tags-group-actions">
+        ${actionHtml}
+        ${isEmpty ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
+      </div>
+      ${personHtml ? `<div class="tags-group tags-group-people">${personHtml}</div>` : ''}`;
   },
 
   // Gardé pour compatibilité (legend, etc.)
