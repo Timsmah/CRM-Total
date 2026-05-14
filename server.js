@@ -48,7 +48,7 @@ app.post('/api/properties/import', (req, res, next) => {
 app.use('/api/drive',      requireAuth, require('./routes/drive'));
 app.use('/api/clients',    requireAuth, require('./routes/clients'));
 app.use('/api/properties', requireAuth, require('./routes/properties'));
-app.use('/api/deals',      requireAdmin, require('./routes/deals'));
+app.use('/api/deals',      requireAuth, require('./routes/deals'));
 app.use('/api/finance',    requireAdmin, require('./routes/finance'));
 app.use('/api/proposals',  requireAuth, require('./routes/proposals'));
 app.use('/api/activities', requireAuth, require('./routes/activities'));

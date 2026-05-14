@@ -237,7 +237,7 @@ const App = {
     document.getElementById('app').classList.remove('hidden');
 
     // Restrict guest: hide dashboard, contracts, finance
-    const guestOnly = ['clients', 'properties'];
+    const guestOnly = ['clients', 'properties', 'contracts'];
     if (this.role === 'guest') {
       document.querySelectorAll('.nav-item').forEach(el => {
         if (!guestOnly.includes(el.dataset.section)) el.style.display = 'none';
