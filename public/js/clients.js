@@ -47,7 +47,7 @@ const ACTION_TAGS = [
   { key: 'hot',      emoji: '🔥', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
   { key: 'animals',  emoji: '🐕', label: 'Animaux',             desc: 'Client avec animaux, vérifie la politique' },
   { key: 'pool',     emoji: '🏊', label: 'Piscine requise',     desc: 'Piscine obligatoire dans les critères' },
-  { key: 'alex',     emoji: '📲', label: 'Alex à appeler',      desc: 'À transmettre à Alex pour qu\'il appelle' },
+  { key: 'alex',     emoji: '📲', label: 'Nono à appeler',      desc: 'À transmettre à Nono pour qu\'il appelle' },
   { key: 'tim',      emoji: '👤', label: 'Tim',                 desc: 'À traiter par Tim' },
 ];
 
@@ -311,7 +311,7 @@ const Clients = {
 
   noteChipsHTML(c) {
     return (c.note_tim ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
-         + (c.note_alex ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Alex</span>` : '');
+         + (c.note_alex ? `<span class="action-tag tag-note" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
   },
 
   reminderChipHTML(c) {
@@ -358,7 +358,7 @@ const Clients = {
       </button>
       <button class="tag-option tag-option-note ${c.note_alex ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_alex')">
-        📝 Note d'Alex
+        📝 Note de Nono
       </button>
       <button class="tag-option tag-option-reminder ${c.reminder_date ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.openReminderModal(${id})">
@@ -402,7 +402,7 @@ const Clients = {
     this._tagPopoverClientId = null;
     const c = this.data.find(x => x.id === id);
     if (!c) return;
-    const label = noteKey === 'note_tim' ? 'Tim' : 'Alex';
+    const label = noteKey === 'note_tim' ? 'Tim' : 'Nono';
     const current = c[noteKey] || '';
     Modal.open(`📝 Note de ${label}`, `
       <textarea id="note-input" rows="6" placeholder="${t('note_write')}"

@@ -284,7 +284,7 @@ const TAG_EN = {
   hot:      'Priority',
   animals:  'Pets',
   pool:     'Pool required',
-  alex:     'Alex to call',
+  alex:     'Nono to call',
   tim:      'Tim',
 };
 
