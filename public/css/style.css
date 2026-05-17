@@ -374,15 +374,161 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 }
 .kanban-cards::-webkit-scrollbar { display: none; }
 
-.kanban-card { padding: 12px; border-radius: 9px; border-left: 3px solid transparent; }
+/* ── KANBAN CARD — 3D flip wrapper ───────────────── */
+.kanban-card {
+  perspective: 900px;
+  cursor: pointer;
+  /* override .card visual — visuals live on .card-face */
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  transform: none !important;
+  transition: none !important;
+}
+.kanban-card:hover { box-shadow: none !important; transform: none !important; }
+
+/* 3D inner */
+.card-inner {
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.52s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-inner.flipped { transform: rotateY(180deg); }
+
+/* Both faces share visual styling */
+.card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.15s;
+}
+.card-inner:not(.flipped):hover .card-front,
+.card-inner.flipped:hover .card-back {
+  box-shadow: var(--shadow-md);
+}
+
+/* FRONT */
+.card-front {
+  padding: 12px;
+  border-left: 3px solid transparent;
+}
+
+/* BACK */
+.card-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Back face UI */
+.card-back-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.card-back-close {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.card-back-close:hover { background: var(--surface-3); }
+.card-back-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.card-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.card-contact-link {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+.card-contact-link:hover { text-decoration: underline; }
+.card-copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  opacity: 0.65;
+  transition: opacity 0.12s;
+}
+.card-copy-btn:hover { opacity: 1; }
+.card-no-contact {
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+  text-align: center;
+  padding: 8px 0;
+}
+.card-back-note {
+  font-size: 12px;
+  color: #78350F;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 6px;
+  padding: 6px 8px;
+  line-height: 1.45;
+}
+.card-back-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.card-back-btn {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+.card-back-btn:hover { background: var(--surface-3); }
+.card-back-btn.cbtn-active { background: #DCFCE7; border-color: #86EFAC; color: #15803D; }
+.card-back-btn.cbtn-open {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.card-back-btn.cbtn-open:hover { background: var(--accent-h); border-color: var(--accent-h); }
+
 .kanban-card .client-name { font-size: 15px; font-weight: 700; }
 .kanban-card .client-details p { font-size: 12px; margin-bottom: 2px; }
-
-/* #6 — bord gauche coloré par urgence */
-.kanban-card.card-border-red    { border-left-color: #DC2626; }
-.kanban-card.card-border-amber  { border-left-color: #D97706; }
-.kanban-card.card-border-yellow { border-left-color: #CA8A04; }
-.kanban-card.card-border-blue   { border-left-color: #3B82F6; }
 
 /* #4 — critères sur 1 ligne avec tooltip au hover */
 .card-criteria {
@@ -415,7 +561,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 
 .kanban-card[draggable="true"] { cursor: grab; }
 .kanban-card[draggable="true"]:active { cursor: grabbing; }
-.kanban-card.dragging { opacity: 0.4; transform: scale(0.97); }
+.kanban-card.dragging { opacity: 0.4; }
+.kanban-card.dragging .card-inner { transform: scale(0.97); }
 .kanban-col.drag-over { border-color: var(--accent); background: rgba(201,146,42,.05); }
 
 .kanban-col.focused { width: auto !important; flex: 1 1 auto; max-height: none; }
@@ -431,8 +578,6 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .kanban-col.focused .kanban-card .client-details p { font-size: 13px; }
 .kanban-col.focused .kanban-col-header { font-size: 13px; }
 .kanban-board.has-focus .kanban-col:not(.focused) { display: none; }
-
-.kanban-card { cursor: pointer; }
 
 /* ── ACTION TAGS ─────────────────────────────────── */
 .action-tags-row {
@@ -475,7 +620,6 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .add-tag-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Tags Popover */
-.kanban-card { position: relative; }
 .tags-popover {
   background: white; border: 1px solid var(--border); border-radius: 10px;
   padding: 8px; display: flex; flex-wrap: wrap; gap: 4px;

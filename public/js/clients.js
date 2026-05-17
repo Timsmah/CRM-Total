@@ -276,54 +276,133 @@ const Clients = {
     const daysAgo = this.daysAgo(c);
     const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
 
-    // #6 — bord gauche coloré selon urgence
-    const borderCls = urgency === 'urgent-red' ? 'card-border-red'
-                    : urgency === 'urgent-amber' ? 'card-border-amber'
-                    : urgency === 'urgent-yellow' ? 'card-border-yellow'
-                    : urgency === 'urgent-future' ? 'card-border-blue' : '';
+    const borderColor = urgency === 'urgent-red' ? '#DC2626'
+                      : urgency === 'urgent-amber' ? '#D97706'
+                      : urgency === 'urgent-yellow' ? '#CA8A04'
+                      : urgency === 'urgent-future' ? '#3B82F6' : 'transparent';
+
+    // Back face: note preview
+    const noteText = c.note_tim || c.note_alex || '';
+    const notePreview = noteText
+      ? `<div class="card-back-note">📌 ${noteText.substring(0, 90)}${noteText.length > 90 ? '…' : ''}</div>`
+      : '';
+
+    // Back face: quick tag state
+    const tags = this.getTags(c);
+    const hasAppeler  = tags.includes('appeler');
+    const hasRappeler = tags.includes('rappeler');
 
     return `
-      <div class="card kanban-card ${borderCls}" data-cid="${c.id}" draggable="true"
+      <div class="kanban-card" data-cid="${c.id}" draggable="true"
         ondragstart="Clients.onDragStart(event, ${c.id})"
-        ondragend="Clients.onDragEnd(event)"
-        onclick="Clients.openDetailModal(${c.id}, event)">
-        <div class="card-top">
-          ${badge(c.status)}
-          <div style="display:flex;align-items:center;gap:6px">
-            ${daysAgo ? `<span class="days-ago-badge">🕐 ${daysAgo}</span>` : ''}
-            <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
-              onclick="Clients.toggleFees(${c.id})" title="Research fees">
-              ${c.research_fees_paid ? t('clients_fees_paid') : t('clients_fees_unpaid')}
-            </button>
-          </div>
-        </div>
+        ondragend="Clients.onDragEnd(event)">
 
-        <!-- #4 — nom en plus gros, critères masqués par défaut -->
-        <div class="client-name">${c.name}</div>
-        <div class="client-details">
-          ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
-          ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
-          ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
-          ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
-        </div>
+        <div class="card-inner" id="card-inner-${c.id}">
 
-        <!-- tags : actions / personnes sur 2 rangées -->
-        <div class="action-tags-row" onclick="event.stopPropagation()">
-          <div class="action-tags-display">
-            <div class="tags-group tags-group-actions">
-              ${this.actionTagsHTML(this.getTags(c))}
-              ${this.reminderChipHTML(c)}
-              ${this.allTagsEmpty(c) ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
+          <!-- ── FRONT ── -->
+          <div class="card-face card-front" style="border-left-color:${borderColor}"
+            onclick="Clients.flipCard(${c.id}, event)">
+
+            <div class="card-top">
+              ${badge(c.status)}
+              <div style="display:flex;align-items:center;gap:6px">
+                ${daysAgo ? `<span class="days-ago-badge">🕐 ${daysAgo}</span>` : ''}
+                <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
+                  onclick="event.stopPropagation();Clients.toggleFees(${c.id})" title="Research fees">
+                  ${c.research_fees_paid ? t('clients_fees_paid') : t('clients_fees_unpaid')}
+                </button>
+              </div>
             </div>
-            ${this.personTagsHTML(this.getTags(c), c) ? `
-              <div class="tags-group tags-group-people">
-                ${this.personTagsHTML(this.getTags(c), c)}
-              </div>` : ''}
+
+            <div class="client-name">${c.name}</div>
+            <div class="client-details">
+              ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
+              ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
+              ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
+              ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
+            </div>
+
+            <div class="action-tags-row" onclick="event.stopPropagation()">
+              <div class="action-tags-display">
+                <div class="tags-group tags-group-actions">
+                  ${this.actionTagsHTML(this.getTags(c))}
+                  ${this.reminderChipHTML(c)}
+                  ${this.allTagsEmpty(c) ? `<span class="no-tags">${t('clients_no_tags')}</span>` : ''}
+                </div>
+                ${this.personTagsHTML(this.getTags(c), c) ? `
+                  <div class="tags-group tags-group-people">
+                    ${this.personTagsHTML(this.getTags(c), c)}
+                  </div>` : ''}
+              </div>
+              <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
+            </div>
+
           </div>
-          <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
+
+          <!-- ── BACK ── -->
+          <div class="card-face card-back">
+
+            <div class="card-back-header">
+              <button class="card-back-close" onclick="event.stopPropagation();Clients.flipBack(${c.id})">← Retour</button>
+              <span class="card-back-name">${c.name.split(' ')[0]}</span>
+            </div>
+
+            ${c.whatsapp
+              ? `<div class="card-contact-row">
+                  <span>📱</span>
+                  <a href="tel:${c.whatsapp}" class="card-contact-link" onclick="event.stopPropagation()">${c.whatsapp}</a>
+                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
+                </div>`
+              : `<p class="card-no-contact">Pas de numéro</p>`}
+
+            ${notePreview}
+
+            <div class="card-back-actions">
+              <button class="card-back-btn ${hasAppeler ? 'cbtn-active' : ''}"
+                onclick="event.stopPropagation();Clients.toggleTagFromBack(${c.id},'appeler',this)">📞 Appeler</button>
+              <button class="card-back-btn ${hasRappeler ? 'cbtn-active' : ''}"
+                onclick="event.stopPropagation();Clients.toggleTagFromBack(${c.id},'rappeler',this)">🔄 Rappeler</button>
+              <button class="card-back-btn cbtn-open"
+                onclick="event.stopPropagation();Clients.flipBack(${c.id});setTimeout(()=>Clients.openDetailModal(${c.id}),120)">📋 Fiche</button>
+            </div>
+
+          </div>
+
         </div>
-        <!-- #2 — boutons Modifier/Archiver supprimés de la carte -->
       </div>`;
+  },
+
+  flipCard(id, event) {
+    if (event && (
+      event.target.closest('button') ||
+      event.target.closest('select') ||
+      event.target.closest('.action-tags-row') ||
+      event.target.closest('.tags-popover')
+    )) return;
+    const inner = document.getElementById(`card-inner-${id}`);
+    if (inner) inner.classList.toggle('flipped');
+  },
+
+  flipBack(id) {
+    const inner = document.getElementById(`card-inner-${id}`);
+    if (inner) inner.classList.remove('flipped');
+  },
+
+  async toggleTagFromBack(id, key, btn) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    let tags = this.getTags(c);
+    if (tags.includes(key)) {
+      tags = tags.filter(k => k !== key);
+      btn.classList.remove('cbtn-active');
+    } else {
+      tags.push(key);
+      btn.classList.add('cbtn-active');
+    }
+    c.action_tags = JSON.stringify(tags);
+    await api.patch(`/clients/${id}/tags`, { action_tags: tags });
+    const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
+    if (display) display.innerHTML = this.fullTagsHTML(c);
   },
 
   async setContactStatus(id, status) {
@@ -613,6 +692,7 @@ const Clients = {
 
   // ── Drag & Drop ──────────────────────────────────
   onDragStart(e, id) {
+    this.flipBack(id); // reset flip before drag
     e.dataTransfer.setData('clientId', id);
     e.currentTarget.classList.add('dragging');
   },
