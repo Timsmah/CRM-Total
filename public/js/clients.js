@@ -362,8 +362,8 @@ const Clients = {
     // Migration : alex → nono_app pour les anciens tags
     const normalized = (tags || []).map(k => k === 'alex' ? 'nono_app' : k);
     const personTags = normalized.filter(k => this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
-    const notes = (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')"  title="${c.note_tim}">📝 Tim</span>`  : '')
-                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
+    const notes = (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openDetailModal(${c.id})"  title="${c.note_tim}">📝 Tim</span>`  : '')
+                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_alex}">📝 Nono</span>` : '');
     return personTags + notes;
   },
 
@@ -388,8 +388,8 @@ const Clients = {
   },
 
   noteChipsHTML(c) {
-    return (c.note_tim ? `<span class="action-tag tag-tim" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_tim')" title="${c.note_tim}">📝 Tim</span>` : '')
-         + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openNoteModal(${c.id},'note_alex')" title="${c.note_alex}">📝 Nono</span>` : '');
+    return (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_tim}">📝 Tim</span>`  : '')
+         + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_alex}">📝 Nono</span>` : '');
   },
 
   reminderChipHTML(c) {
@@ -430,13 +430,9 @@ const Clients = {
       </button>`;
     }).join('') + `
       <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
-      <button class="tag-option tag-option-note ${c.note_tim ? 'active' : ''}"
-        onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_tim')">
-        📝 Note de Tim
-      </button>
-      <button class="tag-option tag-option-note ${c.note_alex ? 'active' : ''}"
-        onclick="event.stopPropagation(); Clients.openNoteModal(${id}, 'note_alex')">
-        📝 Note de Nono
+      <button class="tag-option tag-option-note ${c.note_tim || c.note_alex ? 'active' : ''}"
+        onclick="event.stopPropagation(); document.querySelectorAll('.tags-popover').forEach(p=>p.remove()); Clients.openDetailModal(${id})">
+        📌 ${c.note_tim || c.note_alex ? 'Voir la note' : 'Ajouter une note'}
       </button>
       <button class="tag-option tag-option-reminder ${c.reminder_date ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.openReminderModal(${id})">
@@ -474,22 +470,44 @@ const Clients = {
     if (display) display.innerHTML = this.fullTagsHTML(c);
   },
 
-  openNoteModal(id, noteKey) {
-    document.querySelectorAll('.tags-popover').forEach(p => p.remove());
-    document.removeEventListener('click', this._closeTagHandler);
-    this._tagPopoverClientId = null;
+  editPinnedNote(id) {
     const c = this.data.find(x => x.id === id);
     if (!c) return;
-    const label = noteKey === 'note_tim' ? 'Tim' : 'Nono';
+    const noteKey = (typeof App !== 'undefined' && App.role === 'guest') ? 'note_alex' : 'note_tim';
     const current = c[noteKey] || '';
-    Modal.open(`📝 Note de ${label}`, `
-      <textarea id="note-input" rows="6" placeholder="${t('note_write')}"
-        style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;outline:none;box-sizing:border-box">${current}</textarea>
-      <div class="form-actions" style="margin-top:12px">
-        <button class="btn btn-ghost" onclick="Modal.close()">${t('note_cancel')}</button>
-        ${current ? `<button class="btn btn-ghost" onclick="Clients.saveNote(${id},'${noteKey}','')">${t('note_delete')}</button>` : ''}
-        <button class="btn btn-primary" onclick="Clients.saveNote(${id},'${noteKey}',document.getElementById('note-input').value)">${t('note_save')}</button>
-      </div>`);
+    const body = document.getElementById(`pinned-note-body-${id}`);
+    if (!body) return;
+    body.innerHTML = `
+      <textarea id="pinned-textarea-${id}" rows="3"
+        style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--accent);border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:6px">${current}</textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="Clients._cancelPinnedNote(${id},'${current.replace(/'/g,"\\'")}')">Annuler</button>
+        ${current ? `<button class="btn btn-ghost btn-sm" onclick="Clients.savePinnedNote(${id},'${noteKey}','')">🗑 Supprimer</button>` : ''}
+        <button class="btn btn-primary btn-sm" onclick="Clients.savePinnedNote(${id},'${noteKey}',document.getElementById('pinned-textarea-${id}').value)">Enregistrer</button>
+      </div>`;
+    document.getElementById(`pinned-textarea-${id}`)?.focus();
+  },
+
+  _cancelPinnedNote(id, original) {
+    const body = document.getElementById(`pinned-note-body-${id}`);
+    if (!body) return;
+    body.innerHTML = original
+      ? `<p class="pinned-note-text">${original}</p>`
+      : `<p class="pinned-note-empty">Aucune note…</p>`;
+  },
+
+  async savePinnedNote(id, noteKey, value) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    c[noteKey] = value || null;
+    await api.patch(`/clients/${id}/note`, { [noteKey]: value || null });
+    const body = document.getElementById(`pinned-note-body-${id}`);
+    if (body) body.innerHTML = value
+      ? `<p class="pinned-note-text">${value}</p>`
+      : `<p class="pinned-note-empty">Aucune note…</p>`;
+    // Mettre à jour le chip sur la carte
+    const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
+    if (display) display.innerHTML = this.fullTagsHTML(c);
   },
 
   // ── Reminders ────────────────────────────────────
@@ -680,7 +698,22 @@ const Clients = {
 
       <div class="modal-sep"></div>
       <div class="modal-sub-title">📓 Activity log</div>
-      <div class="activity-quick-btns">
+
+      <!-- Note épinglée -->
+      <div class="pinned-note" id="pinned-note-${id}">
+        <div class="pinned-note-header">
+          <span class="pinned-note-label">📌 Note rapide</span>
+          <button class="pinned-note-btn" onclick="Clients.editPinnedNote(${id})">Modifier</button>
+        </div>
+        <div class="pinned-note-body" id="pinned-note-body-${id}">
+          ${(c.note_tim || c.note_alex)
+            ? `<p class="pinned-note-text">${c.note_tim || c.note_alex}</p>`
+            : `<p class="pinned-note-empty">Aucune note…</p>`}
+        </div>
+      </div>
+
+      <!-- Boutons + timeline -->
+      <div class="activity-quick-btns" style="margin-top:10px">
         ${[['call','📞','Called'],['whatsapp','💬','WhatsApp'],['visit','🏠','Visit'],['email','✉️','Email'],['note','📝','Note']].map(([type,emoji,label]) =>
           `<button class="activity-quick-btn" onclick="Clients.showActivityInput(${id},'${type}','${emoji} ${label}')">${emoji} ${label}</button>`
         ).join('')}
