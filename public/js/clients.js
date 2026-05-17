@@ -34,6 +34,19 @@ function trZone(val) {
   return val.split(/,\s*/).map(z => FR_TO_EN[z.trim()] || z.trim()).join(', ');
 }
 
+// ── Card colour palette ───────────────────────────────────────────────────────
+const CARD_COLORS = [
+  { key: null,       label: 'Défaut',  bg: null,      border: null,      dot: '#CBD5E1' },
+  { key: 'red',      label: 'Rouge',   bg: '#FEE2E2', border: '#FCA5A5', dot: '#EF4444' },
+  { key: 'orange',   label: 'Orange',  bg: '#FFEDD5', border: '#FDBA74', dot: '#F97316' },
+  { key: 'yellow',   label: 'Jaune',   bg: '#FEF9C3', border: '#FDE047', dot: '#EAB308' },
+  { key: 'green',    label: 'Vert',    bg: '#DCFCE7', border: '#86EFAC', dot: '#22C55E' },
+  { key: 'blue',     label: 'Bleu',    bg: '#DBEAFE', border: '#93C5FD', dot: '#3B82F6' },
+  { key: 'purple',   label: 'Violet',  bg: '#F3E8FF', border: '#D8B4FE', dot: '#A855F7' },
+  { key: 'pink',     label: 'Rose',    bg: '#FCE7F3', border: '#F9A8D4', dot: '#EC4899' },
+  { key: 'gray',     label: 'Gris',    bg: '#F1F5F9', border: '#CBD5E1', dot: '#94A3B8' },
+];
+
 const ACTION_TAGS = [
   { key: 'appeler',  emoji: '📞', label: 'À appeler',          desc: 'Premier contact à passer' },
   { key: 'rappeler', emoji: '🔄', label: 'À rappeler',          desc: 'Relance planifiée' },
@@ -135,6 +148,7 @@ const Clients = {
         <span class="legend-sep"></span>
         <span class="legend-item"><span class="legend-clock">🕐</span>${t('clients_legend_days')}</span>
         <button class="legend-help-btn" onclick="Clients.showTagsLegend(event)" title="Badges legend">?</button>
+        <button class="legend-btn" onclick="Clients.showLegend(this)" title="Légende couleurs">🎨</button>
       </div>
       ${this.filterBarHTML()}
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
@@ -276,10 +290,11 @@ const Clients = {
     const daysAgo = this.daysAgo(c);
     const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
 
-    const borderColor = urgency === 'urgent-red' ? '#DC2626'
-                      : urgency === 'urgent-amber' ? '#D97706'
-                      : urgency === 'urgent-yellow' ? '#CA8A04'
-                      : urgency === 'urgent-future' ? '#3B82F6' : 'transparent';
+    // Manual card color
+    const colorDef = CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0];
+    const cardStyle = colorDef.bg
+      ? `background:${colorDef.bg};border-color:${colorDef.border}`
+      : '';
 
     // Back face: note preview
     const noteText = c.note_tim || c.note_alex || '';
@@ -300,8 +315,9 @@ const Clients = {
         <div class="card-inner" id="card-inner-${c.id}">
 
           <!-- ── FRONT ── -->
-          <div class="card-face card-front" style="border-left-color:${borderColor}"
-            onclick="Clients.flipCard(${c.id}, event)">
+          <div class="card-face card-front" style="${cardStyle}"
+            onclick="Clients.flipCard(${c.id}, event)"
+            oncontextmenu="event.preventDefault();Clients.showColorPicker(${c.id}, event)">
 
             <div class="card-top">
               ${badge(c.status)}
@@ -340,7 +356,7 @@ const Clients = {
           </div>
 
           <!-- ── BACK ── -->
-          <div class="card-face card-back">
+          <div class="card-face card-back" style="${cardStyle}">
 
             <div class="card-back-header">
               <button class="card-back-close" onclick="event.stopPropagation();Clients.flipBack(${c.id})">← Retour</button>
@@ -403,6 +419,110 @@ const Clients = {
     await api.patch(`/clients/${id}/tags`, { action_tags: tags });
     const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
     if (display) display.innerHTML = this.fullTagsHTML(c);
+  },
+
+  // ── Card colour picker ───────────────────────────────────────────────────────
+  showColorPicker(id, event) {
+    document.querySelectorAll('.color-picker-popover').forEach(p => p.remove());
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+
+    const labels = this._colorLabels();
+    const picker = document.createElement('div');
+    picker.className = 'color-picker-popover';
+    picker.innerHTML = `
+      <div class="cp-title">🎨 Couleur de la carte</div>
+      <div class="cp-swatches">
+        ${CARD_COLORS.map(col => `
+          <button class="cp-swatch ${(c.card_color || null) === col.key ? 'cp-active' : ''}"
+            style="background:${col.bg || '#fff'};border-color:${col.border || '#CBD5E1'}"
+            title="${labels[col.key] || col.label}"
+            onclick="event.stopPropagation();Clients.setCardColor(${id},'${col.key || ''}',this)">
+            ${(c.card_color || null) === col.key ? '✓' : ''}
+          </button>`).join('')}
+      </div>
+      <div class="cp-hint">Clic droit sur une carte pour changer</div>`;
+
+    const x = Math.min(event.clientX, window.innerWidth - 230);
+    const y = Math.min(event.clientY, window.innerHeight - 160);
+    picker.style.cssText = `position:fixed;top:${y}px;left:${x}px;z-index:9999`;
+    document.body.appendChild(picker);
+
+    setTimeout(() => {
+      document.addEventListener('click', function h() {
+        picker.remove();
+        document.removeEventListener('click', h);
+      });
+    }, 50);
+  },
+
+  async setCardColor(id, colorKey, swatchBtn) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const key = colorKey || null;
+    c.card_color = key;
+    await api.patch(`/clients/${id}/color`, { card_color: key });
+
+    // Update swatch checkmarks
+    const picker = swatchBtn.closest('.color-picker-popover');
+    if (picker) {
+      picker.querySelectorAll('.cp-swatch').forEach(b => { b.textContent = ''; b.classList.remove('cp-active'); });
+      swatchBtn.textContent = '✓';
+      swatchBtn.classList.add('cp-active');
+    }
+
+    // Update both card faces live
+    const colorDef = CARD_COLORS.find(x => x.key === key) || CARD_COLORS[0];
+    const cardStyle = colorDef.bg ? `background:${colorDef.bg};border-color:${colorDef.border}` : '';
+    const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
+    if (card) {
+      card.querySelectorAll('.card-face').forEach(face => face.style.cssText = cardStyle);
+    }
+
+    // Close picker after short delay
+    setTimeout(() => document.querySelectorAll('.color-picker-popover').forEach(p => p.remove()), 300);
+  },
+
+  // ── Legend ───────────────────────────────────────────────────────────────────
+  _colorLabels() {
+    try { return JSON.parse(localStorage.getItem('card_color_labels') || '{}'); } catch { return {}; }
+  },
+  _saveColorLabel(key, label) {
+    const obj = this._colorLabels();
+    if (label) obj[key || 'default'] = label; else delete obj[key || 'default'];
+    localStorage.setItem('card_color_labels', JSON.stringify(obj));
+  },
+
+  showLegend(btn) {
+    const existing = document.querySelector('.color-legend-panel');
+    if (existing) { existing.remove(); return; }
+
+    const labels = this._colorLabels();
+    const panel = document.createElement('div');
+    panel.className = 'color-legend-panel';
+    panel.innerHTML = `
+      <div class="cp-title" style="margin-bottom:10px">🎨 Légende des couleurs</div>
+      ${CARD_COLORS.slice(1).map(col => `
+        <div class="legend-row">
+          <span class="legend-dot-color" style="background:${col.dot}"></span>
+          <input class="legend-label-input" type="text" placeholder="${col.label}"
+            value="${labels[col.key] || ''}"
+            oninput="Clients._saveColorLabel('${col.key}', this.value)"
+            style="background:${col.bg};border-color:${col.border}">
+        </div>`).join('')}
+      <p style="font-size:11px;color:var(--text-3);margin-top:10px">Les libellés sont sauvegardés localement.</p>`;
+
+    const rect = btn.getBoundingClientRect();
+    panel.style.cssText = `position:fixed;top:${rect.bottom + 6}px;left:${rect.left}px;z-index:9999`;
+    document.body.appendChild(panel);
+
+    setTimeout(() => {
+      document.addEventListener('click', function h(e) {
+        if (!e.target.closest('.color-legend-panel') && !e.target.closest('.legend-btn')) {
+          panel.remove(); document.removeEventListener('click', h);
+        }
+      });
+    }, 50);
   },
 
   async setContactStatus(id, status) {

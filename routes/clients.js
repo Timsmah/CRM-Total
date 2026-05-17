@@ -91,6 +91,13 @@ router.patch('/:id/reminder', async (req, res) => {
   res.json(update);
 });
 
+router.patch('/:id/color', async (req, res) => {
+  const { card_color } = req.body;
+  const { error } = await db.from('clients').update({ card_color: card_color || null }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ card_color: card_color || null });
+});
+
 router.patch('/:id/fees', async (req, res) => {
   const { data: client, error: fetchErr } = await db.from('clients').select('research_fees_paid').eq('id', req.params.id).single();
   if (fetchErr) return res.status(404).json({ error: 'Client non trouvé' });

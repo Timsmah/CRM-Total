@@ -1302,6 +1302,83 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   .kpi-hero    { grid-column: span 2; }
 }
 
+/* ── CARD COLOR PICKER ───────────────────────────── */
+.color-picker-popover, .color-legend-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.13);
+  min-width: 210px;
+}
+.cp-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 10px;
+}
+.cp-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cp-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.cp-swatch:hover { transform: scale(1.18); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.cp-swatch.cp-active { box-shadow: 0 0 0 3px var(--accent); }
+.cp-hint { font-size: 11px; color: var(--text-3); }
+
+/* Legend panel */
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.legend-dot-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-label-input {
+  flex: 1;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  color: var(--text);
+}
+.legend-label-input:focus { box-shadow: 0 0 0 2px rgba(201,146,42,.3); }
+.legend-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: background 0.12s;
+}
+.legend-btn:hover { background: var(--surface-2); }
+
 /* ── PINNED NOTE ─────────────────────────────────── */
 .pinned-note {
   background: #FFFBEB;
