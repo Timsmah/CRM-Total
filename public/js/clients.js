@@ -488,12 +488,23 @@ const Clients = {
     }, 50);
   },
 
-  async setCardColor(id, colorKey, swatchBtn) {
+  setCardColor(id, colorKey, swatchBtn) {
     const c = this.data.find(x => x.id === id);
     if (!c) return;
     const key = colorKey || null;
     c.card_color = key;
-    await api.patch(`/clients/${id}/color`, { card_color: key });
+
+    // ── 1. Update DOM instantly (optimistic) ──────────────────────────────
+    const colorDef = CARD_COLORS.find(x => x.key === key) || CARD_COLORS[0];
+    const bg     = colorDef.bg     || '';
+    const border = colorDef.border || '';
+    const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
+    if (card) {
+      card.querySelectorAll('.card-face').forEach(face => {
+        face.style.background    = bg;
+        face.style.borderColor   = border;
+      });
+    }
 
     // Update swatch checkmarks
     const picker = swatchBtn.closest('.color-picker-popover');
@@ -503,16 +514,12 @@ const Clients = {
       swatchBtn.classList.add('cp-active');
     }
 
-    // Update both card faces live
-    const colorDef = CARD_COLORS.find(x => x.key === key) || CARD_COLORS[0];
-    const cardStyle = colorDef.bg ? `background:${colorDef.bg};border-color:${colorDef.border}` : '';
-    const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
-    if (card) {
-      card.querySelectorAll('.card-face').forEach(face => face.style.cssText = cardStyle);
-    }
+    // Close picker
+    setTimeout(() => document.querySelectorAll('.color-picker-popover').forEach(p => p.remove()), 280);
 
-    // Close picker after short delay
-    setTimeout(() => document.querySelectorAll('.color-picker-popover').forEach(p => p.remove()), 300);
+    // ── 2. Persist to DB (async, silent failure) ──────────────────────────
+    api.patch(`/clients/${id}/color`, { card_color: key })
+      .catch(() => Toast.show('Couleur non sauvegardée — vérifiez la colonne card_color en DB', 'error'));
   },
 
   // ── Legend ───────────────────────────────────────────────────────────────────
