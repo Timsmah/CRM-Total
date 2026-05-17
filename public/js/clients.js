@@ -373,6 +373,11 @@ const Clients = {
 
             ${notePreview}
 
+            <!-- Recent activity log (loaded on flip) -->
+            <div class="card-act-log" id="card-act-${c.id}">
+              <span class="card-act-loading">…</span>
+            </div>
+
             <div class="card-back-actions">
               <button class="card-back-btn ${hasAppeler ? 'cbtn-active' : ''}"
                 onclick="event.stopPropagation();Clients.toggleTagFromBack(${c.id},'appeler',this)">📞 Appeler</button>
@@ -396,7 +401,34 @@ const Clients = {
       event.target.closest('.tags-popover')
     )) return;
     const inner = document.getElementById(`card-inner-${id}`);
-    if (inner) inner.classList.toggle('flipped');
+    if (!inner) return;
+    const isFlipping = !inner.classList.contains('flipped');
+    inner.classList.toggle('flipped');
+    if (isFlipping) this._loadCardActivities(id);
+  },
+
+  async _loadCardActivities(id) {
+    const slot = document.getElementById(`card-act-${id}`);
+    if (!slot || slot.dataset.loaded) return; // only fetch once
+    slot.dataset.loaded = '1';
+    try {
+      const rows = await api.get(`/activities?client_id=${id}`);
+      if (!rows.length) {
+        slot.innerHTML = '<p class="card-act-empty">Aucune activité récente</p>';
+        return;
+      }
+      const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
+      slot.innerHTML = rows.slice(0, 3).map(r => `
+        <div class="card-act-entry">
+          <span class="card-act-icon">${ICONS[r.type] || '📌'}</span>
+          <div class="card-act-body">
+            <span class="card-act-meta">${r.author} · ${this._relativeTime(r.created_at)}</span>
+            ${r.content ? `<p class="card-act-text">${r.content}</p>` : ''}
+          </div>
+        </div>`).join('');
+    } catch {
+      slot.innerHTML = '<p class="card-act-empty">—</p>';
+    }
   },
 
   flipBack(id) {
@@ -1086,6 +1118,9 @@ const Clients = {
       const wrap = document.getElementById(`activity-input-${clientId}`);
       if (wrap) wrap.classList.add('hidden');
       this._loadActivities(clientId);
+      // Invalidate card back cache so next flip shows fresh activity
+      const cardSlot = document.getElementById(`card-act-${clientId}`);
+      if (cardSlot) delete cardSlot.dataset.loaded;
       Toast.show('✓ Activity logged');
     } catch (err) { Toast.show(err.message, 'error'); }
   },
