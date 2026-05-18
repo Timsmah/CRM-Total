@@ -312,12 +312,12 @@ const Clients = {
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)">
 
-        <div class="card-inner" id="card-inner-${c.id}">
+        <div class="card-inner" id="card-inner-${c.id}"
+          onclick="Clients.flipCard(${c.id}, event)">
 
           <!-- ── FRONT ── -->
           <div class="card-face card-front" style="${cardStyle}"
-            onclick="Clients.flipCard(${c.id}, event)"
-            oncontextmenu="event.preventDefault();Clients.showColorPicker(${c.id}, event)">
+            oncontextmenu="event.preventDefault();event.stopPropagation();Clients.showColorPicker(${c.id}, event)">
 
             <div class="card-top">
               ${badge(c.status)}
@@ -356,7 +356,7 @@ const Clients = {
           </div>
 
           <!-- ── BACK ── -->
-          <div class="card-face card-back" style="${cardStyle}" onclick="Clients.flipBack(${c.id})">
+          <div class="card-face card-back" style="${cardStyle}">
 
             <div class="card-back-header">
               <span class="card-back-name">${c.name.split(' ')[0]}</span>
@@ -397,8 +397,10 @@ const Clients = {
     if (event && (
       event.target.closest('button') ||
       event.target.closest('select') ||
+      event.target.closest('a') ||
       event.target.closest('.action-tags-row') ||
-      event.target.closest('.tags-popover')
+      event.target.closest('.tags-popover') ||
+      event.target.closest('.color-picker-popover')
     )) return;
     const inner = document.getElementById(`card-inner-${id}`);
     if (!inner) return;
