@@ -356,11 +356,11 @@ const Clients = {
           </div>
 
           <!-- ── BACK ── -->
-          <div class="card-face card-back" style="${cardStyle}">
+          <div class="card-face card-back" style="${cardStyle}" onclick="Clients.flipBack(${c.id})">
 
             <div class="card-back-header">
-              <button class="card-back-close" onclick="event.stopPropagation();Clients.flipBack(${c.id})">← Retour</button>
               <span class="card-back-name">${c.name.split(' ')[0]}</span>
+              <span class="card-back-hint">clic pour retourner</span>
             </div>
 
             ${c.whatsapp
