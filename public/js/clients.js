@@ -296,17 +296,6 @@ const Clients = {
       ? `background:${colorDef.bg};border-color:${colorDef.border}`
       : '';
 
-    // Back face: note preview
-    const noteText = c.note_tim || c.note_alex || '';
-    const notePreview = noteText
-      ? `<div class="card-back-note">📌 ${noteText.substring(0, 90)}${noteText.length > 90 ? '…' : ''}</div>`
-      : '';
-
-    // Back face: quick tag state
-    const tags = this.getTags(c);
-    const hasAppeler  = tags.includes('appeler');
-    const hasRappeler = tags.includes('rappeler');
-
     return `
       <div class="kanban-card" data-cid="${c.id}" draggable="true"
         ondragstart="Clients.onDragStart(event, ${c.id})"
@@ -360,31 +349,19 @@ const Clients = {
 
             <div class="card-back-header">
               <span class="card-back-name">${c.name.split(' ')[0]}</span>
-              <span class="card-back-hint">clic pour retourner</span>
             </div>
 
             ${c.whatsapp
               ? `<div class="card-contact-row">
                   <span>📱</span>
-                  <a href="tel:${c.whatsapp}" class="card-contact-link" onclick="event.stopPropagation()">${c.whatsapp}</a>
+                  <span class="card-contact-link">${c.whatsapp}</span>
                   <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
                 </div>`
               : `<p class="card-no-contact">Pas de numéro</p>`}
 
-            ${notePreview}
-
             <!-- Recent activity log (loaded on flip) -->
             <div class="card-act-log" id="card-act-${c.id}">
               <span class="card-act-loading">…</span>
-            </div>
-
-            <div class="card-back-actions">
-              <button class="card-back-btn ${hasAppeler ? 'cbtn-active' : ''}"
-                onclick="event.stopPropagation();Clients.toggleTagFromBack(${c.id},'appeler',this)">📞 Appeler</button>
-              <button class="card-back-btn ${hasRappeler ? 'cbtn-active' : ''}"
-                onclick="event.stopPropagation();Clients.toggleTagFromBack(${c.id},'rappeler',this)">🔄 Rappeler</button>
-              <button class="card-back-btn cbtn-open"
-                onclick="event.stopPropagation();Clients.flipBack(${c.id});setTimeout(()=>Clients.openDetailModal(${c.id}),120)">📋 Fiche</button>
             </div>
 
           </div>
