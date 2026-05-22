@@ -100,7 +100,7 @@ const Recherches = {
     e.currentTarget.classList.add('rech-dragging');
   },
 
-  async onDrop(e, stage) {
+  onDrop(e, stage) {
     e.preventDefault();
     e.currentTarget.classList.remove('rech-drag-over');
     const id = Number(e.dataTransfer.getData('rechId'));
@@ -108,8 +108,8 @@ const Recherches = {
     const c = this.data.find(x => x.id === id);
     if (!c || this.stageOf(c) === stage) return;
     c.search_stage = stage;
-    await api.patch(`/clients/${id}/search-stage`, { search_stage: stage });
-    this.render();
+    this.render(); // optimistic — bouge tout de suite
+    api.patch(`/clients/${id}/search-stage`, { search_stage: stage }).catch(() => {});
   },
 
   openDetail(id) {
