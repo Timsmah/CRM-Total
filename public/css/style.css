@@ -1324,6 +1324,97 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .urgent-amber  { color: #D97706; }
 .urgent-yellow { color: #FCD53F; }
 
+/* ── PROCESS RECHERCHE ───────────────────────────── */
+.rech-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.rech-title { font-size: 22px; font-weight: 800; margin-bottom: 2px; }
+.rech-sub   { font-size: 13px; color: var(--text-2); }
+
+.rech-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  align-items: start;
+  min-height: calc(100vh - 180px);
+}
+
+.rech-col {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  transition: background 0.15s;
+}
+.rech-col.rech-drag-over { background: rgba(201,146,42,.08); }
+
+.rech-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px;
+  border-radius: 12px 12px 0 0;
+}
+.rech-col-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.rech-col-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.rech-cards {
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rech-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.12s;
+}
+.rech-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.rech-card.rech-dragging { opacity: 0.4; transform: scale(0.97); }
+
+.rech-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.rech-card-rows { display: flex; flex-direction: column; gap: 3px; }
+.rech-card-row  { font-size: 12px; color: var(--text-2); }
+.rech-card-criteria {
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rech-empty { font-size: 12px; color: var(--text-3); padding: 8px 4px; }
+
+@media (max-width: 1100px) {
+  .rech-board { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 1100px) {
   .dash-kpis   { grid-template-columns: 1fr 1fr; }
   .dash-charts { grid-template-columns: 1fr; }

@@ -168,7 +168,7 @@ const Search = {
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance };
+    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches };
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
@@ -237,7 +237,7 @@ const App = {
     document.getElementById('app').classList.remove('hidden');
 
     // Restrict guest: hide dashboard, contracts, finance
-    const guestOnly = ['clients', 'properties', 'contracts'];
+    const guestOnly = ['clients', 'properties', 'contracts', 'recherches'];
     if (this.role === 'guest') {
       document.querySelectorAll('.nav-item').forEach(el => {
         if (!guestOnly.includes(el.dataset.section)) el.style.display = 'none';

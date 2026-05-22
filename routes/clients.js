@@ -91,6 +91,13 @@ router.patch('/:id/reminder', async (req, res) => {
   res.json(update);
 });
 
+router.patch('/:id/search-stage', async (req, res) => {
+  const { search_stage } = req.body;
+  const { error } = await db.from('clients').update({ search_stage: search_stage || null }).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ search_stage: search_stage || null });
+});
+
 router.patch('/:id/color', async (req, res) => {
   const { card_color } = req.body;
   const { error } = await db.from('clients').update({ card_color: card_color || null }).eq('id', req.params.id);
