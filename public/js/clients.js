@@ -302,7 +302,8 @@ const Clients = {
         ondragend="Clients.onDragEnd(event)">
 
         <div class="card-inner" id="card-inner-${c.id}"
-          onclick="Clients.showCardMenu(${c.id}, event)">
+          onclick="Clients.flipCard(${c.id}, event)"
+          oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
 
           <!-- ── FRONT ── -->
           <div class="card-face card-front" style="${cardStyle}">
