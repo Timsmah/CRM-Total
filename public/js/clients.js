@@ -302,11 +302,10 @@ const Clients = {
         ondragend="Clients.onDragEnd(event)">
 
         <div class="card-inner" id="card-inner-${c.id}"
-          onclick="Clients.flipCard(${c.id}, event)">
+          onclick="Clients.showCardMenu(${c.id}, event)">
 
           <!-- ── FRONT ── -->
-          <div class="card-face card-front" style="${cardStyle}"
-            oncontextmenu="event.preventDefault();event.stopPropagation();Clients.showColorPicker(${c.id}, event)">
+          <div class="card-face card-front" style="${cardStyle}">
 
             <div class="card-top">
               ${badge(c.status)}
@@ -319,10 +318,7 @@ const Clients = {
               </div>
             </div>
 
-            <div class="client-name-row">
-              <span class="client-name">${c.name}</span>
-              <button class="card-open-btn" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="Ouvrir la fiche">↗</button>
-            </div>
+            <div class="client-name">${c.name}</div>
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
               ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
@@ -416,6 +412,74 @@ const Clients = {
   flipBack(id) {
     const inner = document.getElementById(`card-inner-${id}`);
     if (inner) inner.classList.remove('flipped');
+  },
+
+  // ── Card context menu (left click) ──────────────────────────────────────────
+  showCardMenu(id, event) {
+    if (event && (
+      event.target.closest('button') ||
+      event.target.closest('select') ||
+      event.target.closest('a') ||
+      event.target.closest('.action-tags-row') ||
+      event.target.closest('.tags-popover') ||
+      event.target.closest('.card-ctx-menu')
+    )) return;
+    event.stopPropagation();
+    document.querySelectorAll('.card-ctx-menu').forEach(m => m.remove());
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+
+    const actTypes = [['call','📞','Appel'],['whatsapp','💬','WhatsApp'],['visit','🏠','Visite'],['email','✉️','Email'],['note','📝','Note']];
+
+    const menu = document.createElement('div');
+    menu.className = 'card-ctx-menu';
+    menu.innerHTML = `
+      <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.openDetailModal(${id})">
+        📋 Ouvrir la fiche
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
+        📝 Logger une activité <span class="ctx-arrow">›</span>
+      </div>
+      <div class="ctx-sub hidden">
+        ${actTypes.map(([type, emoji, label]) => `
+          <div class="ctx-item ctx-sub-item"
+            onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.quickLog(${id},'${type}','${emoji} ${label}')">
+            ${emoji} ${label}
+          </div>`).join('')}
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item ctx-danger" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.archive(${id})">
+        🗄 Archiver
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-colors">
+        ${CARD_COLORS.map(col => `
+          <button class="ctx-dot ${(c.card_color||null)===col.key?'ctx-dot-active':''}"
+            style="background:${col.bg||'#fff'};border-color:${col.border||'#CBD5E1'}"
+            onclick="event.stopPropagation();Clients.setCardColor(${id},'${col.key||''}',this)"
+            title="${col.label}"></button>`).join('')}
+      </div>`;
+
+    const x = Math.min(event.clientX, window.innerWidth - 210);
+    const y = Math.min(event.clientY + 4, window.innerHeight - 280);
+    menu.style.cssText = `position:fixed;top:${y}px;left:${x}px;z-index:9999`;
+    document.body.appendChild(menu);
+
+    setTimeout(() => {
+      document.addEventListener('click', function h() {
+        document.querySelectorAll('.card-ctx-menu').forEach(m => m.remove());
+        document.removeEventListener('click', h);
+      });
+    }, 50);
+  },
+
+  async quickLog(id, type, label) {
+    const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
+    await api.post('/activities', { client_id: id, type, content: null, author });
+    Toast.show(`✓ ${label} enregistré`);
+    const cardSlot = document.getElementById(`card-act-${id}`);
+    if (cardSlot) delete cardSlot.dataset.loaded;
   },
 
   async toggleTagFromBack(id, key, btn) {
