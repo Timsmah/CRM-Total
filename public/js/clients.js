@@ -319,7 +319,10 @@ const Clients = {
               </div>
             </div>
 
-            <div class="client-name">${c.name}</div>
+            <div class="client-name-row">
+              <span class="client-name">${c.name}</span>
+              <button class="card-open-btn" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="Ouvrir la fiche">↗</button>
+            </div>
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
               ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}

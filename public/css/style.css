@@ -555,7 +555,22 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 }
 .card-back-btn.cbtn-open:hover { background: var(--accent-h); border-color: var(--accent-h); }
 
+.client-name-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 0; }
 .kanban-card .client-name { font-size: 15px; font-weight: 700; }
+.card-open-btn {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.card-face:hover .card-open-btn { opacity: 1; }
+.card-open-btn:hover { color: var(--accent); }
 .kanban-card .client-details p { font-size: 12px; margin-bottom: 2px; }
 
 /* #4 — critères sur 1 ligne avec tooltip au hover */
