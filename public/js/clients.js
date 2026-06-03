@@ -86,8 +86,8 @@ const Clients = {
   clientFilters: { status: '', zone: '', tag: '', urgency: '' },
 
   async init() {
-    document.getElementById('content').innerHTML = '<p class="spinner">Syncing…</p>';
-    try { await api.post('/clients/sync/sheets', {}); } catch {}
+    document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
+    api.post('/clients/sync/sheets', {}).catch(() => {}); // fire & forget, ne bloque pas
     await this.load();
     this.render();
     this._checkReminders();
