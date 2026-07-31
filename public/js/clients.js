@@ -899,7 +899,9 @@ const Clients = {
   async archive(id) {
     await api.patch(`/clients/${id}/archive`);
     this.data = this.data.filter(c => c.id !== id);
-    this.render();
+    // Remove card from DOM directly to avoid scroll reset
+    const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
+    if (card) card.remove();
     Toast.show(this.showArchived ? t('toast_unarchived') : t('toast_archived'));
   },
 
