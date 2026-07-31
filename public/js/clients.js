@@ -275,6 +275,7 @@ const Clients = {
   urgencyClass(move_in_date) {
     if (!move_in_date) return '';
     const days = Math.ceil((new Date(move_in_date) - new Date()) / 86400000);
+    if (days < 0) return 'urgent-overdue';
     if (days <= 14) return 'urgent-red';
     if (days <= 30) return 'urgent-amber';
     if (days <= 60) return 'urgent-yellow';
@@ -282,13 +283,24 @@ const Clients = {
     return '';
   },
 
+  urgencyDays(move_in_date) {
+    if (!move_in_date) return null;
+    return Math.ceil((new Date(move_in_date) - new Date()) / 86400000);
+  },
+
   cardHTML(c) {
     const budgetLine = c.budget_max
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : null;
     const urgency = this.urgencyClass(c.move_in_date);
+    const daysNum = this.urgencyDays(c.move_in_date);
     const daysAgo = this.daysAgo(c);
     const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
+    const moveinLine = c.move_in_date
+      ? (daysNum < 0
+          ? `<p class="urgent-overdue" style="display:flex;align-items:center;gap:4px">⚠️ En retard · ${Math.abs(daysNum)}j</p>`
+          : `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>`)
+      : '';
 
     // Manual card color
     const colorDef = CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0];
@@ -323,7 +335,7 @@ const Clients = {
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
               ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
-              ${c.move_in_date ? `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>` : ''}
+              ${moveinLine}
               ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
             </div>
 
