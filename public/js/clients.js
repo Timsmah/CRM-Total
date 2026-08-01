@@ -133,7 +133,7 @@ const Clients = {
         <div class="header-actions">
           <button class="btn btn-primary" onclick="Clients.openAddModal()">${t('clients_add')}</button>
           <button class="btn btn-secondary" onclick="Clients.syncSheets()">${t('clients_sync')}</button>
-          <button class="btn ${this.focusMode ? 'btn-primary' : 'btn-ghost'}" onclick="Clients.toggleFocusMode()">
+          <button class="btn btn-primary" onclick="Clients.toggleFocusMode()">
             ${this.focusMode ? '⊞ Vue complète' : '◉ Focus'}
           </button>
           <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
