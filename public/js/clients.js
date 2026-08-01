@@ -83,6 +83,7 @@ const Clients = {
   showArchived: false,
   focusedCol: null,
   sortDir: 'desc',
+  focusMode: false,
   clientFilters: { status: '', zone: '', tag: '', urgency: '' },
 
   async init() {
@@ -132,6 +133,9 @@ const Clients = {
         <div class="header-actions">
           <button class="btn btn-primary" onclick="Clients.openAddModal()">${t('clients_add')}</button>
           <button class="btn btn-secondary" onclick="Clients.syncSheets()">${t('clients_sync')}</button>
+          <button class="btn ${this.focusMode ? 'btn-primary' : 'btn-ghost'}" onclick="Clients.toggleFocusMode()">
+            ${this.focusMode ? '⊞ Vue complète' : '◉ Focus'}
+          </button>
           <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
             ${this.showArchived ? t('clients_active') : t('clients_archived')}
           </button>
@@ -288,7 +292,70 @@ const Clients = {
     return Math.ceil((new Date(move_in_date) - new Date()) / 86400000);
   },
 
+  toggleFocusMode() {
+    this.focusMode = !this.focusMode;
+    this.render();
+  },
+
+  cardFocusHTML(c) {
+    const budgetLine = c.budget_max
+      ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
+      : null;
+    const urgency = this.urgencyClass(c.move_in_date);
+    const daysNum = this.urgencyDays(c.move_in_date);
+
+    let dateBadge = '';
+    if (c.move_in_date) {
+      if (daysNum < 0) {
+        dateBadge = `<span class="focus-date urgent-overdue">⚠️ En retard · ${Math.abs(daysNum)}j</span>`;
+      } else {
+        dateBadge = `<span class="focus-date ${urgency}">📅 ${formatDate(c.move_in_date)}</span>`;
+      }
+    }
+
+    const colorDef = CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0];
+    const cardStyle = colorDef.bg ? `background:${colorDef.bg};border-color:${colorDef.border}` : '';
+
+    return `
+      <div class="kanban-card" data-cid="${c.id}" draggable="true"
+        ondragstart="Clients.onDragStart(event, ${c.id})"
+        ondragend="Clients.onDragEnd(event)">
+        <div class="card-inner" id="card-inner-${c.id}"
+          onclick="Clients.flipCard(${c.id}, event)"
+          oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
+
+          <div class="card-face card-front card-focus-front" style="${cardStyle}">
+            <div class="focus-name">${c.name}</div>
+            <div class="focus-meta">
+              ${budgetLine ? `<span>💰 ${budgetLine}</span>` : ''}
+              ${budgetLine && c.duration ? `<span class="focus-sep">·</span>` : ''}
+              ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
+            </div>
+            ${dateBadge ? `<div class="focus-date-row">${dateBadge}</div>` : ''}
+          </div>
+
+          <div class="card-face card-back" style="${cardStyle}">
+            <div class="card-back-header">
+              <span class="card-back-name">${c.name.split(' ')[0]}</span>
+            </div>
+            ${c.whatsapp
+              ? `<div class="card-contact-row">
+                  <span>📱</span>
+                  <span class="card-contact-link">${c.whatsapp}</span>
+                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
+                </div>`
+              : `<p class="card-no-contact">Pas de numéro</p>`}
+            <div class="card-act-log" id="card-act-${c.id}">
+              <span class="card-act-loading">…</span>
+            </div>
+          </div>
+
+        </div>
+      </div>`;
+  },
+
   cardHTML(c) {
+    if (this.focusMode) return this.cardFocusHTML(c);
     const budgetLine = c.budget_max
       ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
       : null;
