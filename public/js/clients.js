@@ -85,6 +85,8 @@ const Clients = {
   sortDir: 'desc',
   focusMode: false,
   hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
+  selectionMode: false,
+  selectedClients: new Set(),
   clientFilters: { status: '', zone: '', tag: '', urgency: '' },
 
   async init() {
@@ -137,6 +139,9 @@ const Clients = {
           <button class="btn btn-primary" onclick="Clients.toggleFocusMode()">
             ${this.focusMode ? '⊞ Vue complète' : '◉ Focus'}
           </button>
+          <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
+            ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
+          </button>
           <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
             ${this.showArchived ? t('clients_active') : t('clients_archived')}
           </button>
@@ -156,9 +161,15 @@ const Clients = {
         <button class="legend-btn" onclick="Clients.showLegend(this)" title="Légende couleurs">🎨</button>
       </div>
       ${this.filterBarHTML()}
-      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''}">
+      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
         ${getContactCols().map(col => this.columnHTML(col)).join('')}
-      </div>`;
+      </div>
+      ${this.selectionMode ? `
+      <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
+        <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
+        <button class="btn btn-primary" onclick="Clients.openCallList()">📋 Liste d'appels</button>
+        <button class="btn btn-ghost" onclick="Clients.toggleSelectionMode()">Annuler</button>
+      </div>` : ''}`;
   },
 
   filterBarHTML() {
@@ -229,6 +240,88 @@ const Clients = {
   filtered() {
     if (this.filter === 'tous') return this.data;
     return this.data.filter(c => this.effectiveContactStatus(c) === this.filter);
+  },
+
+  toggleSelectionMode() {
+    this.selectionMode = !this.selectionMode;
+    this.selectedClients.clear();
+    this.render();
+  },
+
+  toggleClientSelection(id) {
+    if (this.selectedClients.has(id)) {
+      this.selectedClients.delete(id);
+    } else {
+      this.selectedClients.add(id);
+    }
+    const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
+    if (card) card.classList.toggle('card-selected', this.selectedClients.has(id));
+    const count = this.selectedClients.size;
+    const bar = document.getElementById('call-sel-bar');
+    if (bar) {
+      bar.style.opacity = count ? '1' : '0';
+      bar.style.pointerEvents = count ? '' : 'none';
+    }
+    const counter = document.getElementById('call-sel-count');
+    if (counter) counter.textContent = `${count} sélectionné${count > 1 ? 's' : ''}`;
+  },
+
+  openCallList() {
+    const clients = [...this.selectedClients]
+      .map(id => this.data.find(c => c.id === id)).filter(Boolean);
+    const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const listHTML = clients.map((c, i) => {
+      const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
+      const urgency = this.urgencyClass(c.move_in_date);
+      const daysNum = this.urgencyDays(c.move_in_date);
+      const dateBadge = c.move_in_date
+        ? (daysNum < 0
+          ? `<span class="cl-date urgent-overdue">⚠️ En retard · ${Math.abs(daysNum)}j</span>`
+          : `<span class="cl-date ${urgency}">📅 ${formatDate(c.move_in_date)}</span>`)
+        : '';
+      return `
+        <div class="cl-item" id="cl-item-${c.id}">
+          <div class="cl-num">${i + 1}</div>
+          <div class="cl-body">
+            <div class="cl-name">${c.name}</div>
+            <div class="cl-meta">
+              ${c.whatsapp
+                ? `<button class="cl-phone" onclick="navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))" title="Copier">📱 ${c.whatsapp}</button>`
+                : `<span class="cl-no-phone">Pas de numéro</span>`}
+              ${budget ? `<span>💰 ${budget}</span>` : ''}
+              ${c.zones ? `<span>📍 ${c.zones}</span>` : ''}
+              ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
+              ${dateBadge}
+            </div>
+          </div>
+          <label class="cl-check-wrap" title="Marquer comme appelé">
+            <input type="checkbox" class="cl-check" onchange="this.closest('.cl-item').classList.toggle('cl-done',this.checked)">
+            <span class="cl-check-box"></span>
+          </label>
+        </div>`;
+    }).join('');
+
+    Clients._callListText = `📋 Liste d'appels — ${today}\n\n` + clients.map((c, i) => {
+      const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : null;
+      const date = c.move_in_date ? formatDate(c.move_in_date) : null;
+      const parts = [c.name];
+      if (c.whatsapp) parts.push(c.whatsapp);
+      if (budget) parts.push(budget);
+      if (c.zones) parts.push(c.zones);
+      if (date) parts.push(`Arrivée ${date}`);
+      return `${i + 1}. ${parts.join(' · ')}`;
+    }).join('\n');
+
+    Modal.open(`📋 Liste d'appels — ${clients.length} client${clients.length > 1 ? 's' : ''}`, `
+      <div class="cl-header">
+        <span class="cl-date-label">${today}</span>
+        <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(Clients._callListText).then(()=>Toast.show('Copié ✓','success'))">📋 Copier tout</button>
+      </div>
+      <div class="cl-list">${listHTML}</div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="Modal.close()">Fermer</button>
+      </div>`);
   },
 
   toggleColHide(colKey) {
@@ -342,7 +435,7 @@ const Clients = {
     const cardStyle = colorDef.bg ? `background:${colorDef.bg};border-color:${colorDef.border}` : '';
 
     return `
-      <div class="kanban-card" data-cid="${c.id}" draggable="true"
+      <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)">
         <div class="card-inner" id="card-inner-${c.id}"
@@ -350,6 +443,7 @@ const Clients = {
           oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
 
           <div class="card-face card-front card-focus-front" style="${cardStyle}">
+            ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
             <div class="focus-name">${c.name}</div>
             <div class="focus-meta">
               ${budgetLine ? `<span>💰 ${budgetLine}</span>` : ''}
@@ -401,7 +495,7 @@ const Clients = {
       : '';
 
     return `
-      <div class="kanban-card" data-cid="${c.id}" draggable="true"
+      <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)">
 
@@ -411,6 +505,7 @@ const Clients = {
 
           <!-- ── FRONT ── -->
           <div class="card-face card-front" style="${cardStyle}">
+            ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
 
             <div class="card-top">
               ${badge(c.status)}
@@ -475,6 +570,7 @@ const Clients = {
   },
 
   flipCard(id, event) {
+    if (this.selectionMode) { this.toggleClientSelection(id); return; }
     if (event && (
       event.target.closest('button') ||
       event.target.closest('select') ||
@@ -521,6 +617,7 @@ const Clients = {
 
   // ── Card context menu (left click) ──────────────────────────────────────────
   showCardMenu(id, event) {
+    if (this.selectionMode) return;
     if (event && (
       event.target.closest('button') ||
       event.target.closest('select') ||

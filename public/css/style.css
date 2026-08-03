@@ -733,6 +733,95 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .urgent-yellow { color: #CA8A04 !important; font-weight: 600; }
 .urgent-future { color: #3B82F6 !important; font-weight: 600; }
 
+/* ── SELECTION MODE ──────────────────────────────── */
+.kanban-board.selection-mode .kanban-card { cursor: pointer; }
+.kanban-card.card-selected .card-front,
+.kanban-card.card-selected .card-focus-front {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: rgba(201,146,42,.06) !important;
+}
+.sel-indicator {
+  position: absolute; top: 10px; right: 10px;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0; transition: all .12s;
+  z-index: 1;
+}
+.sel-indicator.sel-checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.sel-indicator.sel-checked::after {
+  content: '✓'; color: #fff; font-size: 10px; font-weight: 700;
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+}
+
+/* ── CALL SELECTION BAR ──────────────────────────── */
+.call-sel-bar {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--text); color: #fff;
+  padding: 10px 16px; border-radius: 40px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.22);
+  z-index: 900; transition: opacity .2s;
+  white-space: nowrap;
+}
+.call-sel-count { font-size: 13px; font-weight: 600; margin-right: 4px; }
+.call-sel-bar .btn-ghost { color: rgba(255,255,255,.65); }
+.call-sel-bar .btn-ghost:hover { color: #fff; background: rgba(255,255,255,.1); }
+
+/* ── CALL LIST MODAL ─────────────────────────────── */
+.cl-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cl-date-label { font-size: 12px; color: var(--text-2); }
+.cl-list { display: flex; flex-direction: column; gap: 0; max-height: 420px; overflow-y: auto; }
+.cl-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+  transition: opacity .15s;
+}
+.cl-item:last-child { border-bottom: none; }
+.cl-item.cl-done { opacity: .4; }
+.cl-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--surface-2); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; color: var(--text-2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.cl-body { flex: 1; min-width: 0; }
+.cl-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.cl-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--text-2); align-items: center; }
+.cl-phone {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-size: 12px; color: var(--accent); font-weight: 600;
+  font-family: inherit; text-decoration: underline; text-underline-offset: 2px;
+}
+.cl-phone:hover { color: var(--accent-h); }
+.cl-no-phone { font-style: italic; color: var(--text-3); }
+.cl-date { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
+.cl-check-wrap {
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; margin-top: 2px;
+}
+.cl-check-wrap input { display: none; }
+.cl-check-box {
+  width: 20px; height: 20px; border-radius: 6px;
+  border: 2px solid var(--border); background: var(--surface);
+  transition: all .12s; display: flex; align-items: center; justify-content: center;
+}
+.cl-check:checked + .cl-check-box {
+  background: var(--green); border-color: var(--green);
+}
+.cl-check:checked + .cl-check-box::after {
+  content: '✓'; color: #fff; font-size: 11px; font-weight: 700;
+}
+
 /* ── FOCUS MODE ──────────────────────────────────── */
 .card-focus-front {
   padding: 10px 12px 10px 15px !important;
