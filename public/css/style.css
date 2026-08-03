@@ -773,6 +773,23 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .call-sel-bar .btn-ghost { color: rgba(255,255,255,.65); }
 .call-sel-bar .btn-ghost:hover { color: #fff; background: rgba(255,255,255,.1); }
 
+/* ── CALL LIST HISTORY ───────────────────────────── */
+.cl-hist-list { display: flex; flex-direction: column; gap: 0; max-height: 400px; overflow-y: auto; }
+.cl-hist-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+}
+.cl-hist-row:last-child { border-bottom: none; }
+.cl-hist-info { flex: 1; cursor: pointer; min-width: 0; }
+.cl-hist-info:hover .cl-hist-label { color: var(--accent); }
+.cl-hist-label { font-size: 13.5px; font-weight: 600; color: var(--text); display: block; margin-bottom: 2px; }
+.cl-hist-meta { font-size: 11.5px; color: var(--text-2); }
+.cl-hist-del {
+  background: none; border: none; cursor: pointer; color: var(--text-3);
+  font-size: 13px; padding: 4px 6px; border-radius: 6px; transition: all .1s; flex-shrink: 0;
+}
+.cl-hist-del:hover { background: #FEF2F2; color: var(--red); }
+
 /* ── BULK ACTION POPOVER ─────────────────────────── */
 .bulk-popover {
   background: var(--surface); border: 1px solid var(--border);

@@ -152,6 +152,7 @@ const Clients = {
           <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
             ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
           </button>
+          <button class="btn btn-ghost" onclick="Clients.openCallHistory()">📋 Listes</button>
           <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
             ${this.showArchived ? t('clients_active') : t('clients_archived')}
           </button>
@@ -257,6 +258,89 @@ const Clients = {
     return this.data.filter(c => this.effectiveContactStatus(c) === this.filter);
   },
 
+  async openCallHistory() {
+    const lists = await api.get('/call-lists').catch(() => []);
+    if (!lists.length) {
+      Modal.open('📋 Listes d\'appels', `<p style="color:var(--text-2);padding:16px 0">Aucune liste sauvegardée.</p><div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
+      return;
+    }
+    const rows = lists.map(l => {
+      const clients = l.clients || [];
+      const date = new Date(l.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `
+        <div class="cl-hist-row">
+          <div class="cl-hist-info" onclick="Clients._openSavedList(${l.id})">
+            <span class="cl-hist-label">${l.label || date}</span>
+            <span class="cl-hist-meta">${date} · ${clients.length} client${clients.length > 1 ? 's' : ''} · ${l.created_by || 'Tim'}</span>
+          </div>
+          <button class="cl-hist-del" onclick="Clients._deleteCallList(${l.id},this)" title="Supprimer">✕</button>
+        </div>`;
+    }).join('');
+    Modal.open(`📋 Listes d'appels (${lists.length})`, `
+      <div class="cl-hist-list">${rows}</div>
+      <div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
+    Clients._cachedLists = lists;
+  },
+
+  async _deleteCallList(id, btn) {
+    await api.del(`/call-lists/${id}`);
+    btn.closest('.cl-hist-row').remove();
+    Clients._cachedLists = (Clients._cachedLists || []).filter(l => l.id !== id);
+    Toast.show('Liste supprimée');
+  },
+
+  _openSavedList(id) {
+    const l = (Clients._cachedLists || []).find(x => x.id === id);
+    if (!l) return;
+    const clients = l.clients || [];
+    const date = l.label || new Date(l.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const listHTML = clients.map((c, i) => {
+      const urgency = this.urgencyClass(c.move_in_date);
+      const daysNum = this.urgencyDays(c.move_in_date);
+      const dateBadge = c.move_in_date
+        ? (daysNum < 0
+          ? `<span class="cl-date urgent-overdue">⚠️ En retard · ${Math.abs(daysNum)}j</span>`
+          : `<span class="cl-date ${urgency}">📅 ${formatDate(c.move_in_date)}</span>`)
+        : '';
+      const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
+      return `
+        <div class="cl-item" id="cl-item-${c.id}">
+          <div class="cl-num">${i + 1}</div>
+          <div class="cl-body">
+            <div class="cl-name">${c.name}</div>
+            <div class="cl-meta">
+              ${c.whatsapp ? `<button class="cl-phone" onclick="navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))">📱 ${c.whatsapp}</button>` : '<span class="cl-no-phone">Pas de numéro</span>'}
+              ${budget ? `<span>💰 ${budget}</span>` : ''}
+              ${c.zones ? `<span>📍 ${c.zones}</span>` : ''}
+              ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
+              ${dateBadge}
+            </div>
+          </div>
+          <label class="cl-check-wrap">
+            <input type="checkbox" class="cl-check" onchange="this.closest('.cl-item').classList.toggle('cl-done',this.checked)">
+            <span class="cl-check-box"></span>
+          </label>
+        </div>`;
+    }).join('');
+
+    Clients._callListText = `📋 ${date}\n\n` + clients.map((c, i) => {
+      const parts = [c.name];
+      if (c.whatsapp) parts.push(c.whatsapp);
+      if (c.budget_max) parts.push(`${Number(c.budget_max).toLocaleString('fr-FR')} ฿`);
+      if (c.zones) parts.push(c.zones);
+      if (c.move_in_date) parts.push(`Arrivée ${formatDate(c.move_in_date)}`);
+      return `${i + 1}. ${parts.join(' · ')}`;
+    }).join('\n');
+
+    Modal.open(`📋 ${date} — ${clients.length} client${clients.length > 1 ? 's' : ''}`, `
+      <div class="cl-header">
+        <span class="cl-date-label">${date}</span>
+        <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(Clients._callListText).then(()=>Toast.show('Copié ✓','success'))">📋 Copier tout</button>
+      </div>
+      <div class="cl-list">${listHTML}</div>
+      <div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
+  },
+
   toggleSelectionMode() {
     this.selectionMode = !this.selectionMode;
     this.selectedClients.clear();
@@ -316,6 +400,14 @@ const Clients = {
           </label>
         </div>`;
     }).join('');
+
+    const snapshot = clients.map(c => ({
+      id: c.id, name: c.name, whatsapp: c.whatsapp || null,
+      budget_max: c.budget_max || null, budget_eur: c.budget_eur || null,
+      zones: c.zones || null, move_in_date: c.move_in_date || null, duration: c.duration || null,
+    }));
+    const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
+    api.post('/call-lists', { label: today, clients: snapshot, created_by: author }).catch(() => {});
 
     Clients._callListText = `📋 Liste d'appels — ${today}\n\n` + clients.map((c, i) => {
       const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : null;
