@@ -608,6 +608,39 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .kanban-card.dragging .card-inner { transform: scale(0.97); }
 .kanban-col.drag-over { border-color: var(--accent); background: rgba(201,146,42,.05); }
 
+/* ── COLUMN HIDE / COLLAPSE ──────────────────────── */
+.col-hide-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; color: var(--text-3); padding: 0 2px;
+  line-height: 1; opacity: 0; transition: opacity .12s;
+  flex-shrink: 0;
+}
+.kanban-col-header:hover .col-hide-btn { opacity: 1; }
+
+.kanban-col.col-collapsed {
+  flex: 0 0 32px; width: 32px; min-width: 32px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 12px; cursor: pointer;
+  display: flex; align-items: flex-start; justify-content: center;
+  max-height: calc(100vh - 200px);
+  transition: background .12s;
+}
+.kanban-col.col-collapsed:hover { background: var(--surface-3); }
+.col-collapsed-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px; padding: 12px 0;
+}
+.col-collapsed-title {
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-2); white-space: nowrap;
+}
+.kanban-board.has-collapsed { min-width: unset; width: 100%; }
+.kanban-board.has-collapsed .kanban-col:not(.col-collapsed):not(.focused) {
+  flex: 1 1 220px; width: unset;
+}
+
 .kanban-col.focused { width: auto !important; flex: 1 1 auto; max-height: none; }
 .kanban-col.focused .kanban-cards {
   display: grid;

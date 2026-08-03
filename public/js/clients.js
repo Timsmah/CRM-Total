@@ -84,6 +84,7 @@ const Clients = {
   focusedCol: null,
   sortDir: 'desc',
   focusMode: false,
+  hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
   clientFilters: { status: '', zone: '', tag: '', urgency: '' },
 
   async init() {
@@ -155,7 +156,7 @@ const Clients = {
         <button class="legend-btn" onclick="Clients.showLegend(this)" title="Légende couleurs">🎨</button>
       </div>
       ${this.filterBarHTML()}
-      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''}">
+      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''}">
         ${getContactCols().map(col => this.columnHTML(col)).join('')}
       </div>`;
   },
@@ -230,6 +231,16 @@ const Clients = {
     return this.data.filter(c => this.effectiveContactStatus(c) === this.filter);
   },
 
+  toggleColHide(colKey) {
+    if (this.hiddenCols.has(colKey)) {
+      this.hiddenCols.delete(colKey);
+    } else {
+      this.hiddenCols.add(colKey);
+    }
+    localStorage.setItem('crm_hidden_cols', JSON.stringify([...this.hiddenCols]));
+    this.render();
+  },
+
   columnHTML(col) {
 
     const daysAgoNum = (c) => {
@@ -248,6 +259,20 @@ const Clients = {
     const sortIcon = this.sortDir === 'desc' ? '↑' : '↓';
     const sortTitle = this.sortDir === 'desc' ? 'Most recent first' : 'Oldest first';
 
+    if (this.hiddenCols.has(col.key)) {
+      return `
+        <div class="kanban-col col-collapsed"
+          ondragover="Clients.onDragOver(event)"
+          ondragleave="Clients.onDragLeave(event)"
+          ondrop="Clients.onDrop(event, '${col.key}')"
+          onclick="Clients.toggleColHide('${col.key}')" title="Afficher ${col.label}">
+          <div class="col-collapsed-inner">
+            <span class="kanban-count ${col.cls}">${cards.length}</span>
+            <span class="col-collapsed-title ${col.cls}">${col.label}</span>
+          </div>
+        </div>`;
+    }
+
     return `
       <div class="kanban-col ${this.focusedCol === col.key ? 'focused' : ''}"
         ondragover="Clients.onDragOver(event)"
@@ -258,7 +283,7 @@ const Clients = {
           <div style="display:flex;align-items:center;gap:6px">
             <button class="sort-btn" onclick="Clients.toggleSort(event)" title="${sortTitle}">${sortIcon} ${sortTitle}</button>
             <span class="kanban-count">${cards.length}</span>
-            <span style="font-size:10px;opacity:.5">${this.focusedCol === col.key ? '✕' : '⊞'}</span>
+            <button class="col-hide-btn" onclick="event.stopPropagation();Clients.toggleColHide('${col.key}')" title="Masquer">‹</button>
           </div>
         </div>
         <div class="kanban-cards">
