@@ -95,6 +95,16 @@ const Clients = {
     await this.load();
     this.render();
     this._checkReminders();
+    if (!Clients._keyHandler) {
+      Clients._keyHandler = (e) => {
+        if (e.key !== 's' && e.key !== 'S') return;
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        if (['input', 'textarea', 'select'].includes(tag) || document.activeElement?.isContentEditable) return;
+        if (typeof Router !== 'undefined' && Router.current !== 'clients') return;
+        Clients.toggleSelectionMode();
+      };
+      document.addEventListener('keydown', Clients._keyHandler);
+    }
   },
 
   _checkReminders() {
@@ -167,8 +177,13 @@ const Clients = {
       ${this.selectionMode ? `
       <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
         <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
-        <button class="btn btn-primary" onclick="Clients.openCallList()">📋 Liste d'appels</button>
-        <button class="btn btn-ghost" onclick="Clients.toggleSelectionMode()">Annuler</button>
+        <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
+        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
+        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
+        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'color')">🎨 Couleur</button>
+        <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
+        <div class="sel-divider"></div>
+        <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
       </div>` : ''}`;
   },
 
@@ -322,6 +337,102 @@ const Clients = {
       <div class="form-actions">
         <button class="btn btn-ghost" onclick="Modal.close()">Fermer</button>
       </div>`);
+  },
+
+  async bulkArchive() {
+    const ids = [...this.selectedClients];
+    if (!ids.length) return;
+    await Promise.all(ids.map(id => api.patch(`/clients/${id}/archive`)));
+    this.data = this.data.filter(c => !this.selectedClients.has(c.id));
+    ids.forEach(id => { const el = document.querySelector(`.kanban-card[data-cid="${id}"]`); if (el) el.remove(); });
+    const n = ids.length;
+    Toast.show(`🗄 ${n} client${n > 1 ? 's' : ''} archivé${n > 1 ? 's' : ''}`);
+    this.toggleSelectionMode();
+  },
+
+  async bulkMove(colKey) {
+    const ids = [...this.selectedClients];
+    if (!ids.length) return;
+    document.querySelectorAll('.bulk-popover').forEach(p => p.remove());
+    await Promise.all(ids.map(id => api.patch(`/clients/${id}/contact-status`, { contact_status: colKey })));
+    ids.forEach(id => { const c = this.data.find(x => x.id === id); if (c) c.contact_status = colKey; });
+    const n = ids.length;
+    Toast.show(`✓ ${n} client${n > 1 ? 's' : ''} déplacé${n > 1 ? 's' : ''}`);
+    this.toggleSelectionMode();
+  },
+
+  async bulkSetColor(colorKey) {
+    const ids = [...this.selectedClients];
+    if (!ids.length) return;
+    document.querySelectorAll('.bulk-popover').forEach(p => p.remove());
+    const key = colorKey || null;
+    const colorDef = CARD_COLORS.find(x => x.key === key) || CARD_COLORS[0];
+    await Promise.all(ids.map(id => api.patch(`/clients/${id}/color`, { card_color: key })));
+    ids.forEach(id => {
+      const c = this.data.find(x => x.id === id);
+      if (c) c.card_color = key;
+      const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
+      if (card) card.querySelectorAll('.card-face').forEach(f => {
+        f.style.background = colorDef.bg || ''; f.style.borderColor = colorDef.border || '';
+      });
+    });
+    Toast.show('🎨 Couleur appliquée');
+  },
+
+  async bulkAddTag(tagKey) {
+    const ids = [...this.selectedClients];
+    if (!ids.length) return;
+    document.querySelectorAll('.bulk-popover').forEach(p => p.remove());
+    await Promise.all(ids.map(async id => {
+      const c = this.data.find(x => x.id === id);
+      if (!c) return;
+      const tags = this.getTags(c);
+      if (tags.includes(tagKey)) return;
+      tags.push(tagKey);
+      c.action_tags = JSON.stringify(tags);
+      await api.patch(`/clients/${id}/tags`, { action_tags: tags });
+      const display = document.querySelector(`.kanban-card[data-cid="${id}"] .action-tags-display`);
+      if (display) display.innerHTML = this.fullTagsHTML(c);
+    }));
+    const tag = ACTION_TAGS.find(t => t.key === tagKey);
+    Toast.show(`✓ Tag "${tag?.emoji} ${tag?.label}" ajouté`);
+  },
+
+  _toggleBulkPopover(btn, type) {
+    const existing = document.querySelector('.bulk-popover');
+    if (existing) { existing.remove(); if (existing.dataset.type === type) return; }
+
+    let inner = '';
+    if (type === 'move') {
+      inner = getContactCols().map(col =>
+        `<button class="bulk-pop-item" onclick="Clients.bulkMove('${col.key}')">${col.label}</button>`
+      ).join('');
+    } else if (type === 'tag') {
+      inner = ACTION_TAGS.map(tag =>
+        `<button class="bulk-pop-item" onclick="Clients.bulkAddTag('${tag.key}')">${tag.emoji} ${tag.label}</button>`
+      ).join('');
+    } else if (type === 'color') {
+      inner = `<div class="bulk-pop-colors">${CARD_COLORS.map(col =>
+        `<button class="ctx-dot" style="background:${col.bg||'#fff'};border-color:${col.border||'#CBD5E1'}"
+          onclick="Clients.bulkSetColor('${col.key||''}')" title="${col.label}"></button>`
+      ).join('')}</div>`;
+    }
+
+    const pop = document.createElement('div');
+    pop.className = 'bulk-popover'; pop.dataset.type = type;
+    pop.innerHTML = inner;
+    const rect = btn.getBoundingClientRect();
+    const left = Math.min(rect.left, window.innerWidth - 200);
+    pop.style.cssText = `position:fixed;bottom:${window.innerHeight - rect.top + 8}px;left:${left}px;z-index:9999`;
+    document.body.appendChild(pop);
+
+    setTimeout(() => {
+      document.addEventListener('click', function h(e) {
+        if (!e.target.closest('.bulk-popover') && !e.target.closest('.btn-sel-action')) {
+          pop.remove(); document.removeEventListener('click', h);
+        }
+      });
+    }, 50);
   },
 
   toggleColHide(colKey) {

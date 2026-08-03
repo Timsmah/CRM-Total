@@ -773,6 +773,27 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .call-sel-bar .btn-ghost { color: rgba(255,255,255,.65); }
 .call-sel-bar .btn-ghost:hover { color: #fff; background: rgba(255,255,255,.1); }
 
+/* ── BULK ACTION POPOVER ─────────────────────────── */
+.bulk-popover {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow-md);
+  padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  min-width: 170px; max-height: 260px; overflow-y: auto;
+}
+.bulk-pop-item {
+  background: none; border: none; border-radius: 7px;
+  padding: 7px 10px; text-align: left; font-size: 12.5px;
+  font-family: inherit; color: var(--text); cursor: pointer;
+  transition: background .1s;
+}
+.bulk-pop-item:hover { background: var(--surface-2); }
+.bulk-pop-colors {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 2px;
+}
+.sel-divider {
+  width: 1px; height: 20px; background: rgba(255,255,255,.2); flex-shrink: 0;
+}
+
 /* ── CALL LIST MODAL ─────────────────────────────── */
 .cl-header {
   display: flex; align-items: center; justify-content: space-between;
