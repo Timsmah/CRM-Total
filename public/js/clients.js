@@ -843,6 +843,24 @@ const Clients = {
         📋 Ouvrir la fiche
       </div>
       <div class="ctx-sep"></div>
+      ${this.effectiveContactStatus(c) !== 'Property to Find' ? `
+      <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.setContactStatus(${id},'Property to Find')">
+        🔍 Passer en recherche active
+      </div>` : `
+      <div class="ctx-item ctx-disabled">
+        🔍 Déjà en recherche active
+      </div>`}
+      <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
+        → Déplacer vers <span class="ctx-arrow">›</span>
+      </div>
+      <div class="ctx-sub hidden">
+        ${getContactCols().filter(col => col.key !== this.effectiveContactStatus(c)).map(col => `
+          <div class="ctx-item ctx-sub-item"
+            onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.setContactStatus(${id},'${col.key}')">
+            ${col.label}
+          </div>`).join('')}
+      </div>
+      <div class="ctx-sep"></div>
       <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
         📝 Logger une activité <span class="ctx-arrow">›</span>
       </div>

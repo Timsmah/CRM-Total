@@ -1667,6 +1667,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .ctx-item:hover { background: var(--surface-2); }
 .ctx-danger { color: #DC2626; }
 .ctx-danger:hover { background: #FEF2F2; }
+.ctx-disabled { color: var(--text-3); cursor: default; }
+.ctx-disabled:hover { background: none; }
 .ctx-arrow { color: var(--text-3); font-size: 11px; }
 .ctx-sep { height: 1px; background: var(--border); margin: 3px 4px; }
 .ctx-sub { padding-left: 8px; }
