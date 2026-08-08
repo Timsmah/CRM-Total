@@ -844,7 +844,7 @@ const Clients = {
       </div>
       <div class="ctx-sep"></div>
       ${this.effectiveContactStatus(c) !== 'Property to Find' ? `
-      <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.setContactStatus(${id},'Property to Find')">
+      <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.sendToRecherches(${id})">
         🔍 Envoyer en Recherches
       </div>` : `
       <div class="ctx-item ctx-disabled">
@@ -1038,6 +1038,17 @@ const Clients = {
     const c = this.data.find(x => x.id === id);
     if (c) c.contact_status = status;
     this.render();
+  },
+
+  async sendToRecherches(id) {
+    await api.patch(`/clients/${id}/contact-status`, {
+      contact_status: 'Property to Find',
+      status: 'Recherche active',
+    });
+    const c = this.data.find(x => x.id === id);
+    if (c) { c.contact_status = 'Property to Find'; c.status = 'Recherche active'; }
+    this.render();
+    Toast.show('🔍 Client envoyé en Recherches');
   },
 
   // ── Action Tags ──────────────────────────────────
