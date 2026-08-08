@@ -845,10 +845,10 @@ const Clients = {
       <div class="ctx-sep"></div>
       ${this.effectiveContactStatus(c) !== 'Property to Find' ? `
       <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.setContactStatus(${id},'Property to Find')">
-        🔍 Passer en recherche active
+        🔍 Envoyer en Recherches
       </div>` : `
       <div class="ctx-item ctx-disabled">
-        🔍 Déjà en recherche active
+        🔍 Déjà dans Recherches
       </div>`}
       <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
         → Déplacer vers <span class="ctx-arrow">›</span>
