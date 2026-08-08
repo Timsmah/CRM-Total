@@ -843,7 +843,7 @@ const Clients = {
         📋 Ouvrir la fiche
       </div>
       <div class="ctx-sep"></div>
-      ${this.effectiveContactStatus(c) !== 'Property to Find' ? `
+      ${c.status !== 'Recherche active' ? `
       <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.sendToRecherches(${id})">
         🔍 Envoyer en Recherches
       </div>` : `
