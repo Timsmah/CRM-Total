@@ -786,6 +786,9 @@ const Clients = {
     if (!inner) return;
     const isFlipping = !inner.classList.contains('flipped');
     inner.classList.toggle('flipped');
+    // Désactiver le drag quand la carte est retournée pour permettre la sélection de texte
+    const card = inner.closest('.kanban-card');
+    if (card) card.draggable = !isFlipping;
     if (isFlipping) this._loadCardActivities(id);
   },
 
@@ -815,7 +818,11 @@ const Clients = {
 
   flipBack(id) {
     const inner = document.getElementById(`card-inner-${id}`);
-    if (inner) inner.classList.remove('flipped');
+    if (inner) {
+      inner.classList.remove('flipped');
+      const card = inner.closest('.kanban-card');
+      if (card) card.draggable = true;
+    }
   },
 
   // ── Card context menu (left click) ──────────────────────────────────────────
