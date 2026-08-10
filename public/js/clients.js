@@ -661,7 +661,7 @@ const Clients = {
               <span class="card-back-name">${c.name.split(' ')[0]}</span>
             </div>
             ${c.whatsapp
-              ? `<div class="card-contact-row">
+              ? `<div class="card-contact-row" onclick="event.stopPropagation()">
                   <span>📱</span>
                   <span class="card-contact-link">${c.whatsapp}</span>
                   <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
@@ -754,7 +754,7 @@ const Clients = {
             </div>
 
             ${c.whatsapp
-              ? `<div class="card-contact-row">
+              ? `<div class="card-contact-row" onclick="event.stopPropagation()">
                   <span>📱</span>
                   <span class="card-contact-link">${c.whatsapp}</span>
                   <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>

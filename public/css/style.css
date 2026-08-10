@@ -461,6 +461,9 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   font-weight: 600;
   color: var(--accent);
   text-decoration: none;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 .card-contact-link:hover { text-decoration: underline; }
 .card-copy-btn {
