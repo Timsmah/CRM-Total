@@ -72,7 +72,7 @@ function getContactCols() {
     { key: 'Property to Find', label: t('col_search'),   cls: 'col-meeting'    },
     { key: 'Urgent Sending',   label: t('col_proposal'), cls: 'col-urgent'     },
     { key: 'Rappeler',         label: t('col_visit'),    cls: 'col-callback'   },
-    { key: 'Closed',           label: 'Closed',          cls: 'col-closed'     },
+    { key: 'Closed',           label: '✅ Signé',         cls: 'col-closed'     },
   ];
 }
 const CONTACT_COLS = getContactCols(); // kept for compatibility, refreshed in render()
