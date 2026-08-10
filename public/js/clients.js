@@ -87,7 +87,7 @@ const Clients = {
   hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
   selectionMode: false,
   selectedClients: new Set(),
-  clientFilters: { status: '', zone: '', tag: '', urgency: '' },
+  clientFilters: { status: '', zone: '', tag: '', urgency: '', color: '' },
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
@@ -206,6 +206,13 @@ const Clients = {
           <option value="">All zones</option>
           ${zones.map(z => `<option value="${z}" ${f.zone===z?'selected':''}>${z}</option>`).join('')}
         </select>
+        <select class="filter-select" onchange="Clients.setClientFilter('color',this.value)">
+          <option value="">🎨 All colors</option>
+          ${CARD_COLORS.filter(c => c.key !== null).map(col => {
+            const lbl = (this._colorLabels()[col.key] || col.label);
+            return `<option value="${col.key}" ${f.color===col.key?'selected':''}>${lbl}</option>`;
+          }).join('')}
+        </select>
         <select class="filter-select" onchange="Clients.setClientFilter('tag',this.value)">
           <option value="">All tags</option>
           ${ACTION_TAGS.map(tag => `<option value="${tag.key}" ${f.tag===tag.key?'selected':''}>${tag.emoji} ${tag.label}</option>`).join('')}
@@ -234,6 +241,7 @@ const Clients = {
     const f = this.clientFilters;
     if (f.status && c.status !== f.status) return false;
     if (f.zone && !(c.zones||'').toLowerCase().includes(f.zone.toLowerCase())) return false;
+    if (f.color && (c.card_color || null) !== f.color) return false;
     if (f.tag && !this.getTags(c).includes(f.tag)) return false;
     if (f.urgency && this.urgencyClass(c.move_in_date) !== f.urgency) return false;
     return true;
@@ -245,7 +253,7 @@ const Clients = {
   },
 
   clearClientFilters() {
-    this.clientFilters = { status: '', zone: '', tag: '', urgency: '' };
+    this.clientFilters = { status: '', zone: '', tag: '', urgency: '', color: '' };
     this.render();
   },
 
