@@ -897,9 +897,26 @@ const Clients = {
     }, 50);
   },
 
-  async quickLog(id, type, label) {
+  quickLog(id, type, label) {
+    document.querySelectorAll('.card-ctx-menu').forEach(m => m.remove());
+    Modal.open(label, `
+      <div style="padding:4px 0 8px">
+        <input id="quick-log-input" type="text" placeholder="Ajouter une note (optionnel)…"
+          style="width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1.5px solid var(--accent);border-radius:8px;outline:none;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')Clients._submitQuickLog(${id},'${type}','${label}')">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
+        <button class="btn btn-primary" onclick="Clients._submitQuickLog(${id},'${type}','${label}')">Logger</button>
+      </div>`);
+    setTimeout(() => document.getElementById('quick-log-input')?.focus(), 80);
+  },
+
+  async _submitQuickLog(id, type, label) {
+    const content = document.getElementById('quick-log-input')?.value?.trim() || null;
+    Modal.close();
     const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
-    await api.post('/activities', { client_id: id, type, content: null, author });
+    await api.post('/activities', { client_id: id, type, content, author });
     Toast.show(`✓ ${label} enregistré`);
     const cardSlot = document.getElementById(`card-act-${id}`);
     if (cardSlot) delete cardSlot.dataset.loaded;
