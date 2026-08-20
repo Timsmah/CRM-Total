@@ -3,6 +3,7 @@ const Finance = {
   selectedMonth: '',
   _unlocked: false,   // in-memory only — resets on every page refresh
   _chart: null,
+  displayCur: localStorage.getItem('fin_display_cur') || 'THB',
 
   // ── Exchange rate (auto-refreshed daily, editable override) ───────────────
   get eurRate() {
@@ -61,6 +62,42 @@ const Finance = {
   fmtTHB(eur) {
     if (!eur) return '';
     return `≈ ${Math.round(eur * this.eurRate).toLocaleString('fr-FR')} ฿`;
+  },
+
+  // ── Display currency toggle ────────────────────────────────────────────────
+  toggleDisplay() {
+    this.displayCur = this.displayCur === 'THB' ? 'EUR' : 'THB';
+    localStorage.setItem('fin_display_cur', this.displayCur);
+    this.render();
+    setTimeout(() => this.drawRevenueChart(), 60);
+  },
+
+  // Amount of a transaction in the current display currency
+  inDisplay(t) {
+    const amt = Number(t.amount);
+    if (this.displayCur === 'EUR') {
+      return t.currency === 'EUR' ? amt : amt / this.eurRate;
+    }
+    return t.currency === 'EUR' ? Math.round(amt * this.eurRate) : amt;
+  },
+
+  fmtDisplay(val) {
+    if (this.displayCur === 'EUR') {
+      return `${Math.round(val).toLocaleString('fr-FR')} €`;
+    }
+    return `${Math.round(val).toLocaleString('fr-FR')} ฿`;
+  },
+
+  fmtSub(t) {
+    const amt = Number(t.amount);
+    if (this.displayCur === 'EUR') {
+      return t.currency === 'EUR'
+        ? `${this.fmtTHB(amt)}`
+        : `${Math.round(amt).toLocaleString('fr-FR')} ฿`;
+    }
+    return t.currency === 'EUR'
+      ? `${amt.toLocaleString('fr-FR')} €`
+      : `${this.fmtEUR(amt)}`;
   },
 
   // ── Lock / unlock ──────────────────────────────────────────────────────────
@@ -185,6 +222,9 @@ const Finance = {
           <button class="btn btn-ghost" onclick="Finance.editRate()" title="Exchange rate — updated daily">
             1€ = ${this.eurRate} ฿ ✏️
           </button>
+          <button class="btn btn-ghost" onclick="Finance.toggleDisplay()" title="Changer la devise d'affichage">
+            ${this.displayCur === 'THB' ? '฿ → €' : '€ → ฿'}
+          </button>
           <button class="btn btn-primary" onclick="Finance.openAddModal()">+ Transaction</button>
         </div>
       </div>
@@ -197,8 +237,8 @@ const Finance = {
           ).join('')}
         </select>
         <span style="color:var(--text-2);font-size:13px">
-          Total: <strong style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</strong>
-          <span class="eur-inline">${this.fmtEUR(grandTotal)}</span>
+          Total: <strong style="color:var(--accent)">${this.fmtDisplay(grandTotal)}</strong>
+          <span class="eur-inline">${this.displayCur === 'THB' ? this.fmtEUR(grandTotal) : this.fmtTHB(grandTotal)}</span>
         </span>
 
       </div>
@@ -209,14 +249,14 @@ const Finance = {
         ${summary.map(r => `
           <div class="summary-card">
             <div class="acct">${r.acct}</div>
-            <div class="total">${Number(r.total).toLocaleString('fr-FR')} ฿</div>
-            ${r.total ? `<div class="eur-sub">${this.fmtEUR(r.total)}</div>` : ''}
+            <div class="total">${this.fmtDisplay(r.total)}</div>
+            ${r.total ? `<div class="eur-sub">${this.displayCur === 'THB' ? this.fmtEUR(r.total) : this.fmtTHB(r.total)}</div>` : ''}
             <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
           </div>`).join('')}
         <div class="summary-card" style="border-color:rgba(212,168,83,.3)">
           <div class="acct">Total</div>
-          <div class="total" style="color:var(--accent)">${Number(grandTotal).toLocaleString('fr-FR')} ฿</div>
-          ${grandTotal ? `<div class="eur-sub" style="color:var(--accent);opacity:.7">${this.fmtEUR(grandTotal)}</div>` : ''}
+          <div class="total" style="color:var(--accent)">${this.fmtDisplay(grandTotal)}</div>
+          ${grandTotal ? `<div class="eur-sub" style="color:var(--accent);opacity:.7">${this.displayCur === 'THB' ? this.fmtEUR(grandTotal) : this.fmtTHB(grandTotal)}</div>` : ''}
           <div class="sub">${txMonth.length} transaction${txMonth.length !== 1 ? 's' : ''}</div>
         </div>
       </div>
@@ -271,11 +311,8 @@ const Finance = {
               <td>${t.account}</td>
               <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
               <td>
-                ${t.currency === 'EUR'
-                  ? `<div class="tx-amount">${Number(t.amount).toLocaleString('fr-FR')} €</div>
-                     <div class="eur-sub">${this.fmtTHB(Number(t.amount))}</div>`
-                  : `<div class="tx-amount">${Number(t.amount).toLocaleString('fr-FR')} ฿</div>
-                     <div class="eur-sub">${this.fmtEUR(Number(t.amount))}</div>`}
+                <div class="tx-amount">${this.fmtDisplay(this.inDisplay(t))}</div>
+                <div class="eur-sub">${this.fmtSub(t)}</div>
               </td>
               <td>
                 <div class="tx-actions">
