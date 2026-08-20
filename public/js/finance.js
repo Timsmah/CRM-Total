@@ -97,13 +97,19 @@ const Finance = {
     errEl.classList.add('hidden');
     try {
       await api.post('/auth/finance-unlock', { password: pw });
-      this._unlocked = true;
-      await Promise.all([this.load(), this.fetchRate()]);
-      this.render();
-      setTimeout(() => this.drawRevenueChart(), 60);
     } catch {
       errEl.classList.remove('hidden');
+      return;
     }
+    this._unlocked = true;
+    try {
+      await Promise.all([this.load(), this.fetchRate()]);
+    } catch (err) {
+      Toast.show('Erreur chargement finance : ' + (err?.message || err), 'error');
+      return;
+    }
+    this.render();
+    setTimeout(() => this.drawRevenueChart(), 60);
   },
 
   // ── Data ───────────────────────────────────────────────────────────────────
