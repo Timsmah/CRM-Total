@@ -10,18 +10,18 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { amount, date, type, account, notes } = req.body;
+  const { amount, date, type, account, notes, currency } = req.body;
   const { data, error } = await db.from('finance')
-    .insert({ amount, date, type, account, notes: notes || '' })
+    .insert({ amount, date, type, account, notes: notes || '', currency: currency || 'THB' })
     .select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 router.put('/:id', async (req, res) => {
-  const { amount, date, type, account, notes } = req.body;
+  const { amount, date, type, account, notes, currency } = req.body;
   const { data, error } = await db.from('finance')
-    .update({ amount, date, type, account, notes })
+    .update({ amount, date, type, account, notes, currency: currency || 'THB' })
     .eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
