@@ -169,8 +169,8 @@ const Finance = {
     const months     = this.months();
     const summary    = this.summary();
     const byType     = this.summaryByType();
-    const grandTotal = txMonth.reduce((s, t) => s + this.toTHB(t), 0);
     const txMonth    = this.data.filter(t => t.date.startsWith(this.selectedMonth));
+    const grandTotal = txMonth.reduce((s, t) => s + this.toTHB(t), 0);
 
     document.getElementById('content').innerHTML = `
       <div class="section-header">
