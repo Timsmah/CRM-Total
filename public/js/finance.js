@@ -81,23 +81,31 @@ const Finance = {
     return t.currency === 'EUR' ? Math.round(amt * this.eurRate) : amt;
   },
 
-  fmtDisplay(val) {
-    if (this.displayCur === 'EUR') {
-      return `${Math.round(val).toLocaleString('fr-FR')} €`;
-    }
-    return `${Math.round(val).toLocaleString('fr-FR')} ฿`;
+  // Formate `amount` (dans `fromCur`) dans la devise d'affichage courante
+  fmtAs(amount, fromCur) {
+    const v = Math.round(amount);
+    if (!amount) return this.displayCur === 'EUR' ? '0 €' : '0 ฿';
+    if (fromCur === this.displayCur) return `${v.toLocaleString('fr-FR')} ${fromCur === 'EUR' ? '€' : '฿'}`;
+    if (this.displayCur === 'EUR') return `≈ ${Math.round(amount / this.eurRate).toLocaleString('fr-FR')} €`;
+    return `≈ ${Math.round(amount * this.eurRate).toLocaleString('fr-FR')} ฿`;
   },
 
+  // Sous-ligne (devise opposée)
+  fmtAsSub(amount, fromCur) {
+    if (!amount) return '';
+    if (fromCur === this.displayCur) {
+      return this.displayCur === 'EUR'
+        ? `≈ ${Math.round(amount * this.eurRate).toLocaleString('fr-FR')} ฿`
+        : `≈ ${Math.round(amount / this.eurRate).toLocaleString('fr-FR')} €`;
+    }
+    return `${Math.round(amount).toLocaleString('fr-FR')} ${fromCur === 'EUR' ? '€' : '฿'}`;
+  },
+
+  // Pour une transaction individuelle
   fmtSub(t) {
     const amt = Number(t.amount);
-    if (this.displayCur === 'EUR') {
-      return t.currency === 'EUR'
-        ? `${this.fmtTHB(amt)}`
-        : `${Math.round(amt).toLocaleString('fr-FR')} ฿`;
-    }
-    return t.currency === 'EUR'
-      ? `${amt.toLocaleString('fr-FR')} €`
-      : `${this.fmtEUR(amt)}`;
+    const cur = t.currency || 'THB';
+    return this.fmtAsSub(amt, cur);
   },
 
   // ── Lock / unlock ──────────────────────────────────────────────────────────
@@ -237,8 +245,8 @@ const Finance = {
           ).join('')}
         </select>
         <span style="color:var(--text-2);font-size:13px">
-          Total: <strong style="color:var(--accent)">${this.fmtDisplay(grandTotal)}</strong>
-          <span class="eur-inline">${this.displayCur === 'THB' ? this.fmtEUR(grandTotal) : this.fmtTHB(grandTotal)}</span>
+          Total: <strong style="color:var(--accent)">${this.fmtAs(grandTotal, 'THB')}</strong>
+          <span class="eur-inline">${this.fmtAsSub(grandTotal, 'THB')}</span>
         </span>
 
       </div>
@@ -249,14 +257,14 @@ const Finance = {
         ${summary.map(r => `
           <div class="summary-card">
             <div class="acct">${r.acct}</div>
-            <div class="total">${this.fmtDisplay(r.total)}</div>
-            ${r.total ? `<div class="eur-sub">${this.displayCur === 'THB' ? this.fmtEUR(r.total) : this.fmtTHB(r.total)}</div>` : ''}
+            <div class="total">${this.fmtAs(r.total, 'THB')}</div>
+            ${r.total ? `<div class="eur-sub">${this.fmtAsSub(r.total, 'THB')}</div>` : ''}
             <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
           </div>`).join('')}
         <div class="summary-card" style="border-color:rgba(212,168,83,.3)">
           <div class="acct">Total</div>
-          <div class="total" style="color:var(--accent)">${this.fmtDisplay(grandTotal)}</div>
-          ${grandTotal ? `<div class="eur-sub" style="color:var(--accent);opacity:.7">${this.displayCur === 'THB' ? this.fmtEUR(grandTotal) : this.fmtTHB(grandTotal)}</div>` : ''}
+          <div class="total" style="color:var(--accent)">${this.fmtAs(grandTotal, 'THB')}</div>
+          ${grandTotal ? `<div class="eur-sub" style="color:var(--accent);opacity:.7">${this.fmtAsSub(grandTotal, 'THB')}</div>` : ''}
           <div class="sub">${txMonth.length} transaction${txMonth.length !== 1 ? 's' : ''}</div>
         </div>
       </div>
@@ -265,11 +273,8 @@ const Finance = {
       <div class="fin-section-label">By category</div>
       <div class="summary-row">
         ${byType.map(r => {
-          const isEurGoal = r.goalCur === 'EUR';
-          const displayTotal = r.total ? Math.round(r.total).toLocaleString('fr-FR') + (isEurGoal ? ' €' : ' ฿') : '—';
-          const displaySub   = r.total
-            ? (isEurGoal ? this.fmtTHB(r.total) : this.fmtEUR(Math.round(r.total)))
-            : '';
+          const displayTotal = r.total ? this.fmtAs(r.total, r.goalCur) : '—';
+          const displaySub   = r.total ? this.fmtAsSub(r.total, r.goalCur) : '';
           return `
           <div class="summary-card">
             <div class="acct">${r.icon} ${r.label}</div>
@@ -311,7 +316,7 @@ const Finance = {
               <td>${t.account}</td>
               <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
               <td>
-                <div class="tx-amount">${this.fmtDisplay(this.inDisplay(t))}</div>
+                <div class="tx-amount">${this.fmtAs(Number(t.amount), t.currency || 'THB')}</div>
                 <div class="eur-sub">${this.fmtSub(t)}</div>
               </td>
               <td>
