@@ -295,10 +295,13 @@ const Finance = {
         }).join('')}
       </div>
 
+      <!-- Insights -->
+      ${this.insightsHTML()}
+
       <!-- 6-month revenue trend -->
       <div class="fin-section-label">Revenue trend — last 6 months</div>
       <div class="dash-card" style="margin-bottom:24px;padding:18px 22px">
-        <div style="height:160px;position:relative"><canvas id="chart-fin-revenue"></canvas></div>
+        <div style="height:200px;position:relative"><canvas id="chart-fin-revenue"></canvas></div>
       </div>
 
       <!-- Transactions table -->
@@ -331,50 +334,167 @@ const Finance = {
       </table>`;
   },
 
-  // ── 6-month revenue chart ─────────────────────────────────────────────────
-  revenueByMonth() {
+  // ── Analytics helpers ─────────────────────────────────────────────────────
+  _last6Months() {
+    const now = new Date();
+    const keys = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    }
+    return keys;
+  },
+
+  revenueByMonthDetailed() {
+    const cats = ['commission','onboarding','visa','autre'];
+    const months = {};
+    this._last6Months().forEach(k => { months[k] = { commission:0, onboarding:0, visa:0, autre:0 }; });
+    this.data.forEach(t => {
+      const k = (t.date||'').slice(0,7);
+      if (!(k in months)) return;
+      const cat = cats.includes(t.type) ? t.type : 'autre';
+      months[k][cat] += this.toTHB(t);
+    });
+    return months;
+  },
+
+  revenueLastYear() {
     const now = new Date();
     const months = {};
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(now.getFullYear() - 1, now.getMonth() - i, 1);
       months[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`] = 0;
     }
     this.data.forEach(t => { const k = (t.date||'').slice(0,7); if (k in months) months[k] += this.toTHB(t); });
-    return {
-      labels: Object.keys(months).map(k => { const [y,m] = k.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-US',{month:'short'}); }),
-      values: Object.values(months)
-    };
+    return Object.values(months);
   },
 
+  bestMonth() {
+    const byMonth = {};
+    this.data.forEach(t => {
+      const k = (t.date||'').slice(0,7);
+      byMonth[k] = (byMonth[k] || 0) + this.toTHB(t);
+    });
+    const entries = Object.entries(byMonth).sort((a,b) => b[1]-a[1]);
+    if (!entries.length) return null;
+    const [ym, total] = entries[0];
+    const [y,m] = ym.split('-');
+    return { label: new Date(y, m-1, 1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' }), total };
+  },
+
+  projection() {
+    const now = new Date();
+    const [y, m] = this.selectedMonth.split('-').map(Number);
+    if (y !== now.getFullYear() || m !== now.getMonth() + 1) return null;
+    const txMonth = this.data.filter(t => t.date?.startsWith(this.selectedMonth));
+    const total = txMonth.reduce((s,t) => s + this.toTHB(t), 0);
+    if (!total) return null;
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const dayElapsed  = now.getDate();
+    return { projected: Math.round(total / dayElapsed * daysInMonth), dayElapsed, daysInMonth };
+  },
+
+  insightsHTML() {
+    const best = this.bestMonth();
+    const proj = this.projection();
+    if (!best && !proj) return '';
+    const cards = [];
+    if (best) cards.push(`
+      <div class="insight-card">
+        <div class="insight-icon">🏆</div>
+        <div class="insight-label">Meilleur mois</div>
+        <div class="insight-value">${this.fmtAs(best.total,'THB')}</div>
+        <div class="insight-sub">${best.label}</div>
+      </div>`);
+    if (proj) cards.push(`
+      <div class="insight-card">
+        <div class="insight-icon">📈</div>
+        <div class="insight-label">Projection fin de mois</div>
+        <div class="insight-value">${this.fmtAs(proj.projected,'THB')}</div>
+        <div class="insight-sub">J${proj.dayElapsed} / ${proj.daysInMonth} — extrapolé</div>
+      </div>`);
+    return `
+      <div class="fin-section-label">Insights</div>
+      <div class="summary-row" style="margin-bottom:8px">${cards.join('')}</div>`;
+  },
+
+  // ── 6-month revenue chart (stacked by category + N-1 line) ───────────────
   drawRevenueChart() {
     if (this._chart) { this._chart.destroy(); this._chart = null; }
     const ctx = document.getElementById('chart-fin-revenue');
     if (!ctx) return;
-    const data = this.revenueByMonth();
+
+    const detailed  = this.revenueByMonthDetailed();
+    const lastYear  = this.revenueLastYear();
+    const labels    = this._last6Months().map(k => {
+      const [y,m] = k.split('-');
+      return new Date(y,m-1,1).toLocaleDateString('fr-FR', { month:'short' });
+    });
+
+    const CATS = [
+      { key:'commission', label:'Commission', color:'#2563EB' },
+      { key:'onboarding', label:'Onboarding', color:'#2A9D5C' },
+      { key:'visa',       label:'Visa',       color:'#7C3AED' },
+      { key:'autre',      label:'Autre',      color:'#D97706' },
+    ];
+
+    const fmt = thb => `${Number(thb).toLocaleString('fr-FR')} ฿  ≈ ${Math.round(thb/this.eurRate).toLocaleString('fr-FR')} €`;
+
     this._chart = new Chart(ctx, {
-      type: 'bar',
       data: {
-        labels: data.labels,
-        datasets: [{
-          data: data.values,
-          backgroundColor: data.values.map((v, i) => i === data.values.length - 1 ? '#FF6B00' : 'rgba(255,107,0,.25)'),
-          borderColor:     data.values.map((v, i) => i === data.values.length - 1 ? '#FF6B00' : '#FF6B00'),
-          borderWidth: 2,
-          borderRadius: 8,
-        }]
+        labels,
+        datasets: [
+          // N-1 line (drawn behind via order)
+          {
+            type: 'line',
+            label: 'N−1',
+            data: lastYear,
+            borderColor: 'rgba(150,150,150,0.45)',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [4,3],
+            pointRadius: 3,
+            pointBackgroundColor: 'rgba(150,150,150,0.5)',
+            tension: 0.3,
+            order: 10,
+          },
+          // Stacked bars by category
+          ...CATS.map((cat, i) => ({
+            type: 'bar',
+            label: cat.label,
+            data: Object.values(detailed).map(m => m[cat.key]),
+            backgroundColor: cat.color + (i === CATS.length-1 ? 'DD' : 'CC'),
+            stack: 'current',
+            order: 1,
+            borderRadius: i === CATS.length-1 ? { topLeft:5, topRight:5 } : 0,
+            borderSkipped: false,
+          })),
+        ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: {
-          backgroundColor: '#1A1A1A', cornerRadius: 8, padding: 10,
-          callbacks: { label: c => '  ' + Number(c.raw).toLocaleString('fr-FR') + ' ฿  ≈ ' + Math.round(c.raw / this.eurRate).toLocaleString('fr-FR') + ' €' }
-        }},
-        scales: {
-          y: { beginAtZero: true, grid: { color: '#F0EDE8' },
-               ticks: { color: '#9A9490', callback: v => v ? (v/1000).toFixed(0)+'k ฿' : '0' }},
-          x: { ticks: { color: '#9A9490', font: { weight: '600' } }, grid: { display: false } }
+        plugins: {
+          legend: {
+            display: true, position: 'top',
+            labels: { boxWidth:10, padding:14, font:{ size:11 }, color:'#9A9490' }
+          },
+          tooltip: {
+            backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
+            callbacks: {
+              label: c => c.raw ? `  ${c.dataset.label}: ${fmt(c.raw)}` : null,
+              footer: items => {
+                const total = items.filter(i => i.dataset.type==='bar').reduce((s,i) => s+i.raw, 0);
+                return total ? `  Total: ${fmt(total)}` : '';
+              }
+            }
+          }
         },
-        animation: { duration: 800, easing: 'easeOutQuart' }
+        scales: {
+          y: { beginAtZero:true, stacked:true, grid:{ color:'#F0EDE8' },
+               ticks:{ color:'#9A9490', callback: v => v ? (v/1000).toFixed(0)+'k' : '0' }},
+          x: { stacked:true, ticks:{ color:'#9A9490', font:{ weight:'600' } }, grid:{ display:false } }
+        },
+        animation: { duration:800, easing:'easeOutQuart' }
       }
     });
   },
