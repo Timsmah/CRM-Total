@@ -339,7 +339,7 @@ const Finance = {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       months[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`] = 0;
     }
-    this.data.forEach(t => { const k = (t.date||'').slice(0,7); if (k in months) months[k] += Number(t.amount); });
+    this.data.forEach(t => { const k = (t.date||'').slice(0,7); if (k in months) months[k] += this.toTHB(t); });
     return {
       labels: Object.keys(months).map(k => { const [y,m] = k.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-US',{month:'short'}); }),
       values: Object.values(months)
