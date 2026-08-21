@@ -481,10 +481,10 @@ const Finance = {
           tooltip: {
             backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
             callbacks: {
-              label: c => c.raw ? `  ${c.dataset.label}: ${fmt(c.raw)}` : null,
-              footer: items => {
-                const total = items.filter(i => i.dataset.type==='bar').reduce((s,i) => s+i.raw, 0);
-                return total ? `  Total: ${fmt(total)}` : '';
+              label: c => (c.raw && c.dataset.type !== 'line') ? `  ${c.dataset.label}: ${fmt(c.raw)}` : null,
+              afterBody: items => {
+                const total = items.filter(i => i.dataset.type !== 'line').reduce((s,i) => s + (i.raw||0), 0);
+                return total ? [``, `  ━━━━━━━━━━━━━━━━━━━━`, `  Total : ${fmt(total)}`] : [];
               }
             }
           }
