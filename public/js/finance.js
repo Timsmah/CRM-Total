@@ -191,10 +191,10 @@ const Finance = {
 
   summaryByType() {
     const types = [
-      { key: 'commission', label: 'Commission', icon: '🤝', color: '#2563EB' },
-      { key: 'onboarding', label: 'Onboarding', icon: '🚀', color: '#2A9D5C' },
-      { key: 'visa',       label: 'Visa',        icon: '🛂', color: '#7C3AED' },
-      { key: 'autre',      label: 'Other',        icon: '💼', color: '#D97706' },
+      { key: 'commission', label: 'Commission', icon: '🤝', color: '#334155' },
+      { key: 'onboarding', label: 'Onboarding', icon: '🚀', color: '#0F766E' },
+      { key: 'visa',       label: 'Visa',        icon: '🛂', color: '#B45309' },
+      { key: 'autre',      label: 'Autre',        icon: '💼', color: '#9CA3AF' },
     ];
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
     return types.map(t => {
@@ -432,10 +432,10 @@ const Finance = {
     });
 
     const CATS = [
-      { key:'commission', label:'Commission', color:'#2563EB' },
-      { key:'onboarding', label:'Onboarding', color:'#2A9D5C' },
-      { key:'visa',       label:'Visa',       color:'#7C3AED' },
-      { key:'autre',      label:'Autre',      color:'#D97706' },
+      { key:'commission', label:'Commission', color:'#334155' },
+      { key:'onboarding', label:'Onboarding', color:'#0F766E' },
+      { key:'visa',       label:'Visa',       color:'#B45309' },
+      { key:'autre',      label:'Autre',      color:'#9CA3AF' },
     ];
 
     const fmt = thb => `${Number(thb).toLocaleString('fr-FR')} ฿  ≈ ${Math.round(thb/this.eurRate).toLocaleString('fr-FR')} €`;
