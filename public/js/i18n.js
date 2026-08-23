@@ -289,7 +289,7 @@ const TAG_EN = {
 };
 
 // ── Lang state ────────────────────────────────────────────────────────────────
-let _lang = localStorage.getItem('crm_lang') || 'en';
+let _lang = localStorage.getItem('crm_lang') || 'fr';
 
 function t(key) {
   return (I18N[_lang]?.[key]) ?? (I18N.en?.[key]) ?? key;
