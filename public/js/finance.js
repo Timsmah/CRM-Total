@@ -3,6 +3,7 @@ const Finance = {
   selectedMonth: '',
   _unlocked: false,   // in-memory only — resets on every page refresh
   _chart: null,
+  _chart2: null,
   displayCur: localStorage.getItem('fin_display_cur') || 'THB',
 
   // ── Exchange rate (auto-refreshed daily, editable override) ───────────────
@@ -305,10 +306,17 @@ const Finance = {
       <!-- Insights -->
       ${this.insightsHTML()}
 
-      <!-- 6-month revenue trend -->
-      <div class="fin-section-label">Revenue trend — last 6 months</div>
+      <!-- Charts: donut mois + tendance 6 mois -->
+      <div class="fin-section-label">Répartition & tendance</div>
       <div class="dash-card" style="margin-bottom:24px;padding:18px 22px">
-        <div style="height:200px;position:relative"><canvas id="chart-fin-revenue"></canvas></div>
+        <div style="display:flex;gap:28px;align-items:center;height:220px">
+          <div style="position:relative;width:220px;flex-shrink:0;height:100%">
+            <canvas id="chart-fin-donut"></canvas>
+          </div>
+          <div style="flex:1;height:100%;position:relative">
+            <canvas id="chart-fin-trend"></canvas>
+          </div>
+        </div>
       </div>
 
       <!-- Transactions table -->
@@ -425,18 +433,10 @@ const Finance = {
       <div class="summary-row" style="margin-bottom:8px">${cards.join('')}</div>`;
   },
 
-  // ── 6-month revenue chart (stacked by category + N-1 line) ───────────────
+  // ── Charts: donut mois en cours + courbe tendance 6 mois ────────────────
   drawRevenueChart() {
-    if (this._chart) { this._chart.destroy(); this._chart = null; }
-    const ctx = document.getElementById('chart-fin-revenue');
-    if (!ctx) return;
-
-    const detailed  = this.revenueByMonthDetailed();
-    const lastYear  = this.revenueLastYear();
-    const labels    = this._last6Months().map(k => {
-      const [y,m] = k.split('-');
-      return new Date(y,m-1,1).toLocaleDateString('fr-FR', { month:'short' });
-    });
+    if (this._chart)  { this._chart.destroy();  this._chart  = null; }
+    if (this._chart2) { this._chart2.destroy(); this._chart2 = null; }
 
     const CATS = [
       { key:'commission', label:'Commission', color:'#334155' },
@@ -444,66 +444,129 @@ const Finance = {
       { key:'visa',       label:'Visa',       color:'#B45309' },
       { key:'autre',      label:'Autre',      color:'#9CA3AF' },
     ];
-
     const fmt = thb => `${Number(thb).toLocaleString('fr-FR')} ฿  ≈ ${Math.round(thb/this.eurRate).toLocaleString('fr-FR')} €`;
 
-    this._chart = new Chart(ctx, {
-      data: {
-        labels,
-        datasets: [
-          // N-1 line (drawn behind via order)
-          {
-            type: 'line',
-            label: 'N−1',
-            data: lastYear,
-            borderColor: 'rgba(150,150,150,0.45)',
-            backgroundColor: 'transparent',
-            borderWidth: 1.5,
-            borderDash: [4,3],
-            pointRadius: 3,
-            pointBackgroundColor: 'rgba(150,150,150,0.5)',
-            tension: 0.3,
-            order: 10,
-          },
-          // Stacked bars by category
-          ...CATS.map((cat, i) => ({
-            type: 'bar',
-            label: cat.label,
-            data: Object.values(detailed).map(m => m[cat.key]),
-            backgroundColor: cat.color + (i === CATS.length-1 ? 'DD' : 'CC'),
-            stack: 'current',
-            order: 1,
-            borderRadius: i === CATS.length-1 ? { topLeft:5, topRight:5 } : 0,
-            borderSkipped: false,
-          })),
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true, position: 'top',
-            labels: { boxWidth:10, padding:14, font:{ size:11 }, color:'#9A9490' }
-          },
-          tooltip: {
-            backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
-            callbacks: {
-              label: c => (c.raw && c.dataset.type !== 'line') ? `  ${c.dataset.label}: ${fmt(c.raw)}` : null,
-              afterBody: items => {
-                const total = items.filter(i => i.dataset.type !== 'line').reduce((s,i) => s + (i.raw||0), 0);
-                return total ? [``, `  ━━━━━━━━━━━━━━━━━━━━`, `  Total : ${fmt(total)}`] : [];
-              }
+    // ── Donut — répartition du mois sélectionné ──────────────────────────
+    const ctxD = document.getElementById('chart-fin-donut');
+    if (ctxD) {
+      const txMonth  = this.data.filter(t => t.date.startsWith(this.selectedMonth));
+      const catKeys  = ['commission','onboarding','visa','autre'];
+      const totals   = catKeys.map(k =>
+        txMonth.filter(t => catKeys.includes(t.type) ? t.type === k : k === 'autre')
+               .reduce((s,t) => s + this.toTHB(t), 0)
+      );
+      const grandTotal = totals.reduce((s,v) => s + v, 0);
+      const totalStr   = this.displayCur === 'EUR'
+        ? `≈ ${Math.round(grandTotal/this.eurRate).toLocaleString('fr-FR')} €`
+        : `${grandTotal.toLocaleString('fr-FR')} ฿`;
+      const monthStr = new Date(this.selectedMonth + '-01')
+        .toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+
+      const centerPlugin = {
+        id: 'centerText',
+        beforeDraw(chart) {
+          const { ctx: c, chartArea: a } = chart;
+          const cx = (a.left + a.right) / 2, cy = (a.top + a.bottom) / 2;
+          c.save();
+          c.textAlign = 'center';
+          c.font = '500 14px sans-serif';
+          c.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text') || '#1A1A1A';
+          c.fillText(totalStr, cx, cy + 2);
+          c.font = '11px sans-serif';
+          c.fillStyle = '#9A9490';
+          c.fillText(monthStr, cx, cy + 17);
+          c.restore();
+        }
+      };
+
+      this._chart = new Chart(ctxD, {
+        type: 'doughnut',
+        data: {
+          labels: CATS.map(c => c.label),
+          datasets: [{
+            data: totals,
+            backgroundColor: CATS.map(c => c.color),
+            borderWidth: 3,
+            borderColor: 'transparent',
+            hoverOffset: 6,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '66%',
+          plugins: {
+            legend: { display: true, position: 'right',
+              labels: { boxWidth:10, padding:10, font:{ size:11 }, color:'#9A9490' } },
+            tooltip: {
+              backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
+              callbacks: { label: c => `  ${c.label} : ${fmt(c.raw)}` }
             }
-          }
+          },
+          animation: { duration:600 }
         },
-        scales: {
-          y: { beginAtZero:true, stacked:true, grid:{ color:'#F0EDE8' },
-               ticks:{ color:'#9A9490', callback: v => v ? (v/1000).toFixed(0)+'k' : '0' }},
-          x: { stacked:true, ticks:{ color:'#9A9490', font:{ weight:'600' } }, grid:{ display:false } }
+        plugins: [centerPlugin]
+      });
+    }
+
+    // ── Courbe — total mensuel 6 derniers mois + N-1 ─────────────────────
+    const ctxT = document.getElementById('chart-fin-trend');
+    if (ctxT) {
+      const detailed  = this.revenueByMonthDetailed();
+      const lastYear  = this.revenueLastYear();
+      const labels    = this._last6Months().map(k => {
+        const [y,m] = k.split('-');
+        return new Date(y,m-1,1).toLocaleDateString('fr-FR', { month:'short' });
+      });
+      const totals = Object.values(detailed).map(m => m.commission + m.onboarding + m.visa + m.autre);
+
+      this._chart2 = new Chart(ctxT, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Cette année',
+              data: totals,
+              borderColor: '#334155',
+              backgroundColor: 'rgba(51,65,85,0.07)',
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: '#334155',
+              tension: 0.35,
+              fill: true,
+            },
+            {
+              label: 'N−1',
+              data: lastYear,
+              borderColor: 'rgba(150,150,150,0.4)',
+              backgroundColor: 'transparent',
+              borderWidth: 1.5,
+              borderDash: [4,3],
+              pointRadius: 2.5,
+              pointBackgroundColor: 'rgba(150,150,150,0.5)',
+              tension: 0.35,
+            }
+          ]
         },
-        animation: { duration:800, easing:'easeOutQuart' }
-      }
-    });
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'top',
+              labels: { boxWidth:10, padding:12, font:{ size:11 }, color:'#9A9490' } },
+            tooltip: {
+              backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
+              callbacks: { label: c => `  ${c.dataset.label} : ${fmt(c.raw)}` }
+            }
+          },
+          scales: {
+            y: { beginAtZero:true, grid:{ color:'rgba(150,150,150,0.1)' },
+                 ticks:{ color:'#9A9490', callback: v => v ? (v/1000).toFixed(0)+'k' : '0' } },
+            x: { ticks:{ color:'#9A9490', font:{ weight:'600' } }, grid:{ display:false } }
+          },
+          animation: { duration:800, easing:'easeOutQuart' }
+        }
+      });
+    }
   },
 
   // ── Actions ────────────────────────────────────────────────────────────────
