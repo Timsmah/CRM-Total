@@ -54,8 +54,14 @@ app.use('/api/proposals',  requireAuth, require('./routes/proposals'));
 app.use('/api/activities',  requireAuth, require('./routes/activities'));
 app.use('/api/call-lists', requireAuth, require('./routes/call-lists'));
 
-// Static files & SPA fallback
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files & SPA fallback — no-cache on JS/CSS so deploys take effect immediately
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
