@@ -31,9 +31,10 @@ const Dashboard = {
     const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate() - 7);
     const lastSunday = new Date(monday); lastSunday.setDate(monday.getDate() - 1);
 
-    const inRange = (t, from, to) => { const d = new Date(t.date); return d >= from && d <= to; };
-    const revenueWeek     = this.finance.filter(t => t.date && inRange(t, monday, now)).reduce((s,t) => s + Number(t.amount), 0);
-    const revenueLastWeek = this.finance.filter(t => t.date && inRange(t, lastMonday, lastSunday)).reduce((s,t) => s + Number(t.amount), 0);
+    const inRange  = (t, from, to) => { const d = new Date(t.date); return d >= from && d <= to; };
+    const toTHB    = t => t.currency === 'EUR' ? Math.round(Number(t.amount) * eurRate) : Number(t.amount);
+    const revenueWeek     = this.finance.filter(t => t.date && inRange(t, monday, now)).reduce((s,t) => s + toTHB(t), 0);
+    const revenueLastWeek = this.finance.filter(t => t.date && inRange(t, lastMonday, lastSunday)).reduce((s,t) => s + toTHB(t), 0);
 
     const activeClients  = this.clients.filter(c => ['Onboarding','Recherche active'].includes(c.status)).length;
     const availableProps = this.properties.filter(p => p.status === 'Disponible').length;
@@ -73,9 +74,11 @@ const Dashboard = {
     const pad = n => String(n).padStart(2, '0');
     const prefix = `${year}-${pad(month + 1)}`;
 
+    const eurRate = parseFloat(localStorage.getItem('eur_rate') || '37');
+    const toTHB   = t => t.currency === 'EUR' ? Math.round(Number(t.amount) * eurRate) : Number(t.amount);
     const days = {};
     for (let d = 1; d <= daysInMonth; d++) days[`${prefix}-${pad(d)}`] = 0;
-    this.finance.forEach(t => { if (t.date in days) days[t.date] += Number(t.amount); });
+    this.finance.forEach(t => { if (t.date in days) days[t.date] += toTHB(t); });
 
     return {
       labels: Object.keys(days).map(k => parseInt(k.split('-')[2])), // day number 1–31
