@@ -26,25 +26,26 @@ const Finance = {
   },
 
   // ── Monthly goals ──────────────────────────────────────────────────────────
-  // currency: 'THB' or 'EUR'
+  // type 'amount': progress by THB total | type 'count': progress by nb of transactions
   GOALS: {
-    commission: { amount: 60000, currency: 'THB' },
-    onboarding: { amount: 2500,  currency: 'EUR' },
-    visa:       { amount: 23000, currency: 'THB' }, // 2 × 11 500 ฿
+    commission: { type: 'amount', amount: 50000, currency: 'THB' },
+    onboarding: { type: 'count',  count: 10, label: 'recherches' },
+    visa:       { type: 'count',  count: 4,  label: 'visas' },
     autre:      null,
   },
 
   goalInTHB(key) {
     const g = this.GOALS[key];
-    if (!g) return null;
+    if (!g || g.type !== 'amount') return null;
     return g.currency === 'EUR' ? Math.round(g.amount * this.eurRate) : g.amount;
   },
 
   goalLabel(key) {
     const g = this.GOALS[key];
     if (!g) return '';
-    if (g.currency === 'EUR') return `Goal: ${g.amount.toLocaleString('fr-FR')} €`;
-    return `Goal: ${g.amount.toLocaleString('fr-FR')} ฿`;
+    if (g.type === 'count') return `Objectif : ${g.count} ${g.label}`;
+    if (g.currency === 'EUR') return `Objectif : ${g.amount.toLocaleString('fr-FR')} €`;
+    return `Objectif : ${g.amount.toLocaleString('fr-FR')} ฿`;
   },
 
   // ── Conversion helpers ─────────────────────────────────────────────────────
@@ -200,6 +201,7 @@ const Finance = {
     return types.map(t => {
       const txs  = txMonth.filter(x => x.type === t.key);
       const goal = this.GOALS[t.key];
+      const count = txs.length;
       // Sum in goal currency to keep EUR goals fixed
       const total = txs.reduce((s, x) => {
         if (goal?.currency === 'EUR') {
@@ -207,11 +209,11 @@ const Finance = {
         }
         return s + this.toTHB(x);
       }, 0);
-      const count    = txs.length;
-      const goalAmt  = goal ? goal.amount : null;
-      const goalCur  = goal?.currency || 'THB';
-      const pct      = goalAmt ? Math.min(Math.round(total / goalAmt * 100), 100) : null;
-      return { ...t, total, count, goal: goalAmt, goalCur, pct };
+      let pct = null;
+      if (goal?.type === 'count')  pct = Math.min(Math.round(count / goal.count * 100), 100);
+      if (goal?.type === 'amount') pct = Math.min(Math.round(total / goal.amount * 100), 100);
+      const goalCur = goal?.currency || 'THB';
+      return { ...t, total, count, goal, goalCur, pct };
     });
   },
 
@@ -273,14 +275,19 @@ const Finance = {
       <div class="fin-section-label">By category</div>
       <div class="summary-row">
         ${byType.map(r => {
-          const displayTotal = r.total ? this.fmtAs(r.total, r.goalCur) : '—';
-          const displaySub   = r.total ? this.fmtAsSub(r.total, r.goalCur) : '';
+          const isCount      = r.goal?.type === 'count';
+          const displayTotal = isCount
+            ? `<span style="font-size:22px;font-weight:700">${r.count}</span><span style="font-size:13px;color:var(--text-2);margin-left:4px">/ ${r.goal.count} ${r.goal.label}</span>`
+            : (r.total ? this.fmtAs(r.total, r.goalCur) : '—');
+          const displaySub   = isCount
+            ? (r.total ? `≈ ${this.fmtAs(r.total, r.goalCur)}` : '')
+            : (r.total ? this.fmtAsSub(r.total, r.goalCur) : '');
           return `
           <div class="summary-card">
             <div class="acct">${r.icon} ${r.label}</div>
             <div class="total" style="color:${r.color}">${displayTotal}</div>
             ${displaySub ? `<div class="eur-sub" style="color:${r.color};opacity:.7">${displaySub}</div>` : ''}
-            <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
+            ${!isCount ? `<div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>` : ''}
             ${r.goal ? `
               <div class="type-bar-track">
                 <div class="type-bar-fill" style="width:${r.pct}%;background:${r.color}20;border:none">
