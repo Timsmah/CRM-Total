@@ -1,15 +1,21 @@
 const Dashboard = {
   clients: [], properties: [], finance: [], charts: {},
   _notes: { tasks: [], notes: '' },
+  _viewDate: new Date().toISOString().slice(0, 10),
+  _ctxIdx: null,
+
+  _today() { return new Date().toISOString().slice(0, 10); },
+  isToday() { return this._viewDate === this._today(); },
 
   async init() {
+    this._viewDate = this._today();
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     try {
       const [clients, properties, finance, notes] = await Promise.all([
         api.get('/clients?archived=0'),
         api.get('/properties?archived=0'),
         api.get('/finance'),
-        api.get('/notes').catch(() => ({ tasks: [], notes: '' })),
+        api.get(`/notes?date=${this._viewDate}`).catch(() => ({ tasks: [], notes: '' })),
       ]);
       this.clients    = clients;
       this.properties = properties;
@@ -21,10 +27,82 @@ const Dashboard = {
 
   // ── Notes / checklist ─────────────────────────────────────────────────────
   async _syncNotes() {
-    try { await api.put('/notes', { tasks: this._notes.tasks, notes: this._notes.notes }); }
+    try { await api.put(`/notes?date=${this._viewDate}`, { tasks: this._notes.tasks, notes: this._notes.notes }); }
     catch { Toast.show('Erreur sauvegarde notes', 'error'); }
   },
+
+  async _loadNotes(date) {
+    const n = await api.get(`/notes?date=${date}`).catch(() => ({ tasks: [], notes: '' }));
+    this._notes = { tasks: n.tasks || [], notes: n.notes || '' };
+  },
+
+  async prevDay() {
+    const d = new Date(this._viewDate + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    this._viewDate = d.toISOString().slice(0, 10);
+    await this._loadNotes(this._viewDate);
+    this._renderNotes();
+  },
+
+  async nextDay() {
+    const d = new Date(this._viewDate + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    const next = d.toISOString().slice(0, 10);
+    if (next > this._today()) return;
+    this._viewDate = next;
+    await this._loadNotes(this._viewDate);
+    this._renderNotes();
+  },
+
+  _dateLabelFR() {
+    const today = this._today();
+    const d1 = new Date(today + 'T12:00:00'); d1.setDate(d1.getDate() - 1);
+    const d2 = new Date(today + 'T12:00:00'); d2.setDate(d2.getDate() - 2);
+    const yest = d1.toISOString().slice(0, 10);
+    const avt  = d2.toISOString().slice(0, 10);
+    if (this._viewDate === today) return "Aujourd'hui";
+    if (this._viewDate === yest)  return 'Hier';
+    if (this._viewDate === avt)   return 'Avant-hier';
+    return new Date(this._viewDate + 'T12:00:00')
+      .toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+  },
+
+  _showCtx(e, i) {
+    e.preventDefault();
+    this._ctxIdx = i;
+    const menu = document.getElementById('task-ctx-menu');
+    if (!menu) return;
+    menu.style.display = 'block';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top  = e.clientY + 'px';
+    requestAnimationFrame(() => {
+      const r = menu.getBoundingClientRect();
+      if (r.right  > window.innerWidth)  menu.style.left = (e.clientX - r.width)  + 'px';
+      if (r.bottom > window.innerHeight) menu.style.top  = (e.clientY - r.height) + 'px';
+    });
+  },
+  _hideCtx() {
+    const m = document.getElementById('task-ctx-menu');
+    if (m) m.style.display = 'none';
+    this._ctxIdx = null;
+  },
+
+  async carryForward() {
+    const i = this._ctxIdx;
+    this._hideCtx();
+    if (i === null || !this._notes.tasks[i]) return;
+    const taskText = this._notes.tasks[i].text;
+    const today = this._today();
+    const todayData = await api.get(`/notes?date=${today}`).catch(() => ({ tasks: [], notes: '' }));
+    const todayTasks = todayData.tasks || [];
+    if (!todayTasks.find(t => t.text === taskText)) todayTasks.push({ text: taskText, done: false });
+    await api.put(`/notes?date=${today}`, { tasks: todayTasks, notes: todayData.notes || '' });
+    Toast.show("Tâche envoyée à aujourd'hui ✓");
+    if (this.isToday()) { this._notes.tasks = todayTasks; this._renderNotes(); }
+  },
+
   async addTask() {
+    if (!this.isToday()) return;
     const inp = document.getElementById('dash-task-input');
     const txt = inp?.value.trim();
     if (!txt) return;
@@ -40,6 +118,7 @@ const Dashboard = {
     this._renderNotes();
   },
   async deleteTask(i) {
+    if (!this.isToday()) return;
     this._notes.tasks.splice(i, 1);
     await this._syncNotes();
     this._renderNotes();
@@ -51,53 +130,77 @@ const Dashboard = {
     await this._syncNotes();
   },
   async clearDone() {
+    if (!this.isToday()) return;
     this._notes.tasks = this._notes.tasks.filter(t => !t.done);
     await this._syncNotes();
     this._renderNotes();
   },
+
   _renderNotes() {
-    const tasks  = this._notes.tasks;
-    const done   = tasks.filter(t => t.done).length;
-    const pct    = tasks.length ? Math.round(done / tasks.length * 100) : 0;
-    const el     = document.getElementById('dash-notes-block');
+    const el = document.getElementById('dash-notes-block');
     if (!el) return;
     el.innerHTML = this._notesHTML();
-    // Re-bind textarea autosave
     const ta = document.getElementById('dash-notes-text');
-    if (ta) { ta.addEventListener('blur', () => this.saveNoteText()); }
-    // Re-bind enter on input
+    if (ta) ta.addEventListener('blur', () => this.saveNoteText());
     const inp = document.getElementById('dash-task-input');
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') this.addTask(); });
   },
+
   _notesHTML() {
-    const tasks = this._notes.tasks;
-    const done  = tasks.filter(t => t.done).length;
-    const pct   = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+    const tasks   = this._notes.tasks;
+    const done    = tasks.filter(t => t.done).length;
+    const pct     = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+    const past    = !this.isToday();
+    const label   = this._dateLabelFR();
+    const atToday = this.isToday();
+
+    // Navigation header
+    const nav = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button onclick="Dashboard.prevDay()" style="background:none;border:0.5px solid var(--border);border-radius:6px;padding:3px 9px;font-size:14px;cursor:pointer;color:var(--text-2)" title="Jour précédent">‹</button>
+        <span style="font-size:12px;font-weight:600;color:${atToday ? '#0F766E' : 'var(--text-2)'};text-align:center">
+          ${atToday ? '🔥 ' : '📅 '}${label}
+        </span>
+        <button onclick="Dashboard.nextDay()" ${atToday ? 'disabled' : ''} style="background:none;border:0.5px solid var(--border);border-radius:6px;padding:3px 9px;font-size:14px;cursor:${atToday ? 'default' : 'pointer'};color:${atToday ? 'var(--border)' : 'var(--text-2)'};" title="Jour suivant">›</button>
+      </div>`;
+
     const progressBar = tasks.length ? `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <div style="flex:1;background:var(--bg-2);border-radius:4px;height:5px;overflow:hidden">
           <div style="width:${pct}%;height:100%;background:#0F766E;border-radius:4px;transition:width .3s"></div>
         </div>
         <span style="font-size:11px;color:var(--text-2);flex-shrink:0">${done}/${tasks.length}</span>
-        ${done > 0 ? `<button onclick="Dashboard.clearDone()" style="font-size:10px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Effacer terminées</button>` : ''}
+        ${done > 0 && atToday ? `<button onclick="Dashboard.clearDone()" style="font-size:10px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Effacer terminées</button>` : ''}
       </div>` : '';
-    const taskList = tasks.length ? `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
-      ${tasks.map((t,i) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-2);border-radius:7px;group">
-          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="Dashboard.toggleTask(${i})"
-            style="width:15px;height:15px;cursor:pointer;accent-color:#0F766E;flex-shrink:0">
-          <span style="flex:1;font-size:13px;color:${t.done ? 'var(--text-3)' : 'var(--text)'};text-decoration:${t.done ? 'line-through' : 'none'}">${t.text}</span>
-          <button onclick="Dashboard.deleteTask(${i})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:0;opacity:.5;hover:opacity:1">✕</button>
-        </div>`).join('')}
-    </div>` : `<p style="font-size:12px;color:var(--text-3);text-align:center;padding:8px 0 12px">Aucune tâche — ajoute-en une ci-dessous 👇</p>`;
-    return `
-      ${progressBar}
-      ${taskList}
+
+    const taskList = tasks.length
+      ? `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+          ${tasks.map((t, i) => `
+            <div oncontextmenu="${past ? `Dashboard._showCtx(event,${i})` : 'false'}"
+              style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-2);border-radius:7px;cursor:${past ? 'context-menu' : 'default'}">
+              <input type="checkbox" ${t.done ? 'checked' : ''} onchange="Dashboard.toggleTask(${i})"
+                style="width:15px;height:15px;cursor:pointer;accent-color:#0F766E;flex-shrink:0">
+              <span style="flex:1;font-size:13px;color:${t.done ? 'var(--text-3)' : 'var(--text)'};text-decoration:${t.done ? 'line-through' : 'none'}">${t.text}</span>
+              ${atToday ? `<button onclick="Dashboard.deleteTask(${i})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:0;opacity:.5">✕</button>` : ''}
+            </div>`).join('')}
+        </div>`
+      : `<p style="font-size:12px;color:var(--text-3);text-align:center;padding:8px 0 12px">${past ? 'Aucune tâche ce jour-là' : 'Aucune tâche — ajoute-en une ci-dessous 👇'}</p>`;
+
+    const addRow = atToday ? `
       <div style="display:flex;gap:6px;margin-bottom:12px">
         <input id="dash-task-input" type="text" placeholder="Ajouter une tâche…"
           style="flex:1;padding:7px 10px;font-size:13px;border:0.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text)">
         <button onclick="Dashboard.addTask()" style="padding:7px 12px;background:#0F766E;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-weight:500">+</button>
-      </div>
+      </div>` : `
+      <div style="margin-bottom:12px;padding:6px 10px;background:var(--bg-2);border-radius:7px;font-size:11px;color:var(--text-3);text-align:center">
+        Clic droit sur une tâche pour l'envoyer à aujourd'hui
+      </div>`;
+
+    return `
+      ${nav}
+      ${progressBar}
+      ${taskList}
+      ${addRow}
       <div style="border-top:0.5px solid var(--border);padding-top:10px">
         <div style="font-size:10px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📝 Notes libres</div>
         <textarea id="dash-notes-text" placeholder="Notes, idées, rappels…"
@@ -326,6 +429,15 @@ const Dashboard = {
       <div class="dash-card" style="margin-bottom:24px">
         <div class="dash-card-title" style="margin-bottom:12px">🔥 Sur le feu</div>
         <div id="dash-notes-block">${this._notesHTML()}</div>
+      </div>
+
+      <!-- Context menu clic droit tâches passées -->
+      <div id="task-ctx-menu" style="position:fixed;display:none;background:var(--surface,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;min-width:200px;padding:4px;overflow:hidden">
+        <button onclick="Dashboard.carryForward()"
+          style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;font-size:13px;color:var(--text);background:none;border:none;cursor:pointer;border-radius:7px;text-align:left"
+          onmouseover="this.style.background='var(--bg-2)'" onmouseout="this.style.background='none'">
+          <span>→</span> Envoyer à aujourd'hui
+        </button>
       </div>`;
 
     // Pipeline bars animate
@@ -341,6 +453,10 @@ const Dashboard = {
     if (ta) ta.addEventListener('blur', () => this.saveNoteText());
     const inp = document.getElementById('dash-task-input');
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') this.addTask(); });
+
+    // Fermer le menu contextuel sur clic extérieur
+    document.addEventListener('click', () => this._hideCtx(), { once: false });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') this._hideCtx(); });
   },
 
   // ── Charts ────────────────────────────────────────────────────────────────

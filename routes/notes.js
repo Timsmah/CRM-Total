@@ -2,21 +2,23 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 
-// GET — charge les notes
+// GET /api/notes?date=YYYY-MM-DD
 router.get('/', async (req, res) => {
-  const { data, error } = await db.from('dashboard_notes').select('*').eq('id', 1).single();
+  const date = req.query.date || new Date().toISOString().slice(0, 10);
+  const { data, error } = await db.from('daily_notes').select('*').eq('date', date).maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json(data || { date, tasks: [], notes: '' });
 });
 
-// PUT — met à jour tasks et/ou notes
+// PUT /api/notes?date=YYYY-MM-DD
 router.put('/', async (req, res) => {
+  const date = req.query.date || new Date().toISOString().slice(0, 10);
   const { tasks, notes } = req.body;
-  const update = { updated_at: new Date().toISOString() };
-  if (tasks !== undefined) update.tasks = tasks;
-  if (notes !== undefined) update.notes = notes;
-  const { data, error } = await db.from('dashboard_notes')
-    .update(update).eq('id', 1).select().single();
+  const payload = { date };
+  if (tasks !== undefined) payload.tasks = tasks;
+  if (notes !== undefined) payload.notes = notes;
+  const { data, error } = await db.from('daily_notes')
+    .upsert(payload, { onConflict: 'date' }).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
