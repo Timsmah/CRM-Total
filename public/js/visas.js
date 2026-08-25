@@ -45,13 +45,6 @@ const Visas = {
                 : `<div class="visa-empty">Aucun</div>`}
             </div>
           </div>`).join('')}
-      </div>
-
-      <!-- Modal -->
-      <div id="visa-modal" class="modal-overlay hidden">
-        <div class="modal-box" style="max-width:460px">
-          <div id="visa-modal-content"></div>
-        </div>
       </div>`;
   },
 
@@ -78,48 +71,36 @@ const Visas = {
     this.render();
   },
 
-  openAdd() {
-    document.getElementById('visa-modal').classList.remove('hidden');
-    document.getElementById('visa-modal-content').innerHTML = this.formHTML(null);
-  },
-
+  openAdd()    { Modal.open('Nouveau visa',   this.formHTML(null)); },
   openEdit(id) {
     const v = this.data.find(x => x.id === id);
-    if (!v) return;
-    document.getElementById('visa-modal').classList.remove('hidden');
-    document.getElementById('visa-modal-content').innerHTML = this.formHTML(v);
+    if (v) Modal.open('Modifier le visa', this.formHTML(v));
   },
-
-  closeModal() {
-    document.getElementById('visa-modal').classList.add('hidden');
-  },
+  closeModal() { Modal.close(); },
 
   formHTML(v) {
     const isEdit = !!v;
     return `
-      <h3 style="margin-bottom:16px;font-size:16px;font-weight:600">${isEdit ? 'Modifier' : 'Nouveau visa'}</h3>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div>
-          <label class="form-label">Nom *</label>
-          <input id="vf-name" class="form-input" value="${v?.name || ''}" placeholder="Prénom Nom">
-        </div>
-        <div>
-          <label class="form-label">Téléphone</label>
-          <input id="vf-phone" class="form-input" value="${v?.phone || ''}" placeholder="+66…">
-        </div>
-        <div>
-          <label class="form-label">Statut</label>
-          <select id="vf-status" class="form-select">
-            ${this.COLS.map(c => `<option value="${c.key}" ${v?.status === c.key ? 'selected' : ''}>${c.label}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Notes</label>
-          <textarea id="vf-notes" class="form-textarea" rows="3" placeholder="Remarques, documents…">${v?.notes || ''}</textarea>
-        </div>
+      <div class="form-row">
+        <label>Nom *</label>
+        <input id="vf-name" type="text" value="${v?.name || ''}" placeholder="Prénom Nom">
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
-        <button class="btn btn-ghost" onclick="Visas.closeModal()">Annuler</button>
+      <div class="form-row">
+        <label>Téléphone</label>
+        <input id="vf-phone" type="text" value="${v?.phone || ''}" placeholder="+66…">
+      </div>
+      <div class="form-row">
+        <label>Statut</label>
+        <select id="vf-status">
+          ${this.COLS.map(c => `<option value="${c.key}" ${v?.status === c.key ? 'selected' : ''}>${c.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Notes</label>
+        <textarea id="vf-notes" rows="3" placeholder="Remarques, documents…">${v?.notes || ''}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
         <button class="btn btn-primary" onclick="Visas.save(${v?.id || 'null'})">${isEdit ? 'Enregistrer' : 'Créer'}</button>
       </div>`;
   },
