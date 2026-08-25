@@ -293,6 +293,35 @@ const Dashboard = {
         </div>
       </div>
 
+      <!-- ── Activité récente ── -->
+      <div class="dash-card" style="margin-bottom:14px">
+        <div class="dash-card-title">Activité récente</div>
+        ${(() => {
+          const recent = [...this.finance]
+            .sort((a,b) => b.date.localeCompare(a.date))
+            .slice(0, 5);
+          if (!recent.length) return '<p style="font-size:13px;color:var(--text-3);padding:8px 0">Aucune transaction</p>';
+          const typeColor = { commission:'#334155', onboarding:'#0F766E', visa:'#B45309', autre:'#9CA3AF' };
+          const typeDot   = { commission:'🤝', onboarding:'🚀', visa:'🛂', autre:'💼' };
+          return recent.map(tr => {
+            const dot   = typeDot[tr.type] || '💼';
+            const color = typeColor[tr.type] || '#9CA3AF';
+            const amt   = tr.currency === 'EUR'
+              ? `${Number(tr.amount).toLocaleString('fr-FR')} €`
+              : `${Number(tr.amount).toLocaleString('fr-FR')} ฿`;
+            const d = new Date(tr.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">
+              <div style="width:28px;height:28px;border-radius:7px;background:${color}18;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${dot}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tr.notes || tr.type}</div>
+                <div style="font-size:11px;color:var(--text-2)">${tr.account} · ${d}</div>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:${color};flex-shrink:0">${amt}</div>
+            </div>`;
+          }).join('');
+        })()}
+      </div>
+
       <!-- ── Sur le feu ── -->
       <div class="dash-card" style="margin-bottom:24px">
         <div class="dash-card-title" style="margin-bottom:12px">🔥 Sur le feu</div>
