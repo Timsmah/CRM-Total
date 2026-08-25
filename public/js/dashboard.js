@@ -293,30 +293,6 @@ const Dashboard = {
         </div>
       </div>
 
-      <!-- ── Pipeline ── -->
-      <div class="dash-card" style="margin-bottom:14px">
-        <div class="dash-card-title">Pipeline</div>
-        ${this.pipelineHTML(pipeline)}
-      </div>
-
-      <!-- ── Move-ins ── -->
-      <div class="dash-card" style="margin-bottom:14px">
-        <div class="dash-card-title">Arrivées à venir <span class="dash-card-sub">60 prochains jours</span></div>
-        ${urgent.length ? `<div class="movein-grid">${urgent.map(c => {
-          const days  = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
-          const color  = days <= 7 ? '#DC2626' : days <= 14 ? '#EA580C' : days <= 30 ? '#D97706' : '#16A34A';
-          const bg     = days <= 7 ? '#FEF2F2' : days <= 14 ? '#FFF7ED' : days <= 30 ? '#FFFBEB' : '#F0FDF4';
-          const border = days <= 7 ? '#FECACA' : days <= 14 ? '#FED7AA' : days <= 30 ? '#FDE68A' : '#BBF7D0';
-          return `<div class="movein-tile" style="background:${bg};border-color:${border}">
-            <div class="movein-tile-days" style="color:${color}">${days}</div>
-            <div class="movein-tile-unit" style="color:${color}">jours</div>
-            <div class="movein-tile-name">${c.name.split(' ')[0]}</div>
-            <div class="movein-tile-date">${new Date(c.move_in_date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
-          </div>`;
-        }).join('')}</div>`
-        : '<p style="padding:20px 0;text-align:center;color:var(--text-3);font-size:13px">Aucune arrivée dans les 60 prochains jours</p>'}
-      </div>
-
       <!-- ── Sur le feu ── -->
       <div class="dash-card" style="margin-bottom:24px">
         <div class="dash-card-title" style="margin-bottom:12px">🔥 Sur le feu</div>
