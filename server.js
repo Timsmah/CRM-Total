@@ -54,6 +54,7 @@ app.use('/api/proposals',  requireAuth, require('./routes/proposals'));
 app.use('/api/activities',  requireAuth, require('./routes/activities'));
 app.use('/api/call-lists', requireAuth, require('./routes/call-lists'));
 app.use('/api/notes',     requireAuth, require('./routes/notes'));
+app.use('/api/visas',     requireAuth, require('./routes/visas'));
 
 // Static files & SPA fallback — no-cache on JS/CSS so deploys take effect immediately
 app.use(express.static(path.join(__dirname, 'public'), {

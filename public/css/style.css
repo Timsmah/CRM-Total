@@ -1858,3 +1858,61 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   .summary-row { grid-template-columns: 1fr 1fr; }
   #toast-container { left: 12px; right: 12px; bottom: 12px; }
 }
+
+/* ── Visas kanban ──────────────────────────────────────────────────────────── */
+.visa-kanban {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+  align-items: start;
+}
+.visa-col {
+  background: var(--surface-2);
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+}
+.visa-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--surface);
+}
+.visa-col-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.visa-col-count {
+  font-size: 11px; font-weight: 600;
+  background: var(--surface-2); color: var(--text-2);
+  padding: 2px 8px; border-radius: 20px;
+  border: 0.5px solid var(--border);
+}
+.col-visa-contact .visa-col-header { border-top: 3px solid #334155; }
+.col-visa-manass  .visa-col-header { border-top: 3px solid #0F766E; }
+.col-visa-paid    .visa-col-header { border-top: 3px solid #B45309; }
+.visa-col-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+.visa-empty { font-size: 12px; color: var(--text-3); text-align: center; padding: 16px 0; }
+.visa-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: default;
+}
+.visa-card-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.visa-card-phone { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+.visa-card-notes {
+  font-size: 12px; color: var(--text-2); margin-bottom: 8px;
+  line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.visa-card-actions { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.visa-status-select {
+  flex: 1; font-size: 11px; padding: 4px 6px;
+  border: 0.5px solid var(--border); border-radius: 6px;
+  background: var(--surface-2); color: var(--text-2); cursor: pointer;
+}
+@media (max-width: 768px) {
+  .visa-kanban { grid-template-columns: 1fr; }
+}

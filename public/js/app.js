@@ -168,7 +168,7 @@ const Search = {
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches };
+    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches, visas: Visas };
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
