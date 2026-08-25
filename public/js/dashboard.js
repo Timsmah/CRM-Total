@@ -1,16 +1,109 @@
 const Dashboard = {
   clients: [], properties: [], finance: [], charts: {},
+  _notes: { tasks: [], notes: '' },
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     try {
-      [this.clients, this.properties, this.finance] = await Promise.all([
+      const [clients, properties, finance, notes] = await Promise.all([
         api.get('/clients?archived=0'),
         api.get('/properties?archived=0'),
-        api.get('/finance')
+        api.get('/finance'),
+        api.get('/notes').catch(() => ({ tasks: [], notes: '' })),
       ]);
-    } catch (err) { Toast.show('Error loading dashboard', 'error'); return; }
+      this.clients    = clients;
+      this.properties = properties;
+      this.finance    = finance;
+      this._notes     = { tasks: notes.tasks || [], notes: notes.notes || '' };
+    } catch (err) { Toast.show('Erreur chargement dashboard', 'error'); return; }
     this.render();
+  },
+
+  // ── Notes / checklist ─────────────────────────────────────────────────────
+  async _syncNotes() {
+    try { await api.put('/notes', { tasks: this._notes.tasks, notes: this._notes.notes }); }
+    catch { Toast.show('Erreur sauvegarde notes', 'error'); }
+  },
+  async addTask() {
+    const inp = document.getElementById('dash-task-input');
+    const txt = inp?.value.trim();
+    if (!txt) return;
+    this._notes.tasks.push({ text: txt, done: false });
+    inp.value = '';
+    await this._syncNotes();
+    this._renderNotes();
+  },
+  async toggleTask(i) {
+    if (!this._notes.tasks[i]) return;
+    this._notes.tasks[i].done = !this._notes.tasks[i].done;
+    await this._syncNotes();
+    this._renderNotes();
+  },
+  async deleteTask(i) {
+    this._notes.tasks.splice(i, 1);
+    await this._syncNotes();
+    this._renderNotes();
+  },
+  async saveNoteText() {
+    const el = document.getElementById('dash-notes-text');
+    if (!el) return;
+    this._notes.notes = el.value;
+    await this._syncNotes();
+  },
+  async clearDone() {
+    this._notes.tasks = this._notes.tasks.filter(t => !t.done);
+    await this._syncNotes();
+    this._renderNotes();
+  },
+  _renderNotes() {
+    const tasks  = this._notes.tasks;
+    const done   = tasks.filter(t => t.done).length;
+    const pct    = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+    const el     = document.getElementById('dash-notes-block');
+    if (!el) return;
+    el.innerHTML = this._notesHTML();
+    // Re-bind textarea autosave
+    const ta = document.getElementById('dash-notes-text');
+    if (ta) { ta.addEventListener('blur', () => this.saveNoteText()); }
+    // Re-bind enter on input
+    const inp = document.getElementById('dash-task-input');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') this.addTask(); });
+  },
+  _notesHTML() {
+    const tasks = this._notes.tasks;
+    const done  = tasks.filter(t => t.done).length;
+    const pct   = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+    const progressBar = tasks.length ? `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="flex:1;background:var(--bg-2);border-radius:4px;height:5px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:#0F766E;border-radius:4px;transition:width .3s"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text-2);flex-shrink:0">${done}/${tasks.length}</span>
+        ${done > 0 ? `<button onclick="Dashboard.clearDone()" style="font-size:10px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Effacer terminées</button>` : ''}
+      </div>` : '';
+    const taskList = tasks.length ? `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+      ${tasks.map((t,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg-2);border-radius:7px;group">
+          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="Dashboard.toggleTask(${i})"
+            style="width:15px;height:15px;cursor:pointer;accent-color:#0F766E;flex-shrink:0">
+          <span style="flex:1;font-size:13px;color:${t.done ? 'var(--text-3)' : 'var(--text)'};text-decoration:${t.done ? 'line-through' : 'none'}">${t.text}</span>
+          <button onclick="Dashboard.deleteTask(${i})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:0;opacity:.5;hover:opacity:1">✕</button>
+        </div>`).join('')}
+    </div>` : `<p style="font-size:12px;color:var(--text-3);text-align:center;padding:8px 0 12px">Aucune tâche — ajoute-en une ci-dessous 👇</p>`;
+    return `
+      ${progressBar}
+      ${taskList}
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <input id="dash-task-input" type="text" placeholder="Ajouter une tâche…"
+          style="flex:1;padding:7px 10px;font-size:13px;border:0.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text)">
+        <button onclick="Dashboard.addTask()" style="padding:7px 12px;background:#0F766E;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-weight:500">+</button>
+      </div>
+      <div style="border-top:0.5px solid var(--border);padding-top:10px">
+        <div style="font-size:10px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📝 Notes libres</div>
+        <textarea id="dash-notes-text" placeholder="Notes, idées, rappels…"
+          style="width:100%;min-height:72px;padding:8px 10px;font-size:13px;border:0.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);resize:vertical;line-height:1.5">${this._notes.notes}</textarea>
+        <div style="font-size:10px;color:var(--text-3);margin-top:3px">Sauvegardé automatiquement</div>
+      </div>`;
   },
 
   greeting() {
@@ -129,118 +222,120 @@ const Dashboard = {
   render() {
     const kpis     = this.kpis();
     const pipeline = this.pipelineData();
-    const revenue  = this.revenueByDay();
-    const zones    = this.zoneData();
     const urgent   = this.urgentClients();
     const now      = new Date();
+    const eurRate  = kpis.eurRate;
 
-    const revFmt   = Number(kpis.revenueWeek).toLocaleString('fr-FR');
-    const revEUR   = Math.round(kpis.revenueWeek / kpis.eurRate).toLocaleString('fr-FR');
-    const trendPct = kpis.revenueLastWeek > 0
-      ? Math.round((kpis.revenueWeek - kpis.revenueLastWeek) / kpis.revenueLastWeek * 100)
-      : null;
-    const trendUp  = trendPct !== null && trendPct >= 0;
+    // Revenus mois en cours
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const toTHB = tr => tr.currency === 'EUR' ? Math.round(Number(tr.amount) * eurRate) : Number(tr.amount);
+    const txMonth   = this.finance.filter(tr => tr.date?.startsWith(currentMonth));
+    const monthTHB  = txMonth.reduce((s,tr) => s + toTHB(tr), 0);
+    const monthEUR  = Math.round(monthTHB / eurRate);
+    const weekEUR   = Math.round(kpis.revenueWeek / eurRate);
+    const onbCount  = txMonth.filter(tr => tr.type === 'onboarding').length;
+    const visaCount = txMonth.filter(tr => tr.type === 'visa').length;
+
+    // Trend vs mois précédent
+    const prevMonth = (() => { const d = new Date(now.getFullYear(), now.getMonth()-1, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
+    const prevTHB   = this.finance.filter(tr => tr.date?.startsWith(prevMonth)).reduce((s,tr) => s + toTHB(tr), 0);
+    const trendPct  = prevTHB > 0 ? Math.round((monthTHB - prevTHB) / prevTHB * 100) : null;
+    const trendUp   = trendPct !== null && trendPct >= 0;
+
+    const monthName = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+    const dateStr   = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+    const activeClients = this.clients.filter(c => ['Onboarding','Recherche active'].includes(c.status)).length;
 
     document.getElementById('content').innerHTML = `
 
-      <!-- ── Top greeting ── -->
-      <div class="dash-top">
+      <!-- ── Greeting ── -->
+      <div class="dash-top" style="margin-bottom:16px">
         <div>
-          <p class="dash-tagline">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</p>
+          <p class="dash-tagline" style="text-transform:capitalize">${dateStr}</p>
           <h2 class="dash-hello">${this.greeting()}, Timéo 👋</h2>
         </div>
-        <div class="dash-top-stats">
-          <div class="dash-top-stat">
-            <span class="dash-top-val">${this.clients.length}</span>
-            <span class="dash-top-label">Total Clients</span>
-          </div>
-          <div class="dash-top-divider"></div>
-          <div class="dash-top-stat">
-            <span class="dash-top-val">${this.properties.length}</span>
-            <span class="dash-top-label">Properties</span>
-          </div>
-          <div class="dash-top-divider"></div>
-          <div class="dash-top-stat">
-            <span class="dash-top-val" style="color:#FF6B00">${Math.round(kpis.revenueWeek/1000) || 0}k ฿</span>
-            <span class="dash-top-label">This week</span>
-          </div>
+      </div>
+
+      <!-- ── Hero sombre — revenus du mois ── -->
+      <div style="background:#1C2B3A;border-radius:14px;padding:18px 22px;margin-bottom:14px;color:#fff;display:flex;justify-content:space-between;align-items:flex-end">
+        <div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Revenus — ${monthName}</div>
+          <div style="font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1">${monthEUR.toLocaleString('fr-FR')} €</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:4px">≈ ${monthTHB.toLocaleString('fr-FR')} ฿</div>
+        </div>
+        <div style="text-align:right">
+          ${trendPct !== null ? `<div style="font-size:13px;font-weight:600;color:${trendUp ? '#4ADE80' : '#F87171'}">${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}%</div><div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">vs mois précédent</div>` : ''}
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.5)">Cette semaine : <strong style="color:#fff">${weekEUR.toLocaleString('fr-FR')} €</strong></div>
         </div>
       </div>
 
-      <!-- ── KPI : Revenue seul ── -->
-      <div class="dash-kpis dash-kpis-solo">
-        <div class="kpi-card kpi-hero">
-          <div class="kpi-hero-eyebrow">💰 ${t('dash_revenue_week')}</div>
-          <div class="kpi-hero-val" data-target="${kpis.revenueWeek}" data-format="thb">0</div>
-          <div class="kpi-hero-eur">≈ ${revEUR} €</div>
-          ${trendPct !== null ? `
-            <div class="kpi-hero-trend ${trendUp ? 'trend-up' : 'trend-down'}">
-              ${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}% vs last week
-            </div>` : ''}
+      <!-- ── 4 KPI cards ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="dash-card" style="padding:12px 14px">
+          <div style="font-size:20px;margin-bottom:4px">🚀</div>
+          <div style="font-size:18px;font-weight:700;color:#0F766E">${onbCount}<span style="font-size:12px;font-weight:400;color:var(--text-2)"> / 10</span></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Onboardings</div>
+        </div>
+        <div class="dash-card" style="padding:12px 14px">
+          <div style="font-size:20px;margin-bottom:4px">🛂</div>
+          <div style="font-size:18px;font-weight:700;color:#B45309">${visaCount}<span style="font-size:12px;font-weight:400;color:var(--text-2)"> / 4</span></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Visas</div>
+        </div>
+        <div class="dash-card" style="padding:12px 14px">
+          <div style="font-size:20px;margin-bottom:4px">👥</div>
+          <div style="font-size:18px;font-weight:700;color:var(--text)">${activeClients}</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Clients actifs</div>
+        </div>
+        <div class="dash-card" style="padding:12px 14px">
+          <div style="font-size:20px;margin-bottom:4px">📅</div>
+          <div style="font-size:18px;font-weight:700;color:${kpis.urgentMoveIns > 0 ? '#DC2626' : 'var(--text)'}">${kpis.urgentMoveIns}</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Move-ins 7 jours</div>
         </div>
       </div>
 
-      <!-- ── Row 1: Pipeline + Revenue chart ── -->
-      <div class="dash-charts">
-        <div class="dash-card">
-          <div class="dash-card-title">${t('dash_pipeline')}</div>
-          ${this.pipelineHTML(pipeline)}
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-title">Revenue <span class="dash-card-sub">${revenue.monthName} — day by day</span></div>
-          <div style="height:200px;position:relative">
-            <canvas id="chart-revenue"></canvas>
-          </div>
-        </div>
+      <!-- ── Pipeline ── -->
+      <div class="dash-card" style="margin-bottom:14px">
+        <div class="dash-card-title">Pipeline</div>
+        ${this.pipelineHTML(pipeline)}
       </div>
 
-      <!-- ── Row 2: Upcoming Move-ins tuiles ── -->
-      <div class="dash-card" style="margin-top:20px">
-        <div class="dash-card-title">Upcoming Move-ins <span class="dash-card-sub">next 60 days</span></div>
+      <!-- ── Move-ins ── -->
+      <div class="dash-card" style="margin-bottom:14px">
+        <div class="dash-card-title">Arrivées à venir <span class="dash-card-sub">60 prochains jours</span></div>
         ${urgent.length ? `<div class="movein-grid">${urgent.map(c => {
-          const days    = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
-          const color   = days <= 7  ? '#DC2626' : days <= 14 ? '#EA580C' : days <= 30 ? '#D97706' : '#16A34A';
-          const bg      = days <= 7  ? '#FEF2F2' : days <= 14 ? '#FFF7ED' : days <= 30 ? '#FFFBEB' : '#F0FDF4';
-          const border  = days <= 7  ? '#FECACA' : days <= 14 ? '#FED7AA' : days <= 30 ? '#FDE68A' : '#BBF7D0';
-          const firstName = c.name.split(' ')[0];
-          const dateLbl = new Date(c.move_in_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+          const days  = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
+          const color  = days <= 7 ? '#DC2626' : days <= 14 ? '#EA580C' : days <= 30 ? '#D97706' : '#16A34A';
+          const bg     = days <= 7 ? '#FEF2F2' : days <= 14 ? '#FFF7ED' : days <= 30 ? '#FFFBEB' : '#F0FDF4';
+          const border = days <= 7 ? '#FECACA' : days <= 14 ? '#FED7AA' : days <= 30 ? '#FDE68A' : '#BBF7D0';
           return `<div class="movein-tile" style="background:${bg};border-color:${border}">
             <div class="movein-tile-days" style="color:${color}">${days}</div>
             <div class="movein-tile-unit" style="color:${color}">jours</div>
-            <div class="movein-tile-name">${firstName}</div>
-            <div class="movein-tile-date">${dateLbl}</div>
+            <div class="movein-tile-name">${c.name.split(' ')[0]}</div>
+            <div class="movein-tile-date">${new Date(c.move_in_date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
           </div>`;
         }).join('')}</div>`
-        : '<p class="empty" style="padding:40px 0;text-align:center;color:var(--text-3)">Aucune arrivée dans les 60 prochains jours</p>'}
+        : '<p style="padding:20px 0;text-align:center;color:var(--text-3);font-size:13px">Aucune arrivée dans les 60 prochains jours</p>'}
+      </div>
+
+      <!-- ── Sur le feu ── -->
+      <div class="dash-card" style="margin-bottom:24px">
+        <div class="dash-card-title" style="margin-bottom:12px">🔥 Sur le feu</div>
+        <div id="dash-notes-block">${this._notesHTML()}</div>
       </div>`;
 
-    // Animated counters
-    document.querySelectorAll('[data-target]').forEach(el => {
-      const target = parseInt(el.dataset.target) || 0;
-      const fmt    = el.dataset.format;
-      let start = null;
-      const step = ts => {
-        if (!start) start = ts;
-        const p = Math.min((ts - start) / 900, 1);
-        const ease = 1 - Math.pow(1-p, 3);
-        const val  = Math.floor(ease * target);
-        el.textContent = fmt === 'thb' ? Number(val).toLocaleString('fr-FR') + ' ฿' : val;
-        if (p < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    });
-
-    // Pipeline bars animate in
+    // Pipeline bars animate
     setTimeout(() => {
       document.querySelectorAll('.pipeline-fill').forEach(el => {
         const w = el.style.width; el.style.width = '0';
-        requestAnimationFrame(() => { el.style.transition = 'width .8s cubic-bezier(.4,0,.2,1)'; el.style.width = w; });
+        requestAnimationFrame(() => { el.style.transition = 'width .7s cubic-bezier(.4,0,.2,1)'; el.style.width = w; });
       });
     }, 50);
 
-    setTimeout(() => {
-      this.drawRevenue(revenue);
-    }, 60);
+    // Bind notes interactions
+    const ta = document.getElementById('dash-notes-text');
+    if (ta) ta.addEventListener('blur', () => this.saveNoteText());
+    const inp = document.getElementById('dash-task-input');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') this.addTask(); });
   },
 
   // ── Charts ────────────────────────────────────────────────────────────────
