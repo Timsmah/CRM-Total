@@ -65,6 +65,86 @@ const ACTION_TAGS = [
   { key: 'tim',      emoji: '👤', label: 'Tim',                 desc: 'À traiter par Tim' },
 ];
 
+// ── Scoring client ────────────────────────────────────────────────────────────
+function clientScore(c) {
+  const b = Number(c.budget_max) || 0;
+  if (!b) return null; // pas scorable sans budget
+
+  // Budget (50%)
+  let budget;
+  if      (b >= 120000) budget = 10;
+  else if (b >= 70000)  budget = 9;
+  else if (b >= 40000)  budget = 7;
+  else if (b >= 20000)  budget = 6;
+  else                  budget = 5;
+
+  // Durée du bail (35%)
+  const dur = (c.duration || '').toLowerCase();
+  let duree;
+  if      (/\b(1 an|2 ans|3 ans|12 mois)\b/.test(dur))          duree = 10;
+  else if (/\b(6 mois|7 mois|8 mois|9 mois|10 mois|11 mois)\b/.test(dur)) duree = 8;
+  else if (/\b(3 mois|4 mois|5 mois)\b/.test(dur))              duree = 4;
+  else if (/\b(1 mois|2 mois)\b/.test(dur))                     duree = 2;
+  else                                                            duree = 5; // non précisé → neutre
+
+  // Délai move-in (10%)
+  let movein = 5;
+  if (c.move_in_date) {
+    const days = Math.ceil((new Date(c.move_in_date) - new Date()) / 86400000);
+    if      (days < 0)   movein = 1;  // déjà arrivé
+    else if (days <= 3)  movein = 2;
+    else if (days <= 7)  movein = 4;
+    else if (days <= 30) movein = 8;  // 1-4 semaines
+    else if (days <= 60) movein = 10; // 1-2 mois — idéal
+    else                 movein = 6;  // > 2 mois
+  }
+
+  // Clarté des critères (5%)
+  const hasCriteria = (c.criteria || '').trim().length > 5;
+  const hasZones    = (c.zones    || '').trim().length > 0;
+  const clarte      = hasCriteria && hasZones ? 10 : (hasCriteria || hasZones) ? 6 : 2;
+
+  const total = budget * 0.50 + duree * 0.35 + movein * 0.10 + clarte * 0.05;
+  return { total: Math.round(total * 10) / 10, budget, duree, movein, clarte };
+}
+
+function scoreColor(s) {
+  if (s >= 8) return '#0F766E';
+  if (s >= 6) return '#16A34A';
+  if (s >= 4) return '#D97706';
+  return '#DC2626';
+}
+
+function scoreBadge(c) {
+  const r = clientScore(c);
+  if (!r) return '';
+  const col = scoreColor(r.total);
+  return `<span style="font-size:10px;font-weight:700;color:${col};background:${col}18;border:0.5px solid ${col}50;border-radius:5px;padding:1px 6px;letter-spacing:.3px">⭐ ${r.total.toFixed(1)}</span>`;
+}
+
+function scoreBreakdownHTML(c) {
+  const r = clientScore(c);
+  if (!r) return `<p style="font-size:12px;color:var(--text-3);padding:6px 0">Budget non renseigné — score impossible.</p>`;
+  const col = scoreColor(r.total);
+  const bar = v => `<div style="flex:1;background:var(--bg-2,#f1f5f9);border-radius:3px;height:5px;overflow:hidden"><div style="width:${v*10}%;height:100%;background:${col};border-radius:3px"></div></div>`;
+  const row = (lbl, v, w) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <span style="font-size:11px;color:var(--text-2);width:110px;flex-shrink:0">${lbl}</span>
+    ${bar(v)}
+    <span style="font-size:11px;font-weight:600;color:var(--text);width:26px;text-align:right">${v}/10</span>
+    <span style="font-size:10px;color:var(--text-3);width:28px;text-align:right">${w}</span>
+  </div>`;
+  return `<div style="background:var(--surface-2,#f8fafc);border-radius:10px;padding:12px 14px;margin-top:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px">Score client</span>
+      <span style="font-size:22px;font-weight:800;color:${col}">${r.total.toFixed(1)}<span style="font-size:12px;font-weight:400;color:var(--text-3)">/10</span></span>
+    </div>
+    ${row('💰 Budget',  r.budget, '50%')}
+    ${row('📋 Durée',   r.duree,  '35%')}
+    ${row('🗓️ Move-in', r.movein, '10%')}
+    ${row('🎯 Critères',r.clarte,  '5%')}
+  </div>`;
+}
+
 function getContactCols() {
   return [
     { key: 'À contacter',      label: t('col_prospect'), cls: 'col-to-contact' },
@@ -655,7 +735,10 @@ const Clients = {
 
           <div class="card-face card-front card-focus-front" style="${cardStyle}">
             ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
-            <div class="focus-name">${c.name}</div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px">
+              <div class="focus-name" style="flex:1">${c.name}</div>
+              ${scoreBadge(c)}
+            </div>
             <div class="focus-meta">
               ${budgetLine ? `<span>💰 ${budgetLine}</span>` : ''}
               ${budgetLine && c.duration ? `<span class="focus-sep">·</span>` : ''}
@@ -721,6 +804,7 @@ const Clients = {
             <div class="card-top">
               ${badge(c.status)}
               <div style="display:flex;align-items:center;gap:6px">
+                ${scoreBadge(c)}
                 ${daysAgo ? `<span class="days-ago-badge">🕐 ${daysAgo}</span>` : ''}
                 <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
                   onclick="event.stopPropagation();Clients.toggleFees(${c.id})" title="Research fees">
@@ -1435,6 +1519,10 @@ const Clients = {
         ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
         ${c.reminder_date ? `<div class="detail-row"><span class="detail-label">🔔 ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
       </div>
+
+      <div class="modal-sep"></div>
+      <div class="modal-sub-title">⭐ Score client</div>
+      ${scoreBreakdownHTML(c)}
 
       <div class="modal-sep"></div>
       <div class="modal-sub-title" style="display:flex;justify-content:space-between;align-items:center">
