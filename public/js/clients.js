@@ -163,6 +163,7 @@ const Clients = {
   showArchived: false,
   focusedCol: null,
   sortDir: 'desc',
+  sortKey: 'date', // 'date' | 'score'
   focusMode: false,
   hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
   selectionMode: false,
@@ -633,15 +634,30 @@ const Clients = {
       return Math.floor((new Date() - new Date(dateStr)) / 86400000);
     };
 
+    const scoreOf = c => { const r = clientScore(c); return r ? r.total : -1; };
     const cards = this.filtered()
       .filter(c => this.effectiveContactStatus(c) === col.key)
       .filter(c => this._matchClientFilters(c))
-      .sort((a, b) => this.sortDir === 'desc'
-        ? daysAgoNum(a) - daysAgoNum(b)   // récent en premier (peu de jours)
-        : daysAgoNum(b) - daysAgoNum(a)); // vieux en premier (beaucoup de jours)
+      .sort((a, b) => {
+        if (this.sortKey === 'score') {
+          return this.sortDir === 'desc'
+            ? scoreOf(b) - scoreOf(a)
+            : scoreOf(a) - scoreOf(b);
+        }
+        return this.sortDir === 'desc'
+          ? daysAgoNum(a) - daysAgoNum(b)
+          : daysAgoNum(b) - daysAgoNum(a);
+      });
 
-    const sortIcon = this.sortDir === 'desc' ? '↑' : '↓';
-    const sortTitle = this.sortDir === 'desc' ? 'Most recent first' : 'Oldest first';
+    const SORT_MODES = [
+      { key: 'date',  dir: 'desc', icon: '↑', label: 'Recent first' },
+      { key: 'date',  dir: 'asc',  icon: '↓', label: 'Oldest first' },
+      { key: 'score', dir: 'desc', icon: '⭐', label: 'Score ↓' },
+      { key: 'score', dir: 'asc',  icon: '⭐', label: 'Score ↑' },
+    ];
+    const curMode = SORT_MODES.find(m => m.key === this.sortKey && m.dir === this.sortDir) || SORT_MODES[0];
+    const sortIcon  = curMode.icon;
+    const sortTitle = curMode.label;
 
     if (this.hiddenCols.has(col.key)) {
       return `
@@ -1414,7 +1430,16 @@ const Clients = {
 
   toggleSort(e) {
     e.stopPropagation();
-    this.sortDir = this.sortDir === 'desc' ? 'asc' : 'desc';
+    const MODES = [
+      { key: 'date',  dir: 'desc' },
+      { key: 'date',  dir: 'asc'  },
+      { key: 'score', dir: 'desc' },
+      { key: 'score', dir: 'asc'  },
+    ];
+    const idx = MODES.findIndex(m => m.key === this.sortKey && m.dir === this.sortDir);
+    const next = MODES[(idx + 1) % MODES.length];
+    this.sortKey = next.key;
+    this.sortDir = next.dir;
     this.render();
   },
 
