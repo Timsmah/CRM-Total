@@ -1863,7 +1863,11 @@ const Clients = {
       }
       Modal.close();
       await this.load();
-      this.render();
+      if (typeof Router !== 'undefined' && Router.current !== 'clients') {
+        await Router.navigate(Router.current);
+      } else {
+        this.render();
+      }
     } catch (err) {
       Toast.show(err.message, 'error');
     }
