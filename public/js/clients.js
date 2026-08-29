@@ -168,7 +168,7 @@ const Clients = {
   hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
   selectionMode: false,
   selectedClients: new Set(),
-  clientFilters: { status: '', zone: '', tag: '', urgency: '', color: '' },
+  clientFilters: { name: '', urgency: '', scoreMin: '' },
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
@@ -221,36 +221,26 @@ const Clients = {
   },
 
   render() {
+    const total = this.data.length;
     document.getElementById('content').innerHTML = `
       <div class="section-header">
-        <h2>Clients</h2>
+        <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="Clients.openAddModal()">${t('clients_add')}</button>
-          <button class="btn btn-secondary" onclick="Clients.syncSheets()">${t('clients_sync')}</button>
-          <button class="btn btn-primary" onclick="Clients.toggleFocusMode()">
-            ${this.focusMode ? '⊞ Vue complète' : '◉ Focus'}
-          </button>
+          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
           <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
             ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
           </button>
-          <button class="btn btn-ghost" onclick="Clients.openCallHistory()">📋 Listes</button>
-          <button class="btn btn-ghost" onclick="Clients.toggleArchived()">
-            ${this.showArchived ? t('clients_active') : t('clients_archived')}
-          </button>
+          <div style="position:relative">
+            <button class="btn btn-ghost" onclick="Clients._toggleMoreMenu(event)" title="Plus d'options">···</button>
+            <div id="clients-more-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:200;min-width:170px;padding:4px">
+              <button class="more-menu-item" onclick="Clients.syncSheets();Clients._closeMoreMenu()">🔄 Sync Sheets</button>
+              <button class="more-menu-item" onclick="Clients.openCallHistory();Clients._closeMoreMenu()">📋 Listes d'appels</button>
+              <button class="more-menu-item" onclick="Clients.toggleFocusMode();Clients._closeMoreMenu()">${this.focusMode ? '⊞ Vue complète' : '◉ Vue focus'}</button>
+              <div style="height:0.5px;background:var(--border);margin:4px 0"></div>
+              <button class="more-menu-item" onclick="Clients.toggleArchived();Clients._closeMoreMenu()">${this.showArchived ? '👥 Clients actifs' : '🗄 Voir archivés'}</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kanban-legend">
-        <span class="legend-item"><span class="legend-dot dot-red"></span>${t('clients_legend_14')}</span>
-        <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-dot dot-amber"></span>${t('clients_legend_30')}</span>
-        <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-dot dot-yellow"></span>${t('clients_legend_60')}</span>
-        <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-dot dot-future"></span>${t('clients_legend_future')}</span>
-        <span class="legend-sep"></span>
-        <span class="legend-item"><span class="legend-clock">🕐</span>${t('clients_legend_days')}</span>
-        <button class="legend-help-btn" onclick="Clients.showTagsLegend(event)" title="Badges legend">?</button>
-        <button class="legend-btn" onclick="Clients.showLegend(this)" title="Légende couleurs">🎨</button>
       </div>
       ${this.filterBarHTML()}
       <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
@@ -262,54 +252,54 @@ const Clients = {
         <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
         <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
         <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
-        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'color')">🎨 Couleur</button>
         <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
         <div class="sel-divider"></div>
         <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
       </div>` : ''}`;
   },
 
+  _toggleMoreMenu(e) {
+    e.stopPropagation();
+    const m = document.getElementById('clients-more-menu');
+    if (!m) return;
+    const open = m.style.display !== 'none';
+    m.style.display = open ? 'none' : 'block';
+    if (!open) {
+      setTimeout(() => document.addEventListener('click', () => {
+        m.style.display = 'none';
+      }, { once: true }), 10);
+    }
+  },
+  _closeMoreMenu() {
+    const m = document.getElementById('clients-more-menu');
+    if (m) m.style.display = 'none';
+  },
+
   filterBarHTML() {
-    const SKIP = /non\s*pr[eé]cis[eé]|je ne sais|pas encore|autre/i;
-    const zones = [...new Set(
-      this.data.flatMap(c => (c.zones||'').split(/,\s*/).map(z => z.trim()).filter(z => z && !SKIP.test(z)))
-    )].sort();
-    const statuses = ['Prospect','Onboarding','Recherche active','Signé','Perdu'];
     const f = this.clientFilters;
-    const active = Object.values(f).some(v => v);
+    const active = f.name || f.urgency || f.scoreMin;
+    const filtered = active ? this.countFiltered() : this.data.length;
     return `
       <div class="filter-bar">
-        <select class="filter-select" onchange="Clients.setClientFilter('status',this.value)">
-          <option value="">All statuses</option>
-          ${statuses.map(s => `<option value="${s}" ${f.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-        <select class="filter-select" onchange="Clients.setClientFilter('zone',this.value)">
-          <option value="">All zones</option>
-          ${zones.map(z => `<option value="${z}" ${f.zone===z?'selected':''}>${z}</option>`).join('')}
-        </select>
-        <select class="filter-select" onchange="Clients.setClientFilter('color',this.value)">
-          <option value="">🎨 All colors</option>
-          ${CARD_COLORS.filter(c => c.key !== null).map(col => {
-            const lbl = (this._colorLabels()[col.key] || col.label);
-            return `<option value="${col.key}" ${f.color===col.key?'selected':''}>${lbl}</option>`;
-          }).join('')}
-        </select>
-        <select class="filter-select" onchange="Clients.setClientFilter('tag',this.value)">
-          <option value="">All tags</option>
-          ${ACTION_TAGS.map(tag => `<option value="${tag.key}" ${f.tag===tag.key?'selected':''}>${tag.emoji} ${tag.label}</option>`).join('')}
-        </select>
+        <input class="filter-search" type="text" placeholder="🔍 Rechercher un client…"
+          value="${f.name || ''}"
+          oninput="Clients.setClientFilter('name', this.value)">
         <select class="filter-select" onchange="Clients.setClientFilter('urgency',this.value)">
-          <option value="">All urgencies</option>
-          <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>🔴 &lt;14 days</option>
-          <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>🟠 &lt;30 days</option>
-          <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>🟡 &lt;60 days</option>
-          <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>🔵 &gt;60 days</option>
+          <option value="">📅 Toutes urgences</option>
+          <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>🔴 Arrive &lt; 14j</option>
+          <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>🟠 Arrive &lt; 30j</option>
+          <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>🟡 Arrive &lt; 60j</option>
+          <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>🔵 Arrive &gt; 60j</option>
         </select>
-        ${active ? `<button class="btn btn-ghost btn-sm" onclick="Clients.clearClientFilters()">✕ Clear</button>` : ''}
-        <span style="margin-left:auto;font-size:12px;color:var(--text-3)">
-          ${active
-            ? `<strong style="color:var(--accent)">${this.countFiltered()}</strong> / ${this.data.length} clients`
-            : `${this.data.length} clients`}
+        <select class="filter-select" onchange="Clients.setClientFilter('scoreMin',this.value)">
+          <option value="">⭐ Tous scores</option>
+          <option value="6" ${f.scoreMin==='6'?'selected':''}>⭐ Score ≥ 6</option>
+          <option value="7" ${f.scoreMin==='7'?'selected':''}>⭐ Score ≥ 7</option>
+          <option value="8" ${f.scoreMin==='8'?'selected':''}>⭐ Score ≥ 8</option>
+        </select>
+        ${active ? `<button class="btn btn-ghost btn-sm" onclick="Clients.clearClientFilters()" style="flex-shrink:0">✕ Effacer</button>` : ''}
+        <span style="margin-left:auto;font-size:12px;color:var(--text-3);flex-shrink:0">
+          ${active ? `<strong style="color:var(--accent)">${filtered}</strong> / ` : ''}${this.data.length} clients
         </span>
       </div>`;
   },
@@ -320,11 +310,15 @@ const Clients = {
 
   _matchClientFilters(c) {
     const f = this.clientFilters;
-    if (f.status && c.status !== f.status) return false;
-    if (f.zone && !(c.zones||'').toLowerCase().includes(f.zone.toLowerCase())) return false;
-    if (f.color && (c.card_color || null) !== f.color) return false;
-    if (f.tag && !this.getTags(c).includes(f.tag)) return false;
+    if (f.name) {
+      const q = f.name.toLowerCase();
+      if (!(c.name || '').toLowerCase().includes(q)) return false;
+    }
     if (f.urgency && this.urgencyClass(c.move_in_date) !== f.urgency) return false;
+    if (f.scoreMin) {
+      const r = clientScore(c);
+      if (!r || r.total < parseFloat(f.scoreMin)) return false;
+    }
     return true;
   },
 
@@ -334,7 +328,7 @@ const Clients = {
   },
 
   clearClientFilters() {
-    this.clientFilters = { status: '', zone: '', tag: '', urgency: '', color: '' };
+    this.clientFilters = { name: '', urgency: '', scoreMin: '' };
     this.render();
   },
 
@@ -821,7 +815,6 @@ const Clients = {
               ${badge(c.status)}
               <div style="display:flex;align-items:center;gap:6px">
                 ${scoreBadge(c)}
-                ${daysAgo ? `<span class="days-ago-badge">🕐 ${daysAgo}</span>` : ''}
                 <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
                   onclick="event.stopPropagation();Clients.toggleFees(${c.id})" title="Research fees">
                   ${c.research_fees_paid ? t('clients_fees_paid') : t('clients_fees_unpaid')}
