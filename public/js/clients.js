@@ -844,6 +844,7 @@ const Clients = {
               </div>
               <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
             </div>
+            ${daysAgo ? `<div style="font-size:10px;color:var(--text-3);margin-top:4px;padding-top:4px;border-top:0.5px solid var(--border)">🕐 ${daysAgo}</div>` : ''}
 
           </div>
 
