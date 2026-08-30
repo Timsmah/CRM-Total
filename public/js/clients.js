@@ -1749,6 +1749,25 @@ const Clients = {
       // Invalidate card back cache so next flip shows fresh activity
       const cardSlot = document.getElementById(`card-act-${clientId}`);
       if (cardSlot) delete cardSlot.dataset.loaded;
+
+      // Auto-advance kanban column on WhatsApp activity
+      if (type === 'whatsapp') {
+        const COLS = getContactCols();
+        const c = this.data.find(x => x.id === clientId);
+        if (c) {
+          const cur = c.contact_status || 'À contacter';
+          const idx = COLS.findIndex(col => col.key === cur);
+          if (idx !== -1 && idx < COLS.length - 1) {
+            const next = COLS[idx + 1].key;
+            c.contact_status = next;
+            api.patch(`/clients/${clientId}/contact-status`, { contact_status: next }).catch(() => {});
+            Toast.show(`💬 WhatsApp logué · glissé → ${next}`);
+            this.render();
+            return;
+          }
+        }
+      }
+
       Toast.show('✓ Activity logged');
     } catch (err) { Toast.show(err.message, 'error'); }
   },
