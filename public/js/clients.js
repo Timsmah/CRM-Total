@@ -1704,23 +1704,42 @@ const Clients = {
   },
 
   // ── Activity log ─────────────────────────────────
+  _usersCache: null,
+  async _getUsers() {
+    if (this._usersCache) return this._usersCache;
+    try { this._usersCache = await api.get('/users'); } catch { this._usersCache = []; }
+    return this._usersCache;
+  },
+
   async _loadActivities(clientId) {
     const slot = document.getElementById(`activity-slot-${clientId}`);
     if (!slot) return;
     try {
-      const rows = await api.get(`/activities?client_id=${clientId}`);
+      const [rows, users] = await Promise.all([
+        api.get(`/activities?client_id=${clientId}`),
+        this._getUsers().catch(() => []),
+      ]);
       if (!rows.length) { slot.innerHTML = `<p class="sub-empty">No activity yet. Log your first interaction above.</p>`; return; }
       const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
-      slot.innerHTML = rows.map(r => `
+      slot.innerHTML = rows.map(r => {
+        const user = users.find(u => u.name === r.author);
+        const avatarEl = (typeof avatarHTML === 'function' && user)
+          ? avatarHTML(user, 24)
+          : `<span style="width:24px;height:24px;border-radius:50%;background:var(--surface-2,#222);display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${(r.author||'?')[0]}</span>`;
+        return `
         <div class="activity-entry">
           <span class="activity-icon">${ICONS[r.type]||'📌'}</span>
           <div class="activity-content">
-            <span class="activity-author">${r.author}</span>
-            <span class="activity-time">${this._relativeTime(r.created_at)}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              ${avatarEl}
+              <span class="activity-author">${r.author}</span>
+              <span class="activity-time">${this._relativeTime(r.created_at)}</span>
+            </div>
             ${r.content ? `<p class="activity-text">${r.content}</p>` : ''}
           </div>
           <button class="activity-del" onclick="Clients.deleteActivity(${r.id},${clientId})" title="Delete">✕</button>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } catch { slot.innerHTML = '<p class="sub-empty">—</p>'; }
   },
 
