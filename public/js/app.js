@@ -508,7 +508,6 @@ const App = {
   _readSections(pickerId) {
     return [...document.querySelectorAll(`.${pickerId}-section:checked`)].map(cb => cb.value);
   },
-  },
 
   async openAdminUsers() {
     let users = [];
