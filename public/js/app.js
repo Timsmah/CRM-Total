@@ -265,10 +265,11 @@ const App = {
     }
 
     // Masquer les sections interdites (guest = ancien compte Nono)
-    const guestOnly = ['clients', 'properties', 'contracts', 'recherches', 'visas'];
-    if (this.user.role === 'guest') {
+    const memberOnly = ['clients', 'properties', 'contracts', 'recherches', 'visas'];
+    const isMember = this.user.role !== 'admin';
+    if (isMember) {
       document.querySelectorAll('.nav-item').forEach(el => {
-        if (!guestOnly.includes(el.dataset.section)) el.style.display = 'none';
+        if (!memberOnly.includes(el.dataset.section)) el.style.display = 'none';
       });
     }
 
@@ -276,7 +277,7 @@ const App = {
     document.querySelectorAll('.nav-item').forEach(el => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
-        if (this.user.role === 'guest' && !guestOnly.includes(el.dataset.section)) return;
+        if (isMember && !memberOnly.includes(el.dataset.section)) return;
         Router.navigate(el.dataset.section);
       });
     });
