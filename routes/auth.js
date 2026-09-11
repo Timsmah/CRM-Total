@@ -36,17 +36,6 @@ router.post('/login', async (req, res) => {
     return res.json({ success: true, ...payload });
   }
 
-  // ── Login legacy (mot de passe seul — rétro-compatibilité) ───────────────
-  const adminPw = process.env.CRM_PASSWORD || 'admin';
-  const guestPw = process.env.GUEST_PASSWORD;
-  if (password === adminPw) {
-    res.cookie('crm_auth', 'admin', COOKIE_OPTS);
-    return res.json({ success: true, role: 'admin', name: 'Tim', lang: 'fr', id: null, avatar_type: 'preset', avatar_value: '1' });
-  }
-  if (guestPw && password === guestPw) {
-    res.cookie('crm_auth', 'guest', COOKIE_OPTS);
-    return res.json({ success: true, role: 'guest', name: 'Nono', lang: 'fr', id: null, avatar_type: 'preset', avatar_value: '2' });
-  }
   res.status(401).json({ error: 'Identifiants incorrects' });
 });
 
