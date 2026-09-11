@@ -38,6 +38,12 @@ router.post('/login', async (req, res) => {
     return res.json({ success: true, ...payload });
   }
 
+  // ── Fallback temporaire (à supprimer après création des comptes) ──────────
+  const adminPw = process.env.CRM_PASSWORD;
+  if (adminPw && password === adminPw) {
+    res.cookie('crm_auth', 'admin', COOKIE_OPTS);
+    return res.json({ success: true, role: 'admin', name: 'Tim', lang: 'fr', id: null, avatar_type: 'preset', avatar_value: '1' });
+  }
   res.status(401).json({ error: 'Identifiants incorrects' });
 });
 
