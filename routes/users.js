@@ -18,7 +18,7 @@ const COOKIE_OPTS = {
 router.get('/', async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const { data, error } = await db.from('crm_users')
-    .select('id, name, email, role, lang, avatar_type, avatar_value, created_at')
+    .select('id, name, email, role, lang, avatar_type, avatar_value, sections, created_at')
     .order('created_at');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
 // ── POST /api/users — créer un utilisateur (admin seulement) ─────────────
 router.post('/', async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
-  const { name, email, password, role = 'member', lang = 'fr', avatar_type = 'preset', avatar_value = '1' } = req.body;
+  const { name, email, password, role = 'member', lang = 'fr', avatar_type = 'preset', avatar_value = '1', sections = null } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'name, email et password requis' });
 
   const password_hash = await hashPassword(password);
@@ -39,7 +39,8 @@ router.post('/', async (req, res) => {
     lang,
     avatar_type,
     avatar_value,
-  }).select('id, name, email, role, lang, avatar_type, avatar_value').single();
+    sections: sections && sections.length ? sections : null,
+  }).select('id, name, email, role, lang, avatar_type, avatar_value, sections').single();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);

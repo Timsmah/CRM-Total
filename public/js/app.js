@@ -265,7 +265,9 @@ const App = {
     }
 
     // Masquer les sections interdites (guest = ancien compte Nono)
-    const memberOnly = ['clients', 'properties', 'contracts', 'recherches', 'visas'];
+    // Sections par défaut pour les membres (si pas de sections custom sur le compte)
+    const DEFAULT_MEMBER_SECTIONS = ['clients', 'properties', 'recherches', 'visas'];
+    const memberOnly = this.user.sections || DEFAULT_MEMBER_SECTIONS;
     const isMember = this.user.role !== 'admin';
     if (isMember) {
       document.querySelectorAll('.nav-item').forEach(el => {
@@ -463,6 +465,51 @@ const App = {
   },
 
   // ── Panel admin : gestion des utilisateurs ────────────────────────────────
+  // Rôles prédéfinis — pré-remplissent les sections
+  ROLE_PRESETS: {
+    admin:       null, // admin voit tout, pas de restrictions
+    agent:       ['clients', 'recherches', 'properties', 'visas'],
+    coordinator: ['clients', 'recherches', 'properties', 'visas', 'dashboard'],
+    member:      ['clients', 'properties', 'recherches', 'visas'],
+  },
+
+  _sectionsPickerHTML(selectedSections, pickerId = 'nu') {
+    const ALL_SECTIONS = [
+      { key: 'dashboard',  label: '📊 Dashboard'  },
+      { key: 'clients',    label: '👥 Clients'     },
+      { key: 'recherches', label: '🔍 Recherches'  },
+      { key: 'properties', label: '🏠 Biens'       },
+      { key: 'contracts',  label: '📋 Contracts'   },
+      { key: 'visas',      label: '🛂 Visas'       },
+    ];
+    const selected = selectedSections || ['clients', 'properties', 'recherches', 'visas'];
+    return `
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        ${Object.entries({agent:'Agent',coordinator:'Coordinateur',member:'Membre basique'}).map(([k,l]) =>
+          `<button type="button" onclick="App._applyRolePreset('${k}','${pickerId}')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:none;color:var(--text-2)">${l}</button>`
+        ).join('')}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${ALL_SECTIONS.map(s => `
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:6px;user-select:none">
+            <input type="checkbox" class="${pickerId}-section" value="${s.key}" ${selected.includes(s.key) ? 'checked' : ''} style="accent-color:var(--gold,#d4a853)">
+            ${s.label}
+          </label>`).join('')}
+      </div>`;
+  },
+
+  _applyRolePreset(role, pickerId) {
+    const sections = this.ROLE_PRESETS[role] || ['clients', 'properties', 'recherches', 'visas'];
+    document.querySelectorAll(`.${pickerId}-section`).forEach(cb => {
+      cb.checked = sections.includes(cb.value);
+    });
+  },
+
+  _readSections(pickerId) {
+    return [...document.querySelectorAll(`.${pickerId}-section:checked`)].map(cb => cb.value);
+  },
+  },
+
   async openAdminUsers() {
     let users = [];
     try { users = await api.get('/users'); } catch {}
@@ -481,6 +528,7 @@ const App = {
           <select id="nu-lang"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select>
         </div>
       </div>
+      <div class="form-row"><label>Sections accessibles</label>${this._sectionsPickerHTML(null, 'nu')}</div>
       <button class="btn btn-primary" onclick="App._createUser()" style="width:100%;margin-top:8px">Créer le compte</button>
     `);
   },
@@ -501,14 +549,15 @@ const App = {
   },
 
   async _createUser() {
-    const name  = document.getElementById('nu-name')?.value?.trim();
-    const email = document.getElementById('nu-email')?.value?.trim();
-    const pw    = document.getElementById('nu-pw')?.value;
-    const role  = document.getElementById('nu-role')?.value || 'member';
-    const lang  = document.getElementById('nu-lang')?.value || 'fr';
+    const name     = document.getElementById('nu-name')?.value?.trim();
+    const email    = document.getElementById('nu-email')?.value?.trim();
+    const pw       = document.getElementById('nu-pw')?.value;
+    const role     = document.getElementById('nu-role')?.value || 'member';
+    const lang     = document.getElementById('nu-lang')?.value || 'fr';
+    const sections = this._readSections('nu');
     if (!name || !email || !pw) return Toast.show('Tous les champs sont requis', 'error');
     try {
-      await api.post('/users', { name, email, password: pw, role, lang });
+      await api.post('/users', { name, email, password: pw, role, lang, sections });
       Toast.show(`✓ Compte créé pour ${name}`);
       this.openAdminUsers();
     } catch (err) { Toast.show(err.message, 'error'); }

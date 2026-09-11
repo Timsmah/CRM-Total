@@ -17,7 +17,8 @@ router.post('/login', async (req, res) => {
   // ── Nouveau login multi-utilisateur (email + mot de passe) ────────────────
   if (email && email.trim()) {
     const { data: user } = await db.from('crm_users')
-      .select('*').eq('email', email.trim().toLowerCase()).maybeSingle();
+      .select('id,name,email,role,lang,avatar_type,avatar_value,sections,password_hash')
+      .eq('email', email.trim().toLowerCase()).maybeSingle();
 
     if (!user) return res.status(401).json({ error: 'Identifiants incorrects' });
 
@@ -31,6 +32,7 @@ router.post('/login', async (req, res) => {
       lang        : user.lang,
       avatar_type : user.avatar_type,
       avatar_value: user.avatar_value,
+      sections    : user.sections || null,
     };
     res.cookie('crm_auth', JSON.stringify(payload), COOKIE_OPTS);
     return res.json({ success: true, ...payload });
