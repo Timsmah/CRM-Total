@@ -265,7 +265,7 @@ const App = {
     }
 
     // Masquer les sections interdites (guest = ancien compte Nono)
-    const guestOnly = ['clients', 'properties', 'contracts', 'recherches'];
+    const guestOnly = ['clients', 'properties', 'contracts', 'recherches', 'visas'];
     if (this.user.role === 'guest') {
       document.querySelectorAll('.nav-item').forEach(el => {
         if (!guestOnly.includes(el.dataset.section)) el.style.display = 'none';
