@@ -10,16 +10,29 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(SECRET));
 
-// ── Auth middleware (signed cookie, works across serverless instances) ──────
+// ── Auth middleware — supporte ancien cookie ('admin'/'guest') ET nouveau JSON ─
 const requireAuth = (req, res, next) => {
-  const role = req.signedCookies?.crm_auth;
-  if (role === 'admin' || role === 'guest') return next();
+  const val = req.signedCookies?.crm_auth;
+  if (!val) return res.status(401).json({ error: 'Non autorisé' });
+
+  // Legacy
+  if (val === 'admin') { req.user = { id: null, name: 'Tim',  role: 'admin',  lang: 'fr', avatar_type: 'preset', avatar_value: '1' }; return next(); }
+  if (val === 'guest') { req.user = { id: null, name: 'Nono', role: 'guest',  lang: 'fr', avatar_type: 'preset', avatar_value: '2' }; return next(); }
+
+  // Nouveau format JSON
+  try {
+    const user = JSON.parse(val);
+    if (user?.id) { req.user = user; return next(); }
+  } catch {}
+
   res.status(401).json({ error: 'Non autorisé' });
 };
 
 // Admin-only routes (finance, contracts)
 const requireAdmin = (req, res, next) => {
-  if (req.signedCookies?.crm_auth === 'admin') return next();
+  const val = req.signedCookies?.crm_auth;
+  if (val === 'admin') return next();
+  try { const u = JSON.parse(val || '{}'); if (u.role === 'admin') return next(); } catch {}
   res.status(403).json({ error: 'Accès réservé à l\'administrateur' });
 };
 
@@ -30,6 +43,9 @@ app.use('/api/listing', require('./routes/listing'));
 // Public inbound routes (form + Calendly webhook — pas de session requise)
 app.use('/api/leads',    require('./routes/leads'));
 app.use('/api/webhooks', require('./routes/webhooks'));
+
+// Gestion des utilisateurs (nécessite auth)
+app.use('/api/users', requireAuth, require('./routes/users'));
 
 // Public properties endpoint for HSC website (no auth)
 app.get('/api/properties/public', require('./routes/properties').publicHandler);

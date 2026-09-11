@@ -489,7 +489,7 @@ const Clients = {
       budget_max: c.budget_max || null, budget_eur: c.budget_eur || null,
       zones: c.zones || null, move_in_date: c.move_in_date || null, duration: c.duration || null,
     }));
-    const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
+    const author = (typeof App !== 'undefined' && App.user?.name) ? App.user.name : 'Tim';
     api.post('/call-lists', { label: today, clients: snapshot, created_by: author }).catch(() => {});
 
     Clients._callListText = `📋 Liste d'appels — ${today}\n\n` + clients.map((c, i) => {
@@ -1024,7 +1024,7 @@ const Clients = {
   async _submitQuickLog(id, type, label) {
     const content = document.getElementById('quick-log-input')?.value?.trim() || null;
     Modal.close();
-    const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
+    const author = (typeof App !== 'undefined' && App.user?.name) ? App.user.name : 'Tim';
     await api.post('/activities', { client_id: id, type, content, author });
     Toast.show(`✓ ${label} enregistré`);
     const cardSlot = document.getElementById(`card-act-${id}`);
@@ -1740,7 +1740,7 @@ const Clients = {
   },
 
   async logActivity(clientId, type, content) {
-    const author = (typeof App !== 'undefined' && App.role === 'guest') ? 'Nono' : 'Tim';
+    const author = (typeof App !== 'undefined' && App.user?.name) ? App.user.name : 'Tim';
     try {
       await api.post('/activities', { client_id: clientId, type, content: content || null, author });
       const wrap = document.getElementById(`activity-input-${clientId}`);

@@ -195,35 +195,58 @@ const Router = {
   }
 };
 
+// ── Avatars prédéfinis (10 options) ──────────────────────────────────────────
+const AVATARS = [
+  { id: '1',  emoji: '🏙️', bg: '#0f2027', label: 'City'      },
+  { id: '2',  emoji: '🌸', bg: '#3d0c3e', label: 'Sakura'    },
+  { id: '3',  emoji: '⚡', bg: '#1a1a00', label: 'Lightning' },
+  { id: '4',  emoji: '🌊', bg: '#001a33', label: 'Wave'      },
+  { id: '5',  emoji: '🔥', bg: '#2a0a00', label: 'Fire'      },
+  { id: '6',  emoji: '🎯', bg: '#0a1a0a', label: 'Target'    },
+  { id: '7',  emoji: '💎', bg: '#0a0020', label: 'Diamond'   },
+  { id: '8',  emoji: '🌙', bg: '#0d0d2b', label: 'Moon'      },
+  { id: '9',  emoji: '🦁', bg: '#1a1000', label: 'Lion'      },
+  { id: '10', emoji: '🐉', bg: '#0a1a0a', label: 'Dragon'    },
+];
+
+function avatarHTML(user, size = 36) {
+  if (!user) return `<div class="user-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.5)}px;background:#222;border-radius:50%;display:flex;align-items:center;justify-content:center">?</div>`;
+  if (user.avatar_type === 'upload' && user.avatar_value?.startsWith('data:')) {
+    return `<img src="${user.avatar_value}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0">`;
+  }
+  const preset = AVATARS.find(a => a.id === (user.avatar_value || '1')) || AVATARS[0];
+  return `<div class="user-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.48)}px;background:${preset.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1">${preset.emoji}</div>`;
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 const App = {
-  role: 'admin',
+  user: { id: null, name: 'Tim', role: 'admin', lang: 'fr', avatar_type: 'preset', avatar_value: '1' },
+  get role() { return this.user?.role || 'admin'; }, // rétro-compat
 
   async init() {
     try {
-      const { authenticated, role } = await api.get('/auth/check');
-      if (authenticated) { this.role = role || 'admin'; this.showApp(); }
-      else this.showLogin();
-    } catch {
-      this.showLogin();
-    }
+      const data = await api.get('/auth/check');
+      if (data.authenticated) {
+        this.user = data;
+        this.showApp();
+      } else this.showLogin();
+    } catch { this.showLogin(); }
   },
 
   showLogin() {
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
-
-    // Pre-warm Apps Script while the user types their password
     fetch('/api/auth/warmup').catch(() => {});
 
     document.getElementById('login-form').onsubmit = async (e) => {
       e.preventDefault();
-      const pw = document.getElementById('password-input').value;
+      const email = document.getElementById('email-input')?.value || '';
+      const pw    = document.getElementById('password-input').value;
       const errEl = document.getElementById('login-error');
       errEl.classList.add('hidden');
       try {
-        const { role } = await api.post('/auth/login', { password: pw });
-        this.role = role || 'admin';
+        const data = await api.post('/auth/login', { email: email.trim(), password: pw });
+        this.user = data;
         document.getElementById('login-screen').classList.add('hidden');
         this.showApp();
       } catch {
@@ -236,9 +259,14 @@ const App = {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
 
-    // Restrict guest: hide dashboard, contracts, finance
+    // Appliquer la langue du compte utilisateur
+    if (this.user?.lang && typeof setLang === 'function') {
+      setLang(this.user.lang);
+    }
+
+    // Masquer les sections interdites (guest = ancien compte Nono)
     const guestOnly = ['clients', 'properties', 'contracts', 'recherches'];
-    if (this.role === 'guest') {
+    if (this.user.role === 'guest') {
       document.querySelectorAll('.nav-item').forEach(el => {
         if (!guestOnly.includes(el.dataset.section)) el.style.display = 'none';
       });
@@ -248,10 +276,17 @@ const App = {
     document.querySelectorAll('.nav-item').forEach(el => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
-        if (this.role === 'guest' && !guestOnly.includes(el.dataset.section)) return;
+        if (this.user.role === 'guest' && !guestOnly.includes(el.dataset.section)) return;
         Router.navigate(el.dataset.section);
       });
     });
+
+    // Avatar + nom en bas de sidebar
+    this._renderSidebarUser();
+
+    // Bouton admin visible seulement pour les admins
+    const adminBtn = document.getElementById('admin-users-btn');
+    if (adminBtn && this.user.role === 'admin') adminBtn.style.display = 'block';
 
     // Logout
     document.getElementById('logout-btn').onclick = async () => {
@@ -268,22 +303,233 @@ const App = {
       if (e.key === 'Escape') Modal.close();
     });
 
-    // Init lang toggle button label
     const langBtn = document.getElementById('lang-toggle');
     if (langBtn) langBtn.textContent = getLang() === 'en' ? '🇫🇷 Français' : '🇬🇧 English';
-    // Apply saved lang to static nav labels
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
-    // Route (guest always starts on clients)
     const hash = window.location.hash.slice(1);
-    const startSection = (this.role === 'guest') ? 'clients' : (hash || 'dashboard');
+    const startSection = (this.user.role === 'guest') ? 'clients' : (hash || 'dashboard');
     Router.navigate(startSection);
 
     window.addEventListener('hashchange', () => {
       const s = window.location.hash.slice(1);
       if (Router.current !== s) Router.navigate(s);
     });
-  }
+  },
+
+  _renderSidebarUser() {
+    const existing = document.getElementById('sidebar-user');
+    if (existing) existing.remove();
+    const sidebar = document.getElementById('sidebar');
+    const logoutBtn = document.getElementById('logout-btn');
+    const div = document.createElement('div');
+    div.id = 'sidebar-user';
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:4px;border-radius:10px;cursor:pointer;transition:background .15s';
+    div.onmouseenter = () => div.style.background = 'var(--surface-2,#1e1e1e)';
+    div.onmouseleave = () => div.style.background = '';
+    div.onclick = () => this.openProfileModal();
+    div.innerHTML = `
+      ${avatarHTML(this.user, 34)}
+      <div style="min-width:0;flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.user.name}</div>
+        <div style="font-size:11px;color:var(--text-3)">${this.user.role === 'admin' ? '⚙️ Admin' : '👤 Membre'}</div>
+      </div>
+    `;
+    sidebar.insertBefore(div, logoutBtn);
+  },
+
+  openProfileModal() {
+    const isNewUser = !!this.user.id;
+    const presetsHTML = AVATARS.map(a => `
+      <button type="button" onclick="App._selectPreset('${a.id}')"
+        id="av-${a.id}"
+        style="width:46px;height:46px;border-radius:50%;border:2px solid ${this.user.avatar_value === a.id && this.user.avatar_type === 'preset' ? '#d4a853' : 'transparent'};cursor:pointer;background:${a.bg};font-size:22px;display:flex;align-items:center;justify-content:center;transition:border-color .15s"
+        title="${a.label}">${a.emoji}</button>
+    `).join('');
+
+    Modal.open('Mon profil', `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+        <div id="profile-avatar-preview">${avatarHTML(this.user, 60)}</div>
+        <div>
+          <div style="font-size:16px;font-weight:600">${this.user.name}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:2px">${this.user.role === 'admin' ? '⚙️ Admin' : '👤 Membre'}</div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <label>Nom affiché</label>
+        <input id="prof-name" value="${this.user.name}" ${!isNewUser ? 'disabled style="opacity:.5"' : ''}>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;color:var(--text-2);display:block;margin-bottom:10px">Avatar</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${presetsHTML}</div>
+        ${isNewUser ? `
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text-2);border:1px dashed var(--border);border-radius:8px;padding:6px 12px">
+          📷 Importer une photo
+          <input type="file" accept="image/*" style="display:none" onchange="App._uploadAvatar(this)">
+        </label>` : ''}
+      </div>
+
+      ${isNewUser ? `
+      <details style="margin-bottom:16px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--text-2);list-style:none;padding:8px 0">🔒 Changer mon mot de passe</summary>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+          <div class="form-row"><label>Mot de passe actuel</label><input type="password" id="prof-pw-cur"></div>
+          <div class="form-row"><label>Nouveau mot de passe</label><input type="password" id="prof-pw-new"></div>
+          <button class="btn btn-sm btn-ghost" onclick="App._changePassword()" style="align-self:flex-start">Changer</button>
+        </div>
+      </details>` : '<p style="font-size:12px;color:var(--text-3);margin-bottom:16px">Compte legacy — pour modifier, créez un vrai compte.</p>'}
+
+      ${isNewUser ? `<button class="btn btn-primary" onclick="App._saveProfile()" style="width:100%">Enregistrer</button>` : ''}
+    `);
+  },
+
+  _selectPreset(id) {
+    AVATARS.forEach(a => {
+      const btn = document.getElementById(`av-${a.id}`);
+      if (btn) btn.style.borderColor = a.id === id ? '#d4a853' : 'transparent';
+    });
+    // preview
+    this._pendingAvatar = { type: 'preset', value: id };
+    const prev = document.getElementById('profile-avatar-preview');
+    if (prev) {
+      const preset = AVATARS.find(a => a.id === id) || AVATARS[0];
+      prev.innerHTML = `<div style="width:60px;height:60px;font-size:30px;background:${preset.bg};border-radius:50%;display:flex;align-items:center;justify-content:center">${preset.emoji}</div>`;
+    }
+  },
+
+  _uploadAvatar(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Compression via canvas
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const max = 200;
+        const ratio = Math.min(max / img.width, max / img.height, 1);
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        this._pendingAvatar = { type: 'upload', value: dataUrl };
+        const prev = document.getElementById('profile-avatar-preview');
+        if (prev) prev.innerHTML = `<img src="${dataUrl}" style="width:60px;height:60px;border-radius:50%;object-fit:cover">`;
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  async _saveProfile() {
+    if (!this.user.id) return;
+    try {
+      const name = document.getElementById('prof-name')?.value?.trim();
+      const updates = {};
+      if (name && name !== this.user.name) updates.name = name;
+      if (this._pendingAvatar) {
+        updates.avatar_type  = this._pendingAvatar.type;
+        updates.avatar_value = this._pendingAvatar.value;
+      }
+      if (!Object.keys(updates).length && !this._pendingAvatar) { Modal.close(); return; }
+
+      let data;
+      if (this._pendingAvatar?.type === 'upload') {
+        data = await api.post('/users/me/avatar', { data_url: this._pendingAvatar.value });
+      } else {
+        data = await api.patch('/users/me', updates);
+      }
+      this.user = { ...this.user, ...data };
+      this._pendingAvatar = null;
+      Modal.close();
+      this._renderSidebarUser();
+      Toast.show('✓ Profil mis à jour');
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  async _changePassword() {
+    const cur = document.getElementById('prof-pw-cur')?.value;
+    const nw  = document.getElementById('prof-pw-new')?.value;
+    if (!cur || !nw) return Toast.show('Remplis les deux champs', 'error');
+    try {
+      await api.post('/users/me/password', { current_password: cur, new_password: nw });
+      Toast.show('✓ Mot de passe changé');
+      document.getElementById('prof-pw-cur').value = '';
+      document.getElementById('prof-pw-new').value = '';
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  // ── Panel admin : gestion des utilisateurs ────────────────────────────────
+  async openAdminUsers() {
+    let users = [];
+    try { users = await api.get('/users'); } catch {}
+    Modal.open('👥 Utilisateurs', `
+      <div id="users-list" style="margin-bottom:16px">${this._usersListHTML(users)}</div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px">+ Nouveau compte</h4>
+      <div class="form-row"><label>Nom</label><input id="nu-name" placeholder="Chompoo"></div>
+      <div class="form-row"><label>Email</label><input id="nu-email" type="email" placeholder="chompoo@…"></div>
+      <div class="form-row"><label>Mot de passe</label><input id="nu-pw" type="password"></div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <div class="form-row" style="flex:1"><label>Rôle</label>
+          <select id="nu-role"><option value="member">Membre</option><option value="admin">Admin</option></select>
+        </div>
+        <div class="form-row" style="flex:1"><label>Langue</label>
+          <select id="nu-lang"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="App._createUser()" style="width:100%;margin-top:8px">Créer le compte</button>
+    `);
+  },
+
+  _usersListHTML(users) {
+    if (!users.length) return '<p style="font-size:13px;color:var(--text-3)">Aucun compte encore — utilise le formulaire ci-dessous.</p>';
+    return users.map(u => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        ${avatarHTML(u, 32)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500">${u.name}</div>
+          <div style="font-size:11px;color:var(--text-3)">${u.email} · ${u.role} · ${u.lang}</div>
+        </div>
+        <button onclick="App._resetPw('${u.id}','${u.name}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-2)">Reset mdp</button>
+        ${u.id !== this.user.id ? `<button onclick="App._deleteUser('${u.id}','${u.name}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#DC2626;padding:2px 6px">✕</button>` : ''}
+      </div>
+    `).join('');
+  },
+
+  async _createUser() {
+    const name  = document.getElementById('nu-name')?.value?.trim();
+    const email = document.getElementById('nu-email')?.value?.trim();
+    const pw    = document.getElementById('nu-pw')?.value;
+    const role  = document.getElementById('nu-role')?.value || 'member';
+    const lang  = document.getElementById('nu-lang')?.value || 'fr';
+    if (!name || !email || !pw) return Toast.show('Tous les champs sont requis', 'error');
+    try {
+      await api.post('/users', { name, email, password: pw, role, lang });
+      Toast.show(`✓ Compte créé pour ${name}`);
+      this.openAdminUsers();
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  async _deleteUser(id, name) {
+    if (!confirm(`Supprimer le compte de ${name} ?`)) return;
+    try {
+      await api.del(`/users/${id}`);
+      Toast.show(`✓ ${name} supprimé`);
+      this.openAdminUsers();
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  async _resetPw(id, name) {
+    const nw = prompt(`Nouveau mot de passe pour ${name} :`);
+    if (!nw) return;
+    try {
+      await api.post(`/users/${id}/reset-password`, { new_password: nw });
+      Toast.show(`✓ Mot de passe de ${name} réinitialisé`);
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
 };
 
 window.addEventListener('DOMContentLoaded', () => App.init());

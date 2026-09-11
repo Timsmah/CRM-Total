@@ -18,9 +18,10 @@
       <h1>CRM Bangkok</h1>
       <p class="login-sub">Real Estate Agent · Bangkok</p>
       <form id="login-form">
-        <input type="password" id="password-input" placeholder="Password" autocomplete="current-password">
-        <button type="submit">Login</button>
-        <p id="login-error" class="error hidden">Incorrect password</p>
+        <input type="email" id="email-input" placeholder="Email (ou laisser vide pour le mot de passe seul)" autocomplete="email" style="margin-bottom:8px">
+        <input type="password" id="password-input" placeholder="Mot de passe" autocomplete="current-password">
+        <button type="submit">Connexion</button>
+        <p id="login-error" class="error hidden">Identifiants incorrects</p>
       </form>
     </div>
   </div>
@@ -71,6 +72,7 @@
         style="margin-top:auto;background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:6px;width:100%;margin-bottom:8px">
         🇫🇷 Français
       </button>
+      <button id="admin-users-btn" onclick="App.openAdminUsers()" style="display:none;margin-bottom:4px;background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--text-2);width:100%;text-align:left">👥 Gérer les comptes</button>
       <button id="logout-btn" data-i18n="nav_logout">⎋ Log out</button>
     </aside>
 
