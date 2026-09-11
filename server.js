@@ -27,6 +27,10 @@ const requireAdmin = (req, res, next) => {
 app.use('/api/auth',    require('./routes/auth'));
 app.use('/api/listing', require('./routes/listing'));
 
+// Public inbound routes (form + Calendly webhook — pas de session requise)
+app.use('/api/leads',    require('./routes/leads'));
+app.use('/api/webhooks', require('./routes/webhooks'));
+
 // Public properties endpoint for HSC website (no auth)
 app.get('/api/properties/public', require('./routes/properties').publicHandler);
 
