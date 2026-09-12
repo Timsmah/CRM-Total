@@ -46,6 +46,23 @@ router.post('/', async (req, res) => {
   res.json(data);
 });
 
+// ── PATCH /api/users/:id — modifier un utilisateur (admin seulement) ────────
+router.patch('/:id', async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  const { name, role, lang, sections } = req.body;
+  const updates = {};
+  if (name)    updates.name = name.trim();
+  if (role)    updates.role = role;
+  if (lang)    updates.lang = lang;
+  if ('sections' in req.body) updates.sections = (sections && sections.length && role !== 'admin') ? sections : null;
+
+  const { data, error } = await db.from('crm_users')
+    .update(updates).eq('id', req.params.id)
+    .select('id, name, email, role, lang, avatar_type, avatar_value, sections').single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // ── DELETE /api/users/:id — supprimer un utilisateur (admin seulement) ────
 router.delete('/:id', async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });

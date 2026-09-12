@@ -541,10 +541,65 @@ const App = {
           <div style="font-size:13px;font-weight:500">${u.name}</div>
           <div style="font-size:11px;color:var(--text-3)">${u.email} · ${u.role} · ${u.lang}</div>
         </div>
+        <button onclick="App._editUser('${u.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-2)">✏️ Modifier</button>
         <button onclick="App._resetPw('${u.id}','${u.name}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-2)">Reset mdp</button>
         ${u.id !== this.user.id ? `<button onclick="App._deleteUser('${u.id}','${u.name}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#DC2626;padding:2px 6px">✕</button>` : ''}
       </div>
     `).join('');
+  },
+
+  async _editUser(id) {
+    let users = [];
+    try { users = await api.get('/users'); } catch {}
+    const u = users.find(x => x.id === id);
+    if (!u) return Toast.show('Utilisateur introuvable', 'error');
+
+    const currentSections = u.sections || ['clients', 'properties', 'recherches', 'visas'];
+    Modal.open(`✏️ Modifier — ${u.name}`, `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        ${avatarHTML(u, 40)}
+        <div>
+          <div style="font-weight:600">${u.name}</div>
+          <div style="font-size:11px;color:var(--text-3)">${u.email}</div>
+        </div>
+      </div>
+      <div class="form-row"><label>Nom</label><input id="eu-name" value="${u.name}"></div>
+      <div style="display:flex;gap:10px">
+        <div class="form-row" style="flex:1"><label>Rôle</label>
+          <select id="eu-role">
+            <option value="member" ${u.role==='member'?'selected':''}>Membre</option>
+            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+          </select>
+        </div>
+        <div class="form-row" style="flex:1"><label>Langue</label>
+          <select id="eu-lang">
+            <option value="fr" ${u.lang==='fr'?'selected':''}>🇫🇷 Français</option>
+            <option value="en" ${u.lang==='en'?'selected':''}>🇬🇧 English</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row"><label>Sections accessibles</label>
+        <p style="font-size:11px;color:var(--text-3);margin:0 0 8px">Ignoré si le rôle est Admin (voit tout).</p>
+        ${this._sectionsPickerHTML(currentSections, 'eu')}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-primary" onclick="App._saveUserEdit('${u.id}')" style="flex:1">Enregistrer</button>
+        <button class="btn btn-ghost" onclick="App.openAdminUsers()" style="flex:1">← Retour</button>
+      </div>
+    `);
+  },
+
+  async _saveUserEdit(id) {
+    const name     = document.getElementById('eu-name')?.value?.trim();
+    const role     = document.getElementById('eu-role')?.value || 'member';
+    const lang     = document.getElementById('eu-lang')?.value || 'fr';
+    const sections = this._readSections('eu');
+    if (!name) return Toast.show('Le nom est requis', 'error');
+    try {
+      await api.patch(`/users/${id}`, { name, role, lang, sections: role === 'admin' ? null : sections });
+      Toast.show('✓ Compte mis à jour');
+      this.openAdminUsers();
+    } catch (err) { Toast.show(err.message, 'error'); }
   },
 
   async _createUser() {
