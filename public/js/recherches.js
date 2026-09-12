@@ -1,133 +1,255 @@
+// ── Recherches — suivi des biens proposés par client ─────────────────────────
 const Recherches = {
-  data: [],
+  clients:   [],   // clients en Recherche active
+  proposals: {},   // { [client_id]: [proposal, …] }
+  allProps:  [],   // biens DB pour le picker
+  _propPickerData: [],
 
-  COLS: [
-    { key: 'Property to Find', label: 'Property to Find', color: '#F97316', icon: '🔍' },
-    { key: 'Property Sent',    label: 'Property Sent',    color: '#3B82F6', icon: '📤' },
-    { key: 'Visit Planned',    label: 'Visit Planned',    color: '#8B5CF6', icon: '🏠' },
-    { key: 'Closed',           label: 'Closed',           color: '#22C55E', icon: '✅' },
+  STATUSES: [
+    { key: 'Envoyé',        icon: '📤', color: '#3B82F6' },
+    { key: 'Intéressé',     icon: '👍', color: '#22C55E' },
+    { key: 'Pas intéressé', icon: '👎', color: '#6B7280' },
+    { key: 'Visite',        icon: '🏠', color: '#8B5CF6' },
+    { key: 'Loué',          icon: '✅', color: '#16A34A' },
   ],
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     try {
-      this.data = await api.get('/clients?archived=0');
-    } catch { Toast.show('Error loading recherches', 'error'); return; }
+      const [allClients, allProposals, allProps] = await Promise.all([
+        api.get('/clients?archived=0'),
+        api.get('/proposals'),
+        api.get('/properties?archived=false'),
+      ]);
+      this.clients  = allClients.filter(c => c.status === 'Recherche active');
+      this.allProps = allProps;
+      this.proposals = {};
+      allProposals.forEach(p => {
+        if (!this.proposals[p.client_id]) this.proposals[p.client_id] = [];
+        this.proposals[p.client_id].push(p);
+      });
+    } catch {
+      Toast.show('Erreur de chargement', 'error');
+      return;
+    }
     this.render();
   },
 
-  activeClients() {
-    return this.data.filter(c => c.status === 'Recherche active');
-  },
-
-  stageOf(c) {
-    return c.search_stage || 'Property to Find';
-  },
-
   render() {
-    const clients = this.activeClients();
+    const allP   = Object.values(this.proposals).flat();
+    const total  = allP.length;
+    const pending = allP.filter(p => p.status === 'Envoyé').length;
+
     document.getElementById('content').innerHTML = `
-      <div class="rech-header">
-        <div>
-          <h1 class="rech-title">🔍 Process Recherche</h1>
-          <p class="rech-sub">${clients.length} client${clients.length !== 1 ? 's' : ''} en recherche active</p>
-        </div>
-        <button class="btn btn-primary" onclick="Recherches.openAddModal()">+ Nouveau client</button>
-      </div>
+      <div style="padding:24px;max-width:860px">
 
-      <div class="rech-board">
-        ${this.COLS.map(col => {
-          const colClients = clients.filter(c => this.stageOf(c) === col.key);
-          return this.colHTML(col, colClients);
-        }).join('')}
-      </div>`;
-  },
-
-  colHTML(col, clients) {
-    return `
-      <div class="rech-col"
-        ondragover="event.preventDefault();this.classList.add('rech-drag-over')"
-        ondragleave="if(!this.contains(event.relatedTarget))this.classList.remove('rech-drag-over')"
-        ondrop="Recherches.onDrop(event,'${col.key}')">
-        <div class="rech-col-header" style="border-top:3px solid ${col.color}">
-          <span class="rech-col-title">${col.icon} ${col.label}</span>
-          <span class="rech-col-count" style="background:${col.color}22;color:${col.color}">${clients.length}</span>
+        <!-- Header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+          <h1 style="font-size:22px;font-weight:700;margin:0">🔍 Recherches</h1>
         </div>
-        <div class="rech-cards">
-          ${clients.map(c => this.cardHTML(c)).join('')
-            || '<p class="rech-empty">—</p>'}
+        <div style="font-size:13px;color:var(--text-3);margin-bottom:24px;display:flex;gap:16px;flex-wrap:wrap">
+          <span>${this.clients.length} client${this.clients.length !== 1 ? 's' : ''} en recherche active</span>
+          <span>·</span>
+          <span>${total} bien${total !== 1 ? 's' : ''} proposé${total !== 1 ? 's' : ''}</span>
+          ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} en attente de retour</span>` : ''}
+        </div>
+
+        <!-- Cartes clients -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${this.clients.length
+            ? this.clients.map(c => this.clientCardHTML(c)).join('')
+            : '<p style="color:var(--text-3);font-size:14px">Aucun client en recherche active.<br>Change le statut d\'un client en "Recherche active" dans la section Clients.</p>'
+          }
         </div>
       </div>`;
   },
 
-  cardHTML(c) {
-    const budgetLine = c.budget_max
-      ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}`
-      : null;
+  clientCardHTML(c) {
+    const props = this.proposals[c.id] || [];
+    const pending = props.filter(p => p.status === 'Envoyé').length;
 
-    let urgencyColor = null;
-    if (c.move_in_date) {
-      const days = Math.ceil((new Date(c.move_in_date) - new Date()) / 86400000);
-      urgencyColor = days <= 14 ? '#DC2626' : days <= 30 ? '#EA580C' : days <= 60 ? '#D97706' : null;
-    }
-
-    const colorDef = typeof CARD_COLORS !== 'undefined'
-      ? (CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0])
-      : null;
-    const cardStyle = colorDef?.bg ? `background:${colorDef.bg};border-color:${colorDef.border}` : '';
+    const meta = [
+      c.budget_max ? `💰 ${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ' · ' + Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : ''}/mois` : null,
+      c.zones        ? `📍 ${c.zones}` : null,
+      c.property_type ? `🏠 ${c.property_type}${c.bedrooms ? ' · ' + c.bedrooms + ' ch.' : ''}` : null,
+      c.move_in_date  ? `📅 ${fmtDate(c.move_in_date)}` : null,
+    ].filter(Boolean);
 
     return `
-      <div class="rech-card" draggable="true" style="${cardStyle}"
-        ondragstart="Recherches.onDragStart(event,${c.id})"
-        ondragend="event.currentTarget.classList.remove('rech-dragging')"
-        onclick="Recherches.openDetail(${c.id})">
-        <div class="rech-card-name">${c.name}</div>
-        <div class="rech-card-rows">
-          ${budgetLine ? `<div class="rech-card-row">💰 ${budgetLine}</div>` : ''}
-          ${c.zones ? `<div class="rech-card-row">📍 ${c.zones}</div>` : ''}
-          ${c.property_type ? `<div class="rech-card-row">🏠 ${c.property_type}${c.bedrooms ? ' · ' + c.bedrooms : ''}</div>` : ''}
-          ${c.move_in_date
-            ? `<div class="rech-card-row" style="${urgencyColor ? `color:${urgencyColor};font-weight:600` : ''}">📅 ${formatDate(c.move_in_date)}</div>`
-            : ''}
-          ${c.duration ? `<div class="rech-card-row">⏱ ${tr(c.duration)}</div>` : ''}
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+
+        <!-- En-tête client (cliquable → fiche client) -->
+        <div onclick="Recherches.openClientDetail(${c.id})"
+          style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:background .12s"
+          onmouseenter="this.style.background='var(--surface-2,#1a1a1a)'"
+          onmouseleave="this.style.background=''">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span style="font-size:16px;font-weight:700">${c.name}</span>
+              ${pending ? `<span style="font-size:11px;background:#EA580C22;color:#EA580C;padding:2px 7px;border-radius:99px">${pending} en attente</span>` : ''}
+              ${props.length && !pending ? `<span style="font-size:11px;background:#22C55E22;color:#22C55E;padding:2px 7px;border-radius:99px">✓ Tous traités</span>` : ''}
+            </div>
+            ${meta.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-2)">${meta.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
+            ${c.criteria ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic">"${c.criteria}"</div>` : ''}
+          </div>
+          <span style="font-size:12px;color:var(--text-3);flex-shrink:0">Voir fiche →</span>
         </div>
-        ${c.criteria ? `<div class="rech-card-criteria">${c.criteria}</div>` : ''}
+
+        <!-- Liste des propositions -->
+        <div style="padding:12px 20px">
+          ${props.length
+            ? props.map(p => this.proposalRowHTML(p)).join('')
+            : '<p style="font-size:12px;color:var(--text-3);margin:4px 0 10px">Aucun bien proposé pour l\'instant.</p>'
+          }
+          <button onclick="Recherches.openProposeModal(${c.id})"
+            style="margin-top:10px;font-size:12px;color:var(--gold,#d4a853);background:none;border:1px dashed var(--gold,#d4a853);border-radius:8px;padding:6px 0;cursor:pointer;width:100%;opacity:.75;transition:opacity .15s"
+            onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.75'">
+            + Proposer un bien
+          </button>
+        </div>
       </div>`;
   },
 
-  onDragStart(e, id) {
-    e.dataTransfer.setData('rechId', id);
-    e.currentTarget.classList.add('rech-dragging');
+  proposalRowHTML(p) {
+    const s = this.STATUSES.find(x => x.key === p.status) || this.STATUSES[0];
+    const title = p.properties?.title || '—';
+    const sub   = [
+      p.properties?.zone,
+      p.properties?.price ? Number(p.properties.price).toLocaleString('fr-FR') + ' ฿/mois' : null,
+    ].filter(Boolean).join(' · ');
+
+    // Options de statut colorées
+    const opts = this.STATUSES.map(st =>
+      `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${st.key}</option>`
+    ).join('');
+
+    return `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500">${title}</div>
+          ${sub ? `<div style="font-size:11px;color:var(--text-3)">${sub}</div>` : ''}
+          ${p.notes ? `<div style="font-size:11px;color:var(--text-2);margin-top:3px">💬 ${p.notes}</div>` : ''}
+        </div>
+        <select
+          onchange="Recherches.updateStatus('${p.id}', this.value, this)"
+          style="font-size:11px;padding:3px 7px;border:1px solid ${s.color};border-radius:6px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none;flex-shrink:0;max-width:140px">
+          ${opts}
+        </select>
+        <button onclick="Recherches.deleteProposal('${p.id}')"
+          style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:15px;padding:1px 4px;flex-shrink:0" title="Supprimer">✕</button>
+      </div>`;
   },
 
-  onDrop(e, stage) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('rech-drag-over');
-    const id = Number(e.dataTransfer.getData('rechId'));
-    if (!id) return;
-    const c = this.data.find(x => x.id === id);
-    if (!c || this.stageOf(c) === stage) return;
-    c.search_stage = stage;
-    this.render(); // optimistic — bouge tout de suite
-    api.patch(`/clients/${id}/search-stage`, { search_stage: stage }).catch(() => {});
-  },
-
-  openDetail(id) {
-    // Merge into Clients.data so the shared detail modal works
+  // ── Fiche client (modal partagée avec Clients) ────────────────────────────
+  openClientDetail(id) {
+    const c = this.clients.find(x => x.id === id);
+    if (!c) return;
     if (typeof Clients !== 'undefined') {
-      const existing = Clients.data.findIndex(x => x.id === id);
-      const c = this.data.find(x => x.id === id);
-      if (!c) return;
-      if (existing === -1) Clients.data.push(c);
-      else Clients.data[existing] = c;
+      if (!Clients.data.find(x => x.id === id)) Clients.data.push(c);
+      else Clients.data = Clients.data.map(x => x.id === id ? c : x);
       Clients.openDetailModal(id);
     }
   },
 
-  openAddModal() {
-    if (typeof Clients !== 'undefined') {
-      // Pre-fill status = Recherche active
-      Modal.open('Nouveau client', Clients.formHTML({ status: 'Recherche active' }));
+  // ── Modal "Proposer un bien" ──────────────────────────────────────────────
+  openProposeModal(clientId) {
+    const client = this.clients.find(c => c.id === clientId);
+    this._propPickerData = this.allProps;
+
+    Modal.open(`📤 Proposer un bien — ${client?.name || ''}`, `
+      <div class="form-row" style="position:relative">
+        <label>Bien immobilier</label>
+        <input id="prop-search" placeholder="Rechercher par titre ou zone…"
+          oninput="Recherches._filterProps(this.value)" autocomplete="off"
+          style="width:100%">
+        <div id="prop-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
+        <input type="hidden" id="prop-selected-id">
+        <div id="prop-selected-label" style="font-size:12px;color:#22C55E;margin-top:5px;display:none"></div>
+      </div>
+      <div class="form-row">
+        <label>Note (optionnel)</label>
+        <input id="prop-note" placeholder="Ex : correspond au budget, belle vue piscine…">
+      </div>
+      <div class="form-row">
+        <label>Statut initial</label>
+        <select id="prop-status">
+          ${this.STATUSES.filter(s => s.key !== 'Loué').map(s =>
+            `<option value="${s.key}">${s.icon} ${s.key}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="Recherches._submitPropose(${clientId})" style="width:100%;margin-top:4px">Enregistrer</button>
+    `);
+  },
+
+  _filterProps(q) {
+    const res = document.getElementById('prop-results');
+    if (!q || q.length < 1) { res.style.display = 'none'; return; }
+    const lq = q.toLowerCase();
+    const matches = this._propPickerData
+      .filter(p => (p.title || '').toLowerCase().includes(lq) || (p.zone || '').toLowerCase().includes(lq))
+      .slice(0, 8);
+    if (!matches.length) { res.style.display = 'none'; return; }
+    res.innerHTML = matches.map(p => `
+      <div onclick="Recherches._selectProp(${p.id}, \`${(p.title || '').replace(/`/g, '\\`')}\`)"
+        style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)"
+        onmouseenter="this.style.background='var(--surface-2,#1a1a1a)'" onmouseleave="this.style.background=''">
+        <div style="font-size:13px;font-weight:500">${p.title}</div>
+        <div style="font-size:11px;color:var(--text-3)">${[p.zone, p.price ? Number(p.price).toLocaleString('fr-FR') + ' ฿/mois' : null].filter(Boolean).join(' · ')}</div>
+      </div>`).join('');
+    res.style.display = 'block';
+  },
+
+  _selectProp(id, title) {
+    document.getElementById('prop-selected-id').value = id;
+    document.getElementById('prop-search').value = title;
+    document.getElementById('prop-results').style.display = 'none';
+    const lbl = document.getElementById('prop-selected-label');
+    lbl.textContent = `✓ ${title}`;
+    lbl.style.display = 'block';
+  },
+
+  async _submitPropose(clientId) {
+    const property_id = Number(document.getElementById('prop-selected-id')?.value);
+    const notes  = document.getElementById('prop-note')?.value?.trim() || null;
+    const status = document.getElementById('prop-status')?.value || 'Envoyé';
+    if (!property_id) return Toast.show('Sélectionne un bien dans la liste', 'error');
+    try {
+      const p = await api.post('/proposals', { client_id: clientId, property_id, notes, status });
+      if (!this.proposals[clientId]) this.proposals[clientId] = [];
+      this.proposals[clientId].unshift(p);
+      Modal.close();
+      Toast.show('✓ Bien proposé');
+      this.render();
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  // ── Mise à jour statut ────────────────────────────────────────────────────
+  async updateStatus(id, status, selectEl) {
+    const s = this.STATUSES.find(x => x.key === status) || this.STATUSES[0];
+    if (selectEl) {
+      selectEl.style.borderColor = s.color;
+      selectEl.style.background  = s.color + '18';
+      selectEl.style.color       = s.color;
     }
+    try {
+      await api.patch(`/proposals/${id}/status`, { status });
+      Object.values(this.proposals).flat().forEach(p => { if (String(p.id) === String(id)) p.status = status; });
+      // Re-render header stats only (avoids flickering the whole page)
+      this.render();
+    } catch { Toast.show('Erreur mise à jour', 'error'); }
+  },
+
+  // ── Suppression ───────────────────────────────────────────────────────────
+  async deleteProposal(id) {
+    if (!confirm('Supprimer cette proposition ?')) return;
+    try {
+      await api.del(`/proposals/${id}`);
+      Object.keys(this.proposals).forEach(cid => {
+        this.proposals[cid] = this.proposals[cid].filter(p => String(p.id) !== String(id));
+      });
+      Toast.show('Proposition supprimée');
+      this.render();
+    } catch (err) { Toast.show(err.message, 'error'); }
   },
 };

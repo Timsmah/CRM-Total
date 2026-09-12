@@ -2,15 +2,15 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 
-// GET /api/proposals?client_id=X
+// GET /api/proposals?client_id=X  (ou sans filtre → tous)
 router.get('/', async (req, res) => {
   const { client_id } = req.query;
-  if (!client_id) return res.status(400).json({ error: 'client_id required' });
-  const { data, error } = await db
+  let query = db
     .from('proposals')
     .select('*, properties(id, title, zone, price, room_type)')
-    .eq('client_id', client_id)
     .order('created_at', { ascending: false });
+  if (client_id) query = query.eq('client_id', client_id);
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
