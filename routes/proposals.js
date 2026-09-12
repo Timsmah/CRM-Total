@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 
-// GET /api/proposals?client_id=X  (ou sans filtre → tous)
+// GET /api/proposals?client_id=X  (sans filtre → tous)
 router.get('/', async (req, res) => {
   const { client_id } = req.query;
   let query = db
@@ -15,20 +15,32 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
-// POST /api/proposals
+// POST /api/proposals — property_id OU property_title requis
 router.post('/', async (req, res) => {
-  const { client_id, property_id, notes, status } = req.body;
-  if (!client_id || !property_id) return res.status(400).json({ error: 'client_id and property_id required' });
+  const { client_id, property_id, property_title, property_url, photos, notes, status } = req.body;
+  if (!client_id) return res.status(400).json({ error: 'client_id requis' });
+  if (!property_id && !property_title) return res.status(400).json({ error: 'property_id ou property_title requis' });
+
+  const insert = {
+    client_id,
+    notes       : notes  || null,
+    status      : status || 'Envoyé',
+    property_title: property_title || null,
+    property_url  : property_url   || null,
+    photos        : Array.isArray(photos) ? photos : [],
+  };
+  if (property_id) insert.property_id = property_id;
+
   const { data, error } = await db
     .from('proposals')
-    .insert({ client_id, property_id, notes: notes || null, status: status || 'Envoyé' })
+    .insert(insert)
     .select('*, properties(id, title, zone, price, room_type)')
     .single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// PATCH /api/proposals/:id/status
+// PATCH /api/proposals/:id/status  (rétro-compat)
 router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
   const { error } = await db.from('proposals').update({ status }).eq('id', req.params.id);
