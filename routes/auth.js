@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
   // ── Nouveau login multi-utilisateur (email + mot de passe) ────────────────
   if (email && email.trim()) {
     const { data: user } = await db.from('crm_users')
-      .select('id,name,email,role,lang,avatar_type,avatar_value,sections,password_hash')
+      .select('*')
       .eq('email', email.trim().toLowerCase()).maybeSingle();
 
     if (!user) return res.status(401).json({ error: 'Identifiants incorrects' });
