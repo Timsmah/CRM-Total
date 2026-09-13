@@ -64,7 +64,7 @@ const Recherches = {
         <div style="display:flex;flex:1;overflow:hidden">
 
           <!-- Gauche : liste clients -->
-          <div style="width:220px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto">
+          <div style="width:240px;flex-shrink:0;border-right:1.5px solid var(--border);overflow-y:auto;background:var(--surface-2,#fff)">
             ${this.clients.length
               ? this.clients.map(c => this.clientRowHTML(c)).join('')
               : `<p style="padding:16px;font-size:13px;color:var(--text-3)">Aucun client en recherche active.</p>`
@@ -72,7 +72,7 @@ const Recherches = {
           </div>
 
           <!-- Droite : détail -->
-          <div style="flex:1;overflow-y:auto">
+          <div style="flex:1;overflow-y:auto;background:var(--surface-1)">
             ${this.selectedId ? this.detailPanelHTML() : `<p style="padding:24px;font-size:13px;color:var(--text-3)">Sélectionne un client.</p>`}
           </div>
 
@@ -82,26 +82,28 @@ const Recherches = {
 
   // ── Ligne client (sidebar gauche) ─────────────────────────────────────────
   clientRowHTML(c) {
-    const props   = this.proposals[c.id] || [];
-    const pending = props.filter(p => p.status === 'Envoyé').length;
+    const props    = this.proposals[c.id] || [];
+    const pending  = props.filter(p => p.status === 'Envoyé').length;
     const isActive = c.id === this.selectedId;
+    const budget   = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null;
+    const zone     = c.zones ? (typeof trZone === 'function' ? trZone(c.zones) : c.zones) : null;
 
     return `
       <div onclick="Recherches.selectClient(${c.id})"
-        style="padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border);
-               background:${isActive ? 'var(--surface-2,#111)' : 'transparent'};
+        style="padding:9px 12px 9px 10px;cursor:pointer;border-bottom:0.5px solid var(--border);
+               background:${isActive ? 'var(--surface-1)' : 'transparent'};
                border-left:3px solid ${isActive ? '#d4a853' : 'transparent'};
-               transition:background .1s">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-          <span style="font-size:13px;font-weight:${isActive ? '700' : '500'};color:var(--text)">${c.name}</span>
+               transition:background .12s">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:2px">
+          <span style="font-size:12.5px;font-weight:${isActive ? '600' : '500'};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</span>
           ${pending
-            ? `<span style="font-size:10px;background:#EA580C22;color:#EA580C;padding:1px 6px;border-radius:99px">${pending}</span>`
+            ? `<span style="flex-shrink:0;font-size:10px;font-weight:600;background:#EA580C18;color:#EA580C;padding:1px 7px;border-radius:99px">${pending} att.</span>`
             : props.length
-              ? `<span style="font-size:10px;background:#22C55E22;color:#22C55E;padding:1px 6px;border-radius:99px">✓</span>`
+              ? `<span style="flex-shrink:0;font-size:10px;background:#22C55E18;color:#16a34a;padding:1px 6px;border-radius:99px">✓ ${props.length}</span>`
               : ''}
         </div>
-        <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${[c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null, c.zones ? (typeof trZone === 'function' ? trZone(c.zones) : c.zones) : null].filter(Boolean).join(' · ')}
+        <div style="font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75">
+          ${[budget, zone].filter(Boolean).join(' · ') || '—'}
         </div>
       </div>`;
   },
@@ -130,20 +132,41 @@ const Recherches = {
       c.move_in_date  ? `📅 ${fmtDate(c.move_in_date)}` : null,
     ].filter(Boolean);
 
+    // Mini-cards critères
+    const cards = [
+      c.budget_max ? { label: 'Budget', val: `${Number(c.budget_max).toLocaleString('fr-FR')} ฿/mois` } : null,
+      (c.property_type || c.bedrooms) ? { label: 'Type', val: `${c.property_type ? (typeof tr === 'function' ? tr(c.property_type) : c.property_type) : ''}${c.bedrooms ? ' · ' + c.bedrooms + bdSuffix : ''}` } : null,
+      c.move_in_date  ? { label: 'Arrivée', val: fmtDate(c.move_in_date) } : null,
+      c.duration      ? { label: 'Durée',   val: typeof tr === 'function' ? tr(c.duration) : c.duration } : null,
+    ].filter(Boolean);
+
     return `
-      <div style="max-width:700px;padding:20px 24px">
+      <div style="max-width:720px;padding:20px 24px">
 
         <!-- Header client -->
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
-          <div style="flex:1">
-            <h2 style="font-size:18px;font-weight:700;margin:0 0 6px">${c.name}</h2>
-            ${meta.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-2)">${meta.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
-            ${c.criteria ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic">"${c.criteria}"</div>` : ''}
+        <div style="background:var(--surface-2,#fff);border:0.5px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:${cards.length || c.criteria ? '12px' : '0'}">
+            <div>
+              <h2 style="font-size:17px;font-weight:700;margin:0 0 4px">${c.name}</h2>
+              ${c.zones ? `<div style="font-size:12px;color:var(--text-2)">📍 ${typeof trZone === 'function' ? trZone(c.zones) : c.zones}</div>` : ''}
+              ${c.criteria ? `<div style="font-size:12px;color:var(--text-3);margin-top:5px;font-style:italic">"${c.criteria}"</div>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              ${c.budget_max ? `<span style="font-size:12px;font-weight:700;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:7px;padding:4px 10px">${Number(c.budget_max).toLocaleString('fr-FR')} ฿/mois</span>` : ''}
+              <button onclick="Recherches.openClientDetail(${c.id})"
+                style="font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;white-space:nowrap">
+                ${seeFiche}
+              </button>
+            </div>
           </div>
-          <button onclick="Recherches.openClientDetail(${c.id})"
-            style="font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:12px;white-space:nowrap">
-            ${seeFiche}
-          </button>
+          ${cards.length > 1 ? `
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${cards.filter((_,i) => i > 0).map(card => `
+              <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:6px 12px;min-width:80px">
+                <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:2px">${card.label}</div>
+                <div style="font-size:12px;font-weight:600;color:var(--text)">${card.val}</div>
+              </div>`).join('')}
+          </div>` : ''}
         </div>
 
         <!-- Propositions -->
@@ -160,7 +183,7 @@ const Recherches = {
 
         ${props.length
           ? props.map(p => this.proposalCardHTML(p)).join('')
-          : `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:13px;border:1px dashed var(--border);border-radius:12px">
+          : `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:13px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2,#fff)">
                Aucun bien proposé encore.<br>
                <span style="font-size:12px">Clique sur "+ Proposer un bien" pour commencer.</span>
              </div>`
