@@ -136,8 +136,8 @@ const Recherches = {
     const cards = [
       c.budget_max ? { label: 'Budget', val: `${Number(c.budget_max).toLocaleString('fr-FR')} ฿/mois` } : null,
       (c.property_type || c.bedrooms) ? { label: 'Type', val: `${c.property_type ? (typeof tr === 'function' ? tr(c.property_type) : c.property_type) : ''}${c.bedrooms ? ' · ' + c.bedrooms + bdSuffix : ''}` } : null,
-      c.move_in_date  ? { label: 'Arrivée', val: fmtDate(c.move_in_date) } : null,
-      c.duration      ? { label: 'Durée',   val: typeof tr === 'function' ? tr(c.duration) : c.duration } : null,
+      c.move_in_date  ? { label: isEN ? 'Move-in' : 'Arrivée', val: fmtDate(c.move_in_date) } : null,
+      c.duration      ? { label: isEN ? 'Duration' : 'Durée',  val: typeof tr === 'function' ? tr(c.duration) : c.duration } : null,
     ].filter(Boolean);
 
     return `
@@ -191,6 +191,18 @@ const Recherches = {
       </div>`;
   },
 
+  // ── Helper avatar mini par nom d'utilisateur ─────────────────────────────
+  _userAv(name, size = 22) {
+    if (!name) return '';
+    const palette = {
+      Tim:     { bg: '#EEEDFE', color: '#3C3489' },
+      Nono:    { bg: '#E1F5EE', color: '#085041' },
+      Chompoo: { bg: '#FAEEDA', color: '#633806' },
+    };
+    const col = palette[name] || { bg: '#E6F1FB', color: '#0C447C' };
+    return `<div title="${name}" style="width:${size}px;height:${size}px;border-radius:50%;background:${col.bg};color:${col.color};font-size:${Math.round(size*0.42)}px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${name[0]?.toUpperCase()||'?'}</div>`;
+  },
+
   // ── Carte proposition ─────────────────────────────────────────────────────
   proposalCardHTML(p) {
     const s      = this.STATUSES.find(x => x.key === p.status) || this.STATUSES[0];
@@ -201,8 +213,12 @@ const Recherches = {
     ].filter(Boolean).join(' · ');
     const photos = Array.isArray(p.photos) ? p.photos : [];
 
+    // Avatar de qui a envoyé et qui a changé le statut (si différent)
+    const createdAv = this._userAv(p.created_by);
+    const updatedAv = (p.status_updated_by && p.status_updated_by !== p.created_by) ? this._userAv(p.status_updated_by) : '';
+
     return `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+      <div style="background:var(--surface-2,#fff);border:0.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
         <div style="display:flex;align-items:flex-start;gap:12px;padding:14px">
 
           <!-- Photos -->
@@ -210,10 +226,10 @@ const Recherches = {
             <div style="display:flex;gap:5px;flex-shrink:0">
               ${photos.slice(0, 3).map((ph, i) => `
                 <img src="${ph}" onclick="Recherches.viewPhoto('${p.id}',${i})"
-                  style="width:${photos.length === 1 ? '80' : '56'}px;height:${photos.length === 1 ? '80' : '56'}px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border)">
+                  style="width:${photos.length === 1 ? '80' : '56'}px;height:${photos.length === 1 ? '80' : '56'}px;object-fit:cover;border-radius:8px;cursor:pointer;border:0.5px solid var(--border)">
               `).join('')}
             </div>` : `
-            <div style="width:48px;height:48px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏠</div>`
+            <div style="width:48px;height:48px;border-radius:8px;background:var(--surface-1);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏠</div>`
           }
 
           <!-- Infos -->
@@ -223,13 +239,16 @@ const Recherches = {
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${title}</div>
                 ${sub ? `<div style="font-size:12px;color:var(--text-3)">${sub}</div>` : ''}
               </div>
-              <!-- Statut -->
-              <select onchange="Recherches.updateStatus('${p.id}', this.value, this)"
-                style="font-size:11px;padding:4px 8px;border:1px solid ${s.color};border-radius:7px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none;flex-shrink:0">
-                ${this.STATUSES.map(st =>
-                  `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${st.key}</option>`
-                ).join('')}
-              </select>
+              <!-- Statut + avatar dernière action -->
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                ${updatedAv || createdAv}
+                <select onchange="Recherches.updateStatus('${p.id}', this.value, this)"
+                  style="font-size:11px;padding:4px 8px;border:1px solid ${s.color};border-radius:7px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none">
+                  ${this.STATUSES.map(st =>
+                    `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${st.key}</option>`
+                  ).join('')}
+                </select>
+              </div>
             </div>
 
             <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
@@ -238,6 +257,7 @@ const Recherches = {
                     style="font-size:12px;color:var(--gold,#d4a853);text-decoration:none">🔗 Voir l'annonce</a>`
                 : ''}
               ${p.notes ? `<span style="font-size:12px;color:var(--text-2)">💬 ${p.notes}</span>` : ''}
+              ${p.created_by ? `<span style="font-size:11px;color:var(--text-3)">Envoyé par <strong>${p.created_by}</strong></span>` : ''}
               <button onclick="Recherches.deleteProposal('${p.id}')"
                 style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:2px 4px" title="Supprimer">✕</button>
             </div>
@@ -418,8 +438,14 @@ const Recherches = {
       selectEl.style.color       = s.color;
     }
     try {
+      const updatedBy = (typeof App !== 'undefined' && App.user?.name) || null;
       await api.patch(`/proposals/${id}/status`, { status });
-      Object.values(this.proposals).flat().forEach(p => { if (String(p.id) === String(id)) p.status = status; });
+      Object.values(this.proposals).flat().forEach(p => {
+        if (String(p.id) === String(id)) {
+          p.status = status;
+          if (updatedBy) p.status_updated_by = updatedBy;
+        }
+      });
       // Rafraîchir sidebar (badges en attente)
       document.querySelectorAll('#content [onclick^="Recherches.selectClient"]').forEach(el => {
         const cid = parseInt(el.getAttribute('onclick').match(/\d+/)[0]);

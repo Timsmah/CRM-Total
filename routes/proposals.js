@@ -23,11 +23,13 @@ router.post('/', async (req, res) => {
 
   const insert = {
     client_id,
-    notes       : notes  || null,
-    status      : status || 'Envoyé',
-    property_title: property_title || null,
-    property_url  : property_url   || null,
-    photos        : Array.isArray(photos) ? photos : [],
+    notes          : notes  || null,
+    status         : status || 'Envoyé',
+    property_title : property_title || null,
+    property_url   : property_url   || null,
+    photos         : Array.isArray(photos) ? photos : [],
+    created_by     : req.user?.name || null,
+    status_updated_by: req.user?.name || null,
   };
   if (property_id) insert.property_id = property_id;
 
@@ -43,9 +45,10 @@ router.post('/', async (req, res) => {
 // PATCH /api/proposals/:id/status  (rétro-compat)
 router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
-  const { error } = await db.from('proposals').update({ status }).eq('id', req.params.id);
+  const update = { status, status_updated_by: req.user?.name || null };
+  const { error } = await db.from('proposals').update(update).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ status });
+  res.json(update);
 });
 
 // DELETE /api/proposals/:id
