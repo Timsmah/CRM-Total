@@ -194,9 +194,12 @@ const Clients = {
   SUIVI_STATUSES: [
     { key: 'nouveau',          label: 'Nouveau',          color: '#378ADD', bg: '#E6F1FB' },
     { key: 'a_contacter',      label: 'À contacter',      color: '#EF9F27', bg: '#FAEEDA' },
+    { key: 'en_attente',       label: 'En attente',       color: '#9B59B6', bg: '#F3E8FF' },
     { key: 'recherche_lancee', label: 'Recherche lancée', color: '#1D9E75', bg: '#E1F5EE' },
     { key: 'signe',            label: 'Signé',             color: '#888780', bg: '#F1EFE8' },
   ],
+
+  suiviCollapsed: JSON.parse(localStorage.getItem('crm_suivi_collapsed') || '{}'),
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
@@ -1959,6 +1962,16 @@ const Clients = {
     return c.suivi_status || 'nouveau';
   },
 
+  _toggleSuiviGroup(key) {
+    this.suiviCollapsed[key] = !this.suiviCollapsed[key];
+    localStorage.setItem('crm_suivi_collapsed', JSON.stringify(this.suiviCollapsed));
+    // Toggle DOM without full re-render
+    const grp = document.querySelector(`.suivi-grp-body[data-grp="${key}"]`);
+    const btn = document.querySelector(`.suivi-grp-hdr[data-grp="${key}"] .suivi-grp-chevron`);
+    if (grp) grp.style.display = this.suiviCollapsed[key] ? 'none' : '';
+    if (btn) btn.style.transform = this.suiviCollapsed[key] ? 'rotate(-90deg)' : 'rotate(0deg)';
+  },
+
   _renderSuiviHTML() {
     const active = this.data.filter(c => !c.archived);
     const groups = this.SUIVI_STATUSES.map(st => ({
@@ -1967,29 +1980,34 @@ const Clients = {
     }));
 
     const leftHTML = groups.map(g => {
+      const collapsed = !!this.suiviCollapsed[g.key];
       const rows = g.clients.map(c => {
         const isSel = c.id === this.suiviSelectedId;
         const assigned = c.suivi_assigned_to || '';
         const avHTML = this._suiviMiniAv(assigned);
         const budget = c.budget_max ? `฿${Number(c.budget_max).toLocaleString('fr-FR')}` : '';
-        const type = c.property_type ? ` · ${tr(c.property_type)}` : '';
-        const sub = [budget + type].filter(Boolean).join(' ');
+        const type = c.property_type ? tr(c.property_type) : '';
+        const sub = [budget, type].filter(Boolean).join(' · ');
         return `<div class="suivi-row ${isSel ? 'sel' : ''}"
           onclick="Clients._suiviSelect(${c.id})"
           oncontextmenu="Clients._suiviCtxMenu(${c.id},event)">
           <div class="suivi-row-info">
             <div class="suivi-row-name">${c.name}</div>
-            <div class="suivi-row-sub">${sub || '—'}</div>
+            ${sub ? `<div class="suivi-row-sub">${sub}</div>` : ''}
           </div>
           ${avHTML}
         </div>`;
       }).join('');
       return `
-        <div class="suivi-grp-hdr">
+        <div class="suivi-grp-hdr" data-grp="${g.key}" onclick="Clients._toggleSuiviGroup('${g.key}')">
           <div class="suivi-grp-dot" style="background:${g.color}"></div>
-          ${g.label} <span style="margin-left:4px;opacity:.6">· ${g.clients.length}</span>
+          <span class="suivi-grp-lbl">${g.label}</span>
+          <span class="suivi-grp-count">· ${g.clients.length}</span>
+          <span class="suivi-grp-chevron" style="transform:rotate(${collapsed ? '-90' : '0'}deg)">›</span>
         </div>
-        ${rows.length ? rows : '<div style="padding:8px 10px;font-size:11px;color:var(--text-3);border-bottom:0.5px solid var(--border)">—</div>'}`;
+        <div class="suivi-grp-body" data-grp="${g.key}" style="${collapsed ? 'display:none' : ''}">
+          ${rows.length ? rows : '<div class="suivi-grp-empty">—</div>'}
+        </div>`;
     }).join('');
 
     return `<div class="suivi-container">
