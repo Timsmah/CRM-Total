@@ -1944,10 +1944,11 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 /* ══════════════════════════════════════════════════════════════════
    Vue Suivi — split view clients
 ═══════════════════════════════════════════════════════════════════ */
-.view-toggle { display:flex; border:0.5px solid var(--border); border-radius:7px; overflow:hidden; }
-.view-toggle-btn { font-size:12px; padding:5px 11px; background:var(--surface-2,#fff); color:var(--text-2); border:none; cursor:pointer; display:flex; align-items:center; gap:4px; }
-.view-toggle-btn + .view-toggle-btn { border-left:0.5px solid var(--border); }
-.view-toggle-btn.active { background:var(--surface-1); color:var(--text); font-weight:500; }
+.view-toggle { display:flex; border:1.5px solid var(--accent,#3b82f6); border-radius:8px; overflow:hidden; background:var(--surface-2,#fff); }
+.view-toggle-btn { font-size:12px; font-weight:500; padding:6px 14px; background:transparent; color:var(--accent,#3b82f6); border:none; cursor:pointer; display:flex; align-items:center; gap:5px; transition:background .15s,color .15s; }
+.view-toggle-btn + .view-toggle-btn { border-left:1.5px solid var(--accent,#3b82f6); }
+.view-toggle-btn.active { background:var(--accent,#3b82f6); color:#fff; }
+.view-toggle-btn:not(.active):hover { background:rgba(59,130,246,.08); }
 
 .suivi-container { display:flex; height:calc(100vh - 148px); min-height:420px; border:0.5px solid var(--border); border-radius:12px; overflow:hidden; }
 

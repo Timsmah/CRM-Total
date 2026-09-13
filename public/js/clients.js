@@ -1967,7 +1967,6 @@ const Clients = {
     }));
 
     const leftHTML = groups.map(g => {
-      if (!g.clients.length) return '';
       const rows = g.clients.map(c => {
         const isSel = c.id === this.suiviSelectedId;
         const assigned = c.suivi_assigned_to || '';
@@ -1988,9 +1987,9 @@ const Clients = {
       return `
         <div class="suivi-grp-hdr">
           <div class="suivi-grp-dot" style="background:${g.color}"></div>
-          ${g.label} · ${g.clients.length}
+          ${g.label} <span style="margin-left:4px;opacity:.6">· ${g.clients.length}</span>
         </div>
-        ${rows}`;
+        ${rows.length ? rows : '<div style="padding:8px 10px;font-size:11px;color:var(--text-3);border-bottom:0.5px solid var(--border)">—</div>'}`;
     }).join('');
 
     return `<div class="suivi-container">
