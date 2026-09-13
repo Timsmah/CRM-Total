@@ -1962,10 +1962,10 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .suivi-grp-chevron { font-size:14px; line-height:1; color:var(--text-3); transition:transform .18s ease; margin-left:2px; }
 .suivi-grp-body { border-bottom:1.5px solid var(--border); }
 .suivi-grp-empty { padding:6px 12px; font-size:11px; color:var(--text-3); font-style:italic; }
-.suivi-row { display:flex; align-items:center; padding:6px 10px; gap:7px; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background .1s; }
+.suivi-row { display:flex; align-items:center; padding:6px 10px 6px 7.5px; gap:7px; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background .1s; }
 .suivi-row:last-child { border-bottom:none; }
 .suivi-row:hover { background:var(--surface-2,#fff); }
-.suivi-row.sel { background:var(--surface-2,#fff); border-left:2.5px solid var(--accent,#3b82f6); padding-left:7.5px; }
+.suivi-row.sel { background:var(--surface-2,#fff); }
 .suivi-row-info { flex:1; min-width:0; }
 .suivi-row-name { font-size:12px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .suivi-row-sub { font-size:10px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }

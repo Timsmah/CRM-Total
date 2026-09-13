@@ -1988,7 +1988,7 @@ const Clients = {
         const budget = c.budget_max ? `฿${Number(c.budget_max).toLocaleString('fr-FR')}` : '';
         const type = c.property_type ? tr(c.property_type) : '';
         const sub = [budget, type].filter(Boolean).join(' · ');
-        return `<div class="suivi-row ${isSel ? 'sel' : ''}"
+        return `<div class="suivi-row ${isSel ? 'sel' : ''}" style="border-left:2.5px solid ${g.color}"
           onclick="Clients._suiviSelect(${c.id})"
           oncontextmenu="Clients._suiviCtxMenu(${c.id},event)">
           <div class="suivi-row-info">
