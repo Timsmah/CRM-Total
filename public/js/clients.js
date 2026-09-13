@@ -6,19 +6,37 @@ function formatDate(str) {
 }
 
 const FR_TO_EN = {
+  // Durées
   '1 an': '1 year', '2 ans': '2 years', '3 ans': '3 years',
   '1 mois': '1 month', '2 mois': '2 months', '3 mois': '3 months',
   '4 mois': '4 months', '5 mois': '5 months', '6 mois': '6 months',
   '7 mois': '7 months', '8 mois': '8 months', '9 mois': '9 months',
   '10 mois': '10 months', '11 mois': '11 months', '12 mois': '12 months',
+  // Divers
   'Autre': 'Other', 'autre': 'Other',
   'Non précisé': 'Not specified', 'non précisé': 'Not specified',
   'Je ne sais pas encore': 'Not decided yet', 'je ne sais pas encore': 'Not decided yet',
-  'À l\'étranger': 'Abroad', 'a l\'etranger': 'Abroad',
+  'À l\'étranger': 'Abroad',
   'Pas encore décidé': 'Not decided yet',
   'Oui': 'Yes', 'Non': 'No',
-  'Formulaire': 'Form', 'Location': 'Rental', 'Achat': 'Purchase',
-  'Instagram DM': 'Instagram DM',
+  // Sources
+  'Formulaire': 'Form', 'Référence': 'Referral', 'Bouche à oreille': 'Word of mouth',
+  'Instagram DM': 'Instagram DM', 'Facebook': 'Facebook', 'LinkedIn': 'LinkedIn',
+  // Types de biens
+  'Condo / Appartement': 'Condo / Apartment', 'Appartement': 'Apartment',
+  'Studio': 'Studio', 'Maison': 'House', 'Villa': 'Villa',
+  'Chambre': 'Room', 'Duplex': 'Duplex', 'Penthouse': 'Penthouse',
+  'Condo': 'Condo', 'Townhouse': 'Townhouse',
+  // Meublé
+  'Meublé': 'Furnished', 'Non meublé': 'Unfurnished', 'Semi-meublé': 'Semi-furnished',
+  'meublé': 'furnished', 'non meublé': 'unfurnished',
+  // Statuts client
+  'Prospect': 'Prospect', 'Onboarding': 'Onboarding',
+  'Recherche active': 'Active search', 'Signé': 'Signed', 'Perdu': 'Lost',
+  // Transaction
+  'Location': 'Rental', 'Achat': 'Purchase', 'Vente': 'Sale',
+  // Chambres suffix
+  ' ch.': ' bd.',
 };
 
 function tr(val) {

@@ -83,7 +83,8 @@ function fmtTHB(n) {
 
 function fmtDate(d) {
   if (!d) return '';
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  const locale = (typeof getLang === 'function' && getLang() === 'en') ? 'en-GB' : 'fr-FR';
+  return new Date(d).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // ── Global Search ─────────────────────────────────────────────────────────────

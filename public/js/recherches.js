@@ -101,7 +101,7 @@ const Recherches = {
               : ''}
         </div>
         <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${[c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null, c.zones].filter(Boolean).join(' · ')}
+          ${[c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null, c.zones ? (typeof trZone === 'function' ? trZone(c.zones) : c.zones) : null].filter(Boolean).join(' · ')}
         </div>
       </div>`;
   },
@@ -117,12 +117,16 @@ const Recherches = {
     if (!c) return '';
     const props = this.proposals[c.id] || [];
 
+    const isEN = typeof getLang === 'function' && getLang() === 'en';
+    const bdSuffix  = isEN ? ' bd.' : ' ch.';
+    const seeFiche  = isEN ? 'View profile →' : 'Voir fiche →';
+
     const meta = [
       c.budget_max
         ? `💰 ${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ' · ' + Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : ''}/mois`
         : null,
-      c.zones         ? `📍 ${c.zones}` : null,
-      c.property_type ? `🏠 ${c.property_type}${c.bedrooms ? ' · ' + c.bedrooms + ' ch.' : ''}` : null,
+      c.zones         ? `📍 ${typeof trZone === 'function' ? trZone(c.zones) : c.zones}` : null,
+      c.property_type ? `🏠 ${typeof tr === 'function' ? tr(c.property_type) : c.property_type}${c.bedrooms ? ' · ' + c.bedrooms + bdSuffix : ''}` : null,
       c.move_in_date  ? `📅 ${fmtDate(c.move_in_date)}` : null,
     ].filter(Boolean);
 
@@ -138,7 +142,7 @@ const Recherches = {
           </div>
           <button onclick="Recherches.openClientDetail(${c.id})"
             style="font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:12px;white-space:nowrap">
-            Voir fiche →
+            ${seeFiche}
           </button>
         </div>
 
