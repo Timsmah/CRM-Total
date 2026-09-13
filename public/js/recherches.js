@@ -8,12 +8,15 @@ const Recherches = {
   _propPickerData: [],
 
   STATUSES: [
-    { key: 'Envoyé',        icon: '📤', color: '#3B82F6' },
-    { key: 'Intéressé',     icon: '👍', color: '#22C55E' },
-    { key: 'Pas intéressé', icon: '👎', color: '#6B7280' },
-    { key: 'Visite',        icon: '🏠', color: '#8B5CF6' },
-    { key: 'Loué',          icon: '✅', color: '#16A34A' },
+    { key: 'Envoyé',        labelFR: 'Envoyé',        labelEN: 'Sent',           icon: '📤', color: '#3B82F6' },
+    { key: 'Intéressé',     labelFR: 'Intéressé',     labelEN: 'Interested',     icon: '👍', color: '#22C55E' },
+    { key: 'Pas intéressé', labelFR: 'Pas intéressé', labelEN: 'Not interested', icon: '👎', color: '#6B7280' },
+    { key: 'Visite',        labelFR: 'Visite',        labelEN: 'Viewing',        icon: '🏠', color: '#8B5CF6' },
+    { key: 'Loué',          labelFR: 'Loué',          labelEN: 'Rented',         icon: '✅', color: '#16A34A' },
   ],
+
+  _t(fr, en) { return (typeof getLang === 'function' && getLang() === 'en') ? en : fr; },
+  _isEN()    { return typeof getLang === 'function' && getLang() === 'en'; },
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
@@ -50,12 +53,12 @@ const Recherches = {
         <!-- Barre du haut -->
         <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:16px">
           <div>
-            <h1 style="font-size:20px;font-weight:700;margin:0 0 2px">🔍 Recherches</h1>
+            <h1 style="font-size:20px;font-weight:700;margin:0 0 2px">🔍 ${this._t('Recherches','Searches')}</h1>
             <div style="font-size:12px;color:var(--text-3);display:flex;gap:12px">
-              <span>${this.clients.length} client${this.clients.length !== 1 ? 's' : ''} actifs</span>
+              <span>${this.clients.length} ${this._t('clients actifs','active clients')}</span>
               <span>·</span>
-              <span>${total} bien${total !== 1 ? 's' : ''} proposés</span>
-              ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} en attente</span>` : ''}
+              <span>${total} ${this._t(total !== 1 ? 'biens proposés' : 'bien proposé', total !== 1 ? 'properties proposed' : 'property proposed')}</span>
+              ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} ${this._t('en attente','pending')}</span>` : ''}
             </div>
           </div>
         </div>
@@ -67,13 +70,13 @@ const Recherches = {
           <div style="width:240px;flex-shrink:0;border-right:1.5px solid var(--border);overflow-y:auto;background:var(--surface-2,#fff)">
             ${this.clients.length
               ? this.clients.map(c => this.clientRowHTML(c)).join('')
-              : `<p style="padding:16px;font-size:13px;color:var(--text-3)">Aucun client en recherche active.</p>`
+              : `<p style="padding:16px;font-size:13px;color:var(--text-3)">${this._t('Aucun client en recherche active.','No active search clients.')}</p>`
             }
           </div>
 
           <!-- Droite : détail -->
           <div style="flex:1;overflow-y:auto;background:var(--surface-1)">
-            ${this.selectedId ? this.detailPanelHTML() : `<p style="padding:24px;font-size:13px;color:var(--text-3)">Sélectionne un client.</p>`}
+            ${this.selectedId ? this.detailPanelHTML() : `<p style="padding:24px;font-size:13px;color:var(--text-3)">${this._t('Sélectionne un client.','Select a client.')}</p>`}
           </div>
 
         </div>
@@ -172,20 +175,20 @@ const Recherches = {
         <!-- Propositions -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <span style="font-size:13px;font-weight:600;color:var(--text)">
-            ${props.length} bien${props.length !== 1 ? 's' : ''} proposé${props.length !== 1 ? 's' : ''}
+            ${props.length} ${this._t(props.length !== 1 ? 'biens proposés' : 'bien proposé', props.length !== 1 ? 'properties proposed' : 'property proposed')}
           </span>
           <button onclick="Recherches.openProposeModal(${c.id})"
             style="font-size:12px;color:var(--gold,#d4a853);background:none;border:1px solid var(--gold,#d4a853);border-radius:8px;padding:5px 14px;cursor:pointer;transition:opacity .15s"
             onmouseenter="this.style.opacity='.7'" onmouseleave="this.style.opacity='1'">
-            + Proposer un bien
+            + ${this._t('Proposer un bien','Propose a property')}
           </button>
         </div>
 
         ${props.length
           ? props.map(p => this.proposalCardHTML(p)).join('')
           : `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:13px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2,#fff)">
-               Aucun bien proposé encore.<br>
-               <span style="font-size:12px">Clique sur "+ Proposer un bien" pour commencer.</span>
+               ${this._t('Aucun bien proposé encore.','No property proposed yet.')}<br>
+               <span style="font-size:12px">${this._t('Clique sur "+ Proposer un bien" pour commencer.','Click on "+ Propose a property" to get started.')}</span>
              </div>`
         }
       </div>`;
@@ -245,7 +248,7 @@ const Recherches = {
                 <select onchange="Recherches.updateStatus('${p.id}', this.value, this)"
                   style="font-size:11px;padding:4px 8px;border:1px solid ${s.color};border-radius:7px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none">
                   ${this.STATUSES.map(st =>
-                    `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${st.key}</option>`
+                    `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${this._isEN() ? st.labelEN : st.labelFR}</option>`
                   ).join('')}
                 </select>
               </div>
@@ -254,10 +257,10 @@ const Recherches = {
             <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
               ${p.property_url
                 ? `<a href="${p.property_url}" target="_blank" rel="noopener"
-                    style="font-size:12px;color:var(--gold,#d4a853);text-decoration:none">🔗 Voir l'annonce</a>`
+                    style="font-size:12px;color:var(--gold,#d4a853);text-decoration:none">🔗 ${this._t("Voir l'annonce",'View listing')}</a>`
                 : ''}
               ${p.notes ? `<span style="font-size:12px;color:var(--text-2)">💬 ${p.notes}</span>` : ''}
-              ${p.created_by ? `<span style="font-size:11px;color:var(--text-3)">Envoyé par <strong>${p.created_by}</strong></span>` : ''}
+              ${p.created_by ? `<span style="font-size:11px;color:var(--text-3)">${this._t('Envoyé par','Sent by')} <strong>${p.created_by}</strong></span>` : ''}
               <button onclick="Recherches.deleteProposal('${p.id}')"
                 style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:2px 4px" title="Supprimer">✕</button>
             </div>
