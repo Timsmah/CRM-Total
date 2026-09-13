@@ -1,9 +1,10 @@
-// ── Recherches — suivi des biens proposés par client ─────────────────────────
+// ── Recherches — split view : clients à gauche, propositions à droite ─────────
 const Recherches = {
-  clients:       [],
-  proposals:     {},  // { [client_id]: [proposal, …] }
-  allProps:      [],  // biens CRM pour le picker optionnel
-  _pendingPhotos: [], // [{ uid, dataUrl }] pendant la saisie
+  clients:        [],
+  proposals:      {},  // { [client_id]: [proposal, …] }
+  allProps:       [],  // biens CRM pour le picker optionnel
+  selectedId:     null,
+  _pendingPhotos: [],
   _propPickerData: [],
 
   STATUSES: [
@@ -29,6 +30,7 @@ const Recherches = {
         if (!this.proposals[p.client_id]) this.proposals[p.client_id] = [];
         this.proposals[p.client_id].push(p);
       });
+      if (!this.selectedId && this.clients.length) this.selectedId = this.clients[0].id;
     } catch {
       Toast.show('Erreur de chargement', 'error');
       return;
@@ -43,34 +45,77 @@ const Recherches = {
     const pending = allP.filter(p => p.status === 'Envoyé').length;
 
     document.getElementById('content').innerHTML = `
-      <div style="padding:24px;max-width:860px">
+      <div style="display:flex;flex-direction:column;height:calc(100vh - 0px);overflow:hidden">
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <h1 style="font-size:22px;font-weight:700;margin:0">🔍 Recherches</h1>
-        </div>
-        <div style="font-size:13px;color:var(--text-3);margin-bottom:24px;display:flex;gap:14px;flex-wrap:wrap">
-          <span>${this.clients.length} client${this.clients.length !== 1 ? 's' : ''} en recherche active</span>
-          <span>·</span>
-          <span>${total} bien${total !== 1 ? 's' : ''} proposé${total !== 1 ? 's' : ''}</span>
-          ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} en attente de retour</span>` : ''}
+        <!-- Barre du haut -->
+        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:16px">
+          <div>
+            <h1 style="font-size:20px;font-weight:700;margin:0 0 2px">🔍 Recherches</h1>
+            <div style="font-size:12px;color:var(--text-3);display:flex;gap:12px">
+              <span>${this.clients.length} client${this.clients.length !== 1 ? 's' : ''} actifs</span>
+              <span>·</span>
+              <span>${total} bien${total !== 1 ? 's' : ''} proposés</span>
+              ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} en attente</span>` : ''}
+            </div>
+          </div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${this.clients.length
-            ? this.clients.map(c => this.clientCardHTML(c)).join('')
-            : `<p style="color:var(--text-3);font-size:14px;line-height:1.6">
-                Aucun client en recherche active.<br>
-                Passe le statut d'un client en <strong>Recherche active</strong> dans la section Clients.
-               </p>`
-          }
+        <!-- Split -->
+        <div style="display:flex;flex:1;overflow:hidden">
+
+          <!-- Gauche : liste clients -->
+          <div style="width:220px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto">
+            ${this.clients.length
+              ? this.clients.map(c => this.clientRowHTML(c)).join('')
+              : `<p style="padding:16px;font-size:13px;color:var(--text-3)">Aucun client en recherche active.</p>`
+            }
+          </div>
+
+          <!-- Droite : détail -->
+          <div style="flex:1;overflow-y:auto">
+            ${this.selectedId ? this.detailPanelHTML() : `<p style="padding:24px;font-size:13px;color:var(--text-3)">Sélectionne un client.</p>`}
+          </div>
+
         </div>
       </div>`;
   },
 
-  // ── Carte client ──────────────────────────────────────────────────────────
-  clientCardHTML(c) {
+  // ── Ligne client (sidebar gauche) ─────────────────────────────────────────
+  clientRowHTML(c) {
     const props   = this.proposals[c.id] || [];
     const pending = props.filter(p => p.status === 'Envoyé').length;
+    const isActive = c.id === this.selectedId;
+
+    return `
+      <div onclick="Recherches.selectClient(${c.id})"
+        style="padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+               background:${isActive ? 'var(--surface-2,#111)' : 'transparent'};
+               border-left:3px solid ${isActive ? '#d4a853' : 'transparent'};
+               transition:background .1s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:13px;font-weight:${isActive ? '700' : '500'};color:var(--text)">${c.name}</span>
+          ${pending
+            ? `<span style="font-size:10px;background:#EA580C22;color:#EA580C;padding:1px 6px;border-radius:99px">${pending}</span>`
+            : props.length
+              ? `<span style="font-size:10px;background:#22C55E22;color:#22C55E;padding:1px 6px;border-radius:99px">✓</span>`
+              : ''}
+        </div>
+        <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${[c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null, c.zones].filter(Boolean).join(' · ')}
+        </div>
+      </div>`;
+  },
+
+  selectClient(id) {
+    this.selectedId = id;
+    this.render();
+  },
+
+  // ── Panneau droit ─────────────────────────────────────────────────────────
+  detailPanelHTML() {
+    const c = this.clients.find(x => x.id === this.selectedId);
+    if (!c) return '';
+    const props = this.proposals[c.id] || [];
 
     const meta = [
       c.budget_max
@@ -82,44 +127,45 @@ const Recherches = {
     ].filter(Boolean);
 
     return `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="max-width:700px;padding:20px 24px">
 
         <!-- Header client -->
-        <div onclick="Recherches.openClientDetail(${c.id})"
-          style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:background .12s"
-          onmouseenter="this.style.background='var(--surface-2,#1a1a1a)'"
-          onmouseleave="this.style.background=''">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
-              <span style="font-size:16px;font-weight:700">${c.name}</span>
-              ${pending
-                ? `<span style="font-size:11px;background:#EA580C22;color:#EA580C;padding:2px 7px;border-radius:99px">${pending} en attente</span>`
-                : props.length
-                  ? `<span style="font-size:11px;background:#22C55E22;color:#22C55E;padding:2px 7px;border-radius:99px">✓ Tous traités</span>`
-                  : ''}
-            </div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <div style="flex:1">
+            <h2 style="font-size:18px;font-weight:700;margin:0 0 6px">${c.name}</h2>
             ${meta.length ? `<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-2)">${meta.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
             ${c.criteria ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic">"${c.criteria}"</div>` : ''}
           </div>
-          <span style="font-size:12px;color:var(--text-3);flex-shrink:0">Voir fiche →</span>
+          <button onclick="Recherches.openClientDetail(${c.id})"
+            style="font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:12px;white-space:nowrap">
+            Voir fiche →
+          </button>
         </div>
 
-        <!-- Liste propositions -->
-        <div style="padding:12px 20px">
-          ${props.length
-            ? props.map(p => this.proposalRowHTML(p)).join('')
-            : `<p style="font-size:12px;color:var(--text-3);margin:4px 0 10px">Aucun bien proposé pour l'instant.</p>`}
+        <!-- Propositions -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:13px;font-weight:600;color:var(--text)">
+            ${props.length} bien${props.length !== 1 ? 's' : ''} proposé${props.length !== 1 ? 's' : ''}
+          </span>
           <button onclick="Recherches.openProposeModal(${c.id})"
-            style="margin-top:10px;font-size:12px;color:var(--gold,#d4a853);background:none;border:1px dashed var(--gold,#d4a853);border-radius:8px;padding:7px 0;cursor:pointer;width:100%;opacity:.75;transition:opacity .15s"
-            onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.75'">
+            style="font-size:12px;color:var(--gold,#d4a853);background:none;border:1px solid var(--gold,#d4a853);border-radius:8px;padding:5px 14px;cursor:pointer;transition:opacity .15s"
+            onmouseenter="this.style.opacity='.7'" onmouseleave="this.style.opacity='1'">
             + Proposer un bien
           </button>
         </div>
+
+        ${props.length
+          ? props.map(p => this.proposalCardHTML(p)).join('')
+          : `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:13px;border:1px dashed var(--border);border-radius:12px">
+               Aucun bien proposé encore.<br>
+               <span style="font-size:12px">Clique sur "+ Proposer un bien" pour commencer.</span>
+             </div>`
+        }
       </div>`;
   },
 
-  // ── Ligne proposition ─────────────────────────────────────────────────────
-  proposalRowHTML(p) {
+  // ── Carte proposition ─────────────────────────────────────────────────────
+  proposalCardHTML(p) {
     const s      = this.STATUSES.find(x => x.key === p.status) || this.STATUSES[0];
     const title  = p.property_title || p.properties?.title || '—';
     const sub    = [
@@ -129,62 +175,64 @@ const Recherches = {
     const photos = Array.isArray(p.photos) ? p.photos : [];
 
     return `
-      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px">
 
-          <!-- Miniatures photos -->
+          <!-- Photos -->
           ${photos.length ? `
-            <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
+            <div style="display:flex;gap:5px;flex-shrink:0">
               ${photos.slice(0, 3).map((ph, i) => `
-                <img src="${ph}"
-                  onclick="Recherches.viewPhoto('${p.id}', ${i})"
-                  style="width:52px;height:52px;object-fit:cover;border-radius:7px;cursor:pointer;border:1px solid var(--border)">
+                <img src="${ph}" onclick="Recherches.viewPhoto('${p.id}',${i})"
+                  style="width:${photos.length === 1 ? '80' : '56'}px;height:${photos.length === 1 ? '80' : '56'}px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border)">
               `).join('')}
-            </div>` : ''}
+            </div>` : `
+            <div style="width:48px;height:48px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏠</div>`
+          }
 
           <!-- Infos -->
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;margin-bottom:2px">${title}</div>
-            ${sub ? `<div style="font-size:11px;color:var(--text-3)">${sub}</div>` : ''}
-            ${p.property_url
-              ? `<a href="${p.property_url}" target="_blank" rel="noopener"
-                  style="font-size:11px;color:var(--gold,#d4a853);text-decoration:none;display:inline-block;margin-top:2px">🔗 Voir l'annonce</a>`
-              : ''}
-            ${p.notes ? `<div style="font-size:11px;color:var(--text-2);margin-top:4px">💬 ${p.notes}</div>` : ''}
-          </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${title}</div>
+                ${sub ? `<div style="font-size:12px;color:var(--text-3)">${sub}</div>` : ''}
+              </div>
+              <!-- Statut -->
+              <select onchange="Recherches.updateStatus('${p.id}', this.value, this)"
+                style="font-size:11px;padding:4px 8px;border:1px solid ${s.color};border-radius:7px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none;flex-shrink:0">
+                ${this.STATUSES.map(st =>
+                  `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${st.key}</option>`
+                ).join('')}
+              </select>
+            </div>
 
-          <!-- Statut + supprimer -->
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-top:1px">
-            <select onchange="Recherches.updateStatus('${p.id}', this.value, this)"
-              style="font-size:11px;padding:3px 7px;border:1px solid ${s.color};border-radius:6px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none;max-width:150px">
-              ${this.STATUSES.map(st =>
-                `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${st.key}</option>`
-              ).join('')}
-            </select>
-            <button onclick="Recherches.deleteProposal('${p.id}')"
-              title="Supprimer"
-              style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:15px;padding:2px 4px">✕</button>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
+              ${p.property_url
+                ? `<a href="${p.property_url}" target="_blank" rel="noopener"
+                    style="font-size:12px;color:var(--gold,#d4a853);text-decoration:none">🔗 Voir l'annonce</a>`
+                : ''}
+              ${p.notes ? `<span style="font-size:12px;color:var(--text-2)">💬 ${p.notes}</span>` : ''}
+              <button onclick="Recherches.deleteProposal('${p.id}')"
+                style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:2px 4px" title="Supprimer">✕</button>
+            </div>
           </div>
         </div>
       </div>`;
   },
 
-  // ── Visionneuse photo ─────────────────────────────────────────────────────
+  // ── Visionneuse photos ────────────────────────────────────────────────────
   viewPhoto(proposalId, index) {
     const p = Object.values(this.proposals).flat().find(x => String(x.id) === String(proposalId));
     if (!p) return;
     const photos = Array.isArray(p.photos) ? p.photos : [];
-    const src = photos[index];
-    if (!src) return;
+    if (!photos[index]) return;
     Modal.open('📷 Photo', `
       <div style="text-align:center">
-        <img src="${src}" style="max-width:100%;max-height:65vh;border-radius:8px;object-fit:contain;display:block;margin:0 auto">
+        <img src="${photos[index]}" style="max-width:100%;max-height:65vh;border-radius:8px;object-fit:contain;display:block;margin:0 auto">
         ${photos.length > 1 ? `
           <div style="display:flex;justify-content:center;gap:8px;margin-top:14px">
             ${photos.map((ph, i) => `
-              <img src="${ph}"
-                onclick="Recherches.viewPhoto('${proposalId}', ${i})"
-                style="width:52px;height:52px;object-fit:cover;border-radius:7px;cursor:pointer;border:2px solid ${i === index ? 'var(--gold,#d4a853)' : 'var(--border)'}">
+              <img src="${ph}" onclick="Recherches.viewPhoto('${proposalId}',${i})"
+                style="width:52px;height:52px;object-fit:cover;border-radius:7px;cursor:pointer;border:2px solid ${i === index ? '#d4a853' : 'var(--border)'}">
             `).join('')}
           </div>` : ''}
       </div>`);
@@ -208,31 +256,24 @@ const Recherches = {
     Modal.open(`📤 Proposer un bien — ${client?.name || ''}`, `
       <div class="form-row">
         <label>Titre du bien <span style="color:#EF4444">*</span></label>
-        <input id="p-title" placeholder="Ex : Studio Thong Lo 45m², Condo Asoke 2BR…">
+        <input id="p-title" placeholder="Ex : Studio Thong Lo 45m², appt FB Asoke…">
       </div>
-
       <div class="form-row">
-        <label>Lien de l'annonce <span style="font-size:11px;color:var(--text-3)">(Facebook, LINE, DDproperty…)</span></label>
+        <label>Lien <span style="font-size:11px;color:var(--text-3)">(Facebook, LINE, DDproperty…)</span></label>
         <input id="p-url" type="url" placeholder="https://…">
       </div>
-
       <div class="form-row">
-        <label>Photos <span style="font-size:11px;color:var(--text-3)">max 3 — depuis WhatsApp, galerie, n'importe quoi</span></label>
-        <label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text-2);border:1px dashed var(--border);border-radius:8px;padding:6px 14px;margin-bottom:10px;transition:border-color .15s"
-          onmouseenter="this.style.borderColor='var(--gold,#d4a853)'" onmouseleave="this.style.borderColor='var(--border)'">
+        <label>Photos <span style="font-size:11px;color:var(--text-3)">max 3</span></label>
+        <label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text-2);border:1px dashed var(--border);border-radius:8px;padding:6px 14px;margin-bottom:10px">
           📷 Ajouter des photos
           <input type="file" accept="image/*" multiple style="display:none" onchange="Recherches._addPhotos(this)">
         </label>
-        <div id="p-photos-preview" style="display:flex;gap:8px;flex-wrap:wrap;min-height:0"></div>
+        <div id="p-photos-preview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
-
       <div class="form-row">
         <label>Note</label>
-        <textarea id="p-note" rows="2"
-          placeholder="Correspond au budget, belle vue piscine, proche BTS…"
-          style="resize:vertical"></textarea>
+        <textarea id="p-note" rows="2" placeholder="Correspond au budget, belle vue piscine…" style="resize:vertical"></textarea>
       </div>
-
       <div class="form-row">
         <label>Statut initial</label>
         <select id="p-status">
@@ -241,28 +282,19 @@ const Recherches = {
           ).join('')}
         </select>
       </div>
-
       <details style="margin-bottom:16px">
-        <summary style="cursor:pointer;font-size:12px;color:var(--text-3);padding:4px 0;list-style:none">
-          🏠 Lier à un bien déjà dans le CRM (optionnel)
-        </summary>
+        <summary style="cursor:pointer;font-size:12px;color:var(--text-3);padding:4px 0;list-style:none">🏠 Lier à un bien du CRM (optionnel)</summary>
         <div style="margin-top:8px;position:relative">
-          <input id="p-crm-search" placeholder="Rechercher par titre ou zone…"
-            oninput="Recherches._filterProps(this.value)" autocomplete="off">
-          <div id="prop-results"
-            style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
+          <input id="p-crm-search" placeholder="Rechercher par titre ou zone…" oninput="Recherches._filterProps(this.value)" autocomplete="off">
+          <div id="prop-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
           <input type="hidden" id="prop-selected-id">
           <div id="prop-selected-label" style="font-size:11px;color:#22C55E;margin-top:4px;display:none"></div>
         </div>
       </details>
-
-      <button class="btn btn-primary" onclick="Recherches._submitPropose(${clientId})" style="width:100%">
-        Enregistrer
-      </button>
+      <button class="btn btn-primary" onclick="Recherches._submitPropose(${clientId})" style="width:100%">Enregistrer</button>
     `);
   },
 
-  // ── Gestion photos dans le modal ──────────────────────────────────────────
   _addPhotos(input) {
     const files     = [...input.files];
     const remaining = 3 - this._pendingPhotos.length;
@@ -294,14 +326,10 @@ const Recherches = {
     if (!c) return;
     c.innerHTML = this._pendingPhotos.map(ph => `
       <div style="position:relative;display:inline-block">
-        <img src="${ph.dataUrl}"
-          style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block">
+        <img src="${ph.dataUrl}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block">
         <button onclick="Recherches._removePhoto(${ph.uid})"
-          style="position:absolute;top:-7px;right:-7px;background:#EF4444;border:none;border-radius:50%;width:20px;height:20px;color:#fff;font-size:12px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">
-          ✕
-        </button>
-      </div>
-    `).join('');
+          style="position:absolute;top:-7px;right:-7px;background:#EF4444;border:none;border-radius:50%;width:20px;height:20px;color:#fff;font-size:12px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>`).join('');
   },
 
   _removePhoto(uid) {
@@ -309,24 +337,20 @@ const Recherches = {
     this._renderPhotoPreviews();
   },
 
-  // ── Picker bien CRM ───────────────────────────────────────────────────────
   _filterProps(q) {
     const res = document.getElementById('prop-results');
-    if (!q || q.length < 1) { res.style.display = 'none'; return; }
+    if (!q) { res.style.display = 'none'; return; }
     const lq = q.toLowerCase();
     const matches = this._propPickerData
-      .filter(p => (p.title || '').toLowerCase().includes(lq) || (p.zone || '').toLowerCase().includes(lq))
+      .filter(p => (p.title||'').toLowerCase().includes(lq) || (p.zone||'').toLowerCase().includes(lq))
       .slice(0, 8);
     if (!matches.length) { res.style.display = 'none'; return; }
     res.innerHTML = matches.map(p => `
-      <div onclick="Recherches._selectProp(${p.id}, \`${(p.title || '').replace(/`/g, '\\`')}\`)"
+      <div onclick="Recherches._selectProp(${p.id}, \`${(p.title||'').replace(/`/g,'\\`')}\`)"
         style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)"
-        onmouseenter="this.style.background='var(--surface-2,#1a1a1a)'"
-        onmouseleave="this.style.background=''">
+        onmouseenter="this.style.background='var(--surface-2,#1a1a1a)'" onmouseleave="this.style.background=''">
         <div style="font-size:13px;font-weight:500">${p.title}</div>
-        <div style="font-size:11px;color:var(--text-3)">
-          ${[p.zone, p.price ? Number(p.price).toLocaleString('fr-FR') + ' ฿/mois' : null].filter(Boolean).join(' · ')}
-        </div>
+        <div style="font-size:11px;color:var(--text-3)">${[p.zone, p.price ? Number(p.price).toLocaleString('fr-FR')+' ฿/mois':null].filter(Boolean).join(' · ')}</div>
       </div>`).join('');
     res.style.display = 'block';
   },
@@ -336,11 +360,10 @@ const Recherches = {
     document.getElementById('p-crm-search').value     = title;
     document.getElementById('prop-results').style.display = 'none';
     const lbl = document.getElementById('prop-selected-label');
-    lbl.textContent  = `✓ ${title}`;
+    lbl.textContent = `✓ ${title}`;
     lbl.style.display = 'block';
   },
 
-  // ── Soumission ────────────────────────────────────────────────────────────
   async _submitPropose(clientId) {
     const title       = document.getElementById('p-title')?.value?.trim();
     const url         = document.getElementById('p-url')?.value?.trim()  || null;
@@ -348,19 +371,9 @@ const Recherches = {
     const status      = document.getElementById('p-status')?.value       || 'Envoyé';
     const property_id = Number(document.getElementById('prop-selected-id')?.value) || null;
     const photos      = this._pendingPhotos.map(p => p.dataUrl);
-
     if (!title) return Toast.show('Donne un titre au bien', 'error');
-
     try {
-      const p = await api.post('/proposals', {
-        client_id: clientId,
-        property_id,
-        property_title: title,
-        property_url:   url,
-        photos,
-        notes,
-        status,
-      });
+      const p = await api.post('/proposals', { client_id: clientId, property_id, property_title: title, property_url: url, photos, notes, status });
       if (!this.proposals[clientId]) this.proposals[clientId] = [];
       this.proposals[clientId].unshift(p);
       this._pendingPhotos = [];
@@ -370,7 +383,6 @@ const Recherches = {
     } catch (err) { Toast.show(err.message, 'error'); }
   },
 
-  // ── Mise à jour statut ────────────────────────────────────────────────────
   async updateStatus(id, status, selectEl) {
     const s = this.STATUSES.find(x => x.key === status) || this.STATUSES[0];
     if (selectEl) {
@@ -380,14 +392,16 @@ const Recherches = {
     }
     try {
       await api.patch(`/proposals/${id}/status`, { status });
-      Object.values(this.proposals).flat().forEach(p => {
-        if (String(p.id) === String(id)) p.status = status;
+      Object.values(this.proposals).flat().forEach(p => { if (String(p.id) === String(id)) p.status = status; });
+      // Rafraîchir sidebar (badges en attente)
+      document.querySelectorAll('#content [onclick^="Recherches.selectClient"]').forEach(el => {
+        const cid = parseInt(el.getAttribute('onclick').match(/\d+/)[0]);
+        const c = this.clients.find(x => x.id === cid);
+        if (c) el.outerHTML = this.clientRowHTML(c);
       });
-      this.render();
     } catch { Toast.show('Erreur mise à jour', 'error'); }
   },
 
-  // ── Suppression ───────────────────────────────────────────────────────────
   async deleteProposal(id) {
     if (!confirm('Supprimer cette proposition ?')) return;
     try {
