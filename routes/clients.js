@@ -115,6 +115,17 @@ router.patch('/:id/fees', async (req, res) => {
   res.json({ research_fees_paid: newVal });
 });
 
+// ── PATCH /api/clients/:id/suivi — statut suivi + assignation ───────────────
+router.patch('/:id/suivi', async (req, res) => {
+  const { suivi_status, suivi_assigned_to } = req.body;
+  const update = {};
+  if (suivi_status !== undefined) update.suivi_status = suivi_status;
+  if ('suivi_assigned_to' in req.body) update.suivi_assigned_to = req.body.suivi_assigned_to || null;
+  const { error } = await db.from('clients').update(update).eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(update);
+});
+
 // Sync via Google Apps Script Web App
 router.post('/sync/sheets', async (req, res) => {
   try {

@@ -187,6 +187,16 @@ const Clients = {
   selectionMode: false,
   selectedClients: new Set(),
   clientFilters: { name: '', urgency: '', scoreMin: '' },
+  viewMode: localStorage.getItem('crm_clients_view') || 'suivi',
+  suiviSelectedId: null,
+  _suiviUsers: null, // cached team members
+
+  SUIVI_STATUSES: [
+    { key: 'nouveau',          label: 'Nouveau',          color: '#378ADD', bg: '#E6F1FB' },
+    { key: 'a_contacter',      label: 'À contacter',      color: '#EF9F27', bg: '#FAEEDA' },
+    { key: 'recherche_lancee', label: 'Recherche lancée', color: '#1D9E75', bg: '#E1F5EE' },
+    { key: 'signe',            label: 'Signé',             color: '#888780', bg: '#F1EFE8' },
+  ],
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
@@ -240,40 +250,58 @@ const Clients = {
 
   render() {
     const total = this.data.length;
+    const isSuivi = this.viewMode === 'suivi';
     document.getElementById('content').innerHTML = `
       <div class="section-header">
         <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
         <div class="header-actions">
+          <div class="view-toggle">
+            <button class="view-toggle-btn ${isSuivi ? 'active' : ''}" onclick="Clients._setView('suivi')">📋 Suivi</button>
+            <button class="view-toggle-btn ${!isSuivi ? 'active' : ''}" onclick="Clients._setView('kanban')">⠿ Kanban</button>
+          </div>
           <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
-          <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
+          ${!isSuivi ? `<button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
             ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
-          </button>
+          </button>` : ''}
           <div style="position:relative">
             <button class="btn btn-ghost" onclick="Clients._toggleMoreMenu(event)" title="Plus d'options">···</button>
             <div id="clients-more-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:200;min-width:170px;padding:4px">
               <button class="more-menu-item" onclick="Clients.syncSheets();Clients._closeMoreMenu()">🔄 Sync Sheets</button>
               <button class="more-menu-item" onclick="Clients.openCallHistory();Clients._closeMoreMenu()">📋 Listes d'appels</button>
-              <button class="more-menu-item" onclick="Clients.toggleFocusMode();Clients._closeMoreMenu()">${this.focusMode ? '⊞ Vue complète' : '◉ Vue focus'}</button>
+              ${!isSuivi ? `<button class="more-menu-item" onclick="Clients.toggleFocusMode();Clients._closeMoreMenu()">${this.focusMode ? '⊞ Vue complète' : '◉ Vue focus'}</button>` : ''}
               <div style="height:0.5px;background:var(--border);margin:4px 0"></div>
               <button class="more-menu-item" onclick="Clients.toggleArchived();Clients._closeMoreMenu()">${this.showArchived ? '👥 Clients actifs' : '🗄 Voir archivés'}</button>
             </div>
           </div>
         </div>
       </div>
-      ${this.filterBarHTML()}
-      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
-        ${getContactCols().map(col => this.columnHTML(col)).join('')}
-      </div>
-      ${this.selectionMode ? `
-      <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
-        <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
-        <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
-        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
-        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
-        <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
-        <div class="sel-divider"></div>
-        <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
-      </div>` : ''}`;
+      ${isSuivi ? this._renderSuiviHTML() : `
+        ${this.filterBarHTML()}
+        <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
+          ${getContactCols().map(col => this.columnHTML(col)).join('')}
+        </div>
+        ${this.selectionMode ? `
+        <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
+          <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
+          <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
+          <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
+          <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
+          <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
+          <div class="sel-divider"></div>
+          <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
+        </div>` : ''}
+      `}`;
+
+    if (isSuivi && this.suiviSelectedId) {
+      const stillExists = this.data.find(c => c.id === this.suiviSelectedId);
+      if (stillExists) this._suiviLoadRight(this.suiviSelectedId);
+    }
+  },
+
+  _setView(mode) {
+    this.viewMode = mode;
+    localStorage.setItem('crm_clients_view', mode);
+    this.render();
   },
 
   _toggleMoreMenu(e) {
@@ -1921,6 +1949,352 @@ const Clients = {
     } catch (err) {
       Toast.show(err.message, 'error');
     }
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // VUE SUIVI — split view
+  // ══════════════════════════════════════════════════════════════════
+
+  _getSuiviStatus(c) {
+    return c.suivi_status || 'nouveau';
+  },
+
+  _renderSuiviHTML() {
+    const active = this.data.filter(c => !c.archived);
+    const groups = this.SUIVI_STATUSES.map(st => ({
+      ...st,
+      clients: active.filter(c => this._getSuiviStatus(c) === st.key),
+    }));
+
+    const leftHTML = groups.map(g => {
+      if (!g.clients.length) return '';
+      const rows = g.clients.map(c => {
+        const isSel = c.id === this.suiviSelectedId;
+        const assigned = c.suivi_assigned_to || '';
+        const avHTML = this._suiviMiniAv(assigned);
+        const budget = c.budget_max ? `฿${Number(c.budget_max).toLocaleString('fr-FR')}` : '';
+        const type = c.property_type ? ` · ${tr(c.property_type)}` : '';
+        const sub = [budget + type].filter(Boolean).join(' ');
+        return `<div class="suivi-row ${isSel ? 'sel' : ''}"
+          onclick="Clients._suiviSelect(${c.id})"
+          oncontextmenu="Clients._suiviCtxMenu(${c.id},event)">
+          <div class="suivi-row-info">
+            <div class="suivi-row-name">${c.name}</div>
+            <div class="suivi-row-sub">${sub || '—'}</div>
+          </div>
+          ${avHTML}
+        </div>`;
+      }).join('');
+      return `
+        <div class="suivi-grp-hdr">
+          <div class="suivi-grp-dot" style="background:${g.color}"></div>
+          ${g.label} · ${g.clients.length}
+        </div>
+        ${rows}`;
+    }).join('');
+
+    return `<div class="suivi-container">
+      <div class="suivi-left">${leftHTML || '<div class="suivi-empty">Aucun client</div>'}</div>
+      <div class="suivi-right" id="suivi-right">
+        <div class="suivi-empty">← Sélectionne un client</div>
+      </div>
+    </div>`;
+  },
+
+  _suiviSelect(id) {
+    this.suiviSelectedId = id;
+    // update selection highlight
+    document.querySelectorAll('.suivi-row').forEach(r => r.classList.remove('sel'));
+    const rows = document.querySelectorAll('.suivi-row');
+    rows.forEach(r => {
+      if (r.getAttribute('onclick') && r.getAttribute('onclick').includes(`(${id})`)) {
+        r.classList.add('sel');
+      }
+    });
+    this._suiviLoadRight(id);
+  },
+
+  async _suiviLoadRight(id) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const right = document.getElementById('suivi-right');
+    if (!right) return;
+
+    const st = this._getSuiviStatus(c);
+    const stObj = this.SUIVI_STATUSES.find(s => s.key === st) || this.SUIVI_STATUSES[0];
+    const color = stObj.color;
+    const isAdmin = typeof App !== 'undefined' && App.user?.role === 'admin';
+
+    // Budget / meta
+    const budget = c.budget_max ? `฿${Number(c.budget_max).toLocaleString('fr-FR')}/mois` : null;
+    const type   = c.property_type ? tr(c.property_type) : null;
+    const beds   = c.bedrooms ? `${c.bedrooms} ch.` : null;
+    const arrival = c.move_in_date ? fmtDate(c.move_in_date) : null;
+    const dur    = c.duration ? tr(c.duration) : null;
+    const pills  = [budget, type && beds ? `${type} ${beds}` : (type || beds), arrival, dur].filter(Boolean)
+      .map(p => `<span class="suivi-pill">${p}</span>`).join('');
+
+    // Avatar (initiales) pour header
+    const initials = c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const avStyle  = `background:${stObj.bg};color:${color};`;
+
+    // Track HTML
+    const curIdx = this.SUIVI_STATUSES.findIndex(s => s.key === st);
+    const trackHTML = this.SUIVI_STATUSES.map((s, i) => {
+      const isDone = i < curIdx;
+      const isCur  = i === curIdx;
+      const lineColor = (isDone || isCur) ? color : 'var(--border)';
+      const dotBg     = isDone ? color : (isCur ? '#fff' : 'var(--surface-1,#f8fafc)');
+      const dotBorder = (isDone || isCur) ? color : 'var(--border)';
+      const dotShadow = isCur ? `0 0 0 3px ${stObj.bg}` : 'none';
+      const lblColor  = isCur ? color : (isDone ? 'var(--text-2)' : 'var(--text-3)');
+      const lblWeight = isCur ? '600' : '400';
+      return `<div class="suivi-step ${isDone?'done':''} ${isCur?'cur':''}"
+          onclick="Clients._suiviSetStatus(${id},'${s.key}')"
+          title="Passer à : ${s.label}">
+        ${i > 0 ? `<div class="suivi-step-line" style="background:${lineColor}"></div>` : ''}
+        <div class="suivi-step-dot" style="background:${dotBg};border-color:${dotBorder};box-shadow:${dotShadow}"></div>
+        <div class="suivi-step-lbl" style="color:${lblColor};font-weight:${lblWeight}">${s.label}</div>
+      </div>`;
+    }).join('');
+
+    // Assign chips
+    const users = await this._suiviGetUsers();
+    const assignHTML = isAdmin ? `
+      <div class="suivi-assign-row">
+        <span class="suivi-assign-label">Géré par</span>
+        ${users.map(u => {
+          const isActive = (c.suivi_assigned_to === u.name);
+          const avEl = u.avatar_type === 'upload' && u.avatar_value
+            ? `<div class="suivi-assign-av"><img src="${u.avatar_value}" alt="${u.name}"></div>`
+            : `<div class="suivi-assign-av" style="background:${this._suiviUserColor(u.name).bg};color:${this._suiviUserColor(u.name).color}">${(u.name||'?')[0].toUpperCase()}</div>`;
+          return `<div class="suivi-assign-chip ${isActive?'active':''}"
+            style="${isActive ? `border-color:${color};background:${stObj.bg}` : ''}"
+            onclick="Clients._suiviAssign(${id},'${u.name}')">
+            ${avEl}${u.name}
+          </div>`;
+        }).join('')}
+      </div>` : (c.suivi_assigned_to ? `
+      <div class="suivi-assign-row">
+        <span class="suivi-assign-label">Géré par <strong>${c.suivi_assigned_to}</strong></span>
+      </div>` : '');
+
+    right.innerHTML = `
+      <div class="suivi-right-head">
+        <div class="suivi-client-row">
+          <div class="suivi-big-av" style="${avStyle}">${initials}</div>
+          <div>
+            <div class="suivi-client-name">${c.name}</div>
+            <div class="suivi-client-meta">${[tr(c.status||''), c.whatsapp].filter(Boolean).join(' · ')}</div>
+          </div>
+          <button class="suivi-fiche-link" onclick="Clients.openDetailModal(${id})">↗ Fiche</button>
+        </div>
+        <div class="suivi-track">${trackHTML}</div>
+      </div>
+      ${assignHTML}
+      ${pills ? `<div class="suivi-pills">${pills}</div>` : ''}
+      <div id="suivi-late-${id}"></div>
+      <div class="suivi-log" id="suivi-log-${id}"><div class="suivi-log-empty">Chargement…</div></div>
+      <div class="suivi-add-log">
+        <select class="suivi-add-select" id="suivi-chan-${id}">
+          <option value="whatsapp">💬 WhatsApp</option>
+          <option value="call">📞 Appel</option>
+          <option value="line">📱 Line</option>
+          <option value="email">✉️ Email</option>
+          <option value="note">📝 Note</option>
+        </select>
+        <input class="suivi-add-input" id="suivi-note-${id}" placeholder="Loguer une action…"
+          onkeydown="if(event.key==='Enter')Clients._suiviAddLog(${id})">
+        <button class="suivi-add-btn" onclick="Clients._suiviAddLog(${id})">Ajouter</button>
+      </div>`;
+
+    this._suiviLoadLog(id);
+  },
+
+  async _suiviGetUsers() {
+    if (this._suiviUsers) return this._suiviUsers;
+    try {
+      const users = await api.get('/users');
+      this._suiviUsers = (users || []).filter(u => u.role !== 'admin' || true);
+      return this._suiviUsers;
+    } catch {
+      return [{ name: 'Tim', avatar_type: 'preset' }, { name: 'Nono', avatar_type: 'preset' }, { name: 'Chompoo', avatar_type: 'preset' }];
+    }
+  },
+
+  _suiviUserColor(name) {
+    const palette = {
+      Tim:     { bg: '#EEEDFE', color: '#3C3489' },
+      Nono:    { bg: '#E1F5EE', color: '#085041' },
+      Chompoo: { bg: '#FAEEDA', color: '#633806' },
+    };
+    return palette[name] || { bg: '#E6F1FB', color: '#0C447C' };
+  },
+
+  _suiviMiniAv(name) {
+    if (!name) return '';
+    const col = this._suiviUserColor(name);
+    return `<div class="suivi-row-av" style="background:${col.bg};color:${col.color}">${name[0]?.toUpperCase()||'?'}</div>`;
+  },
+
+  async _suiviLoadLog(id) {
+    const slot = document.getElementById(`suivi-log-${id}`);
+    const lateBadge = document.getElementById(`suivi-late-${id}`);
+    if (!slot) return;
+    try {
+      const rows = await api.get(`/activities?client_id=${id}`);
+      const ICONS = { call:'📞', whatsapp:'💬', line:'📱', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
+
+      // Calcul jours sans contact
+      if (lateBadge && rows.length) {
+        const last = new Date(rows[0].created_at);
+        const days = Math.floor((Date.now() - last) / 86400000);
+        if (days >= 7) {
+          lateBadge.innerHTML = `<div class="suivi-late-badge">⚠️ ${days} jours sans contact — à relancer</div>`;
+        }
+      }
+
+      if (!rows.length) {
+        slot.innerHTML = '<div class="suivi-log-empty">Aucune activité — loguez le premier échange.</div>';
+        return;
+      }
+
+      // Grouper par date
+      let lastDay = null;
+      const items = rows.map(r => {
+        const d = new Date(r.created_at);
+        const dayKey = d.toISOString().split('T')[0];
+        let sep = '';
+        if (dayKey !== lastDay) {
+          lastDay = dayKey;
+          const label = this._suiviRelDay(d);
+          sep = `<div class="suivi-log-sep"><span>${label}</span></div>`;
+        }
+        const icon = ICONS[r.type] || '📌';
+        const chan = r.type ? `<span class="suivi-log-channel">${icon} ${r.type}</span>` : '';
+        const when = this._relativeTime(r.created_at);
+
+        // Avatar auteur
+        const col = this._suiviUserColor(r.author || '');
+        const avHTML = `<div class="suivi-log-av" style="background:${col.bg};color:${col.color}">${(r.author||'?')[0].toUpperCase()}</div>`;
+
+        return `${sep}<div class="suivi-log-entry">
+          ${avHTML}
+          <div class="suivi-log-bubble">
+            <div class="suivi-log-top">
+              <span class="suivi-log-who">${r.author || '—'}</span>
+              ${chan}
+              <span class="suivi-log-when">${when}</span>
+            </div>
+            ${r.content ? `<div class="suivi-log-text">${r.content}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+      slot.innerHTML = items;
+    } catch {
+      slot.innerHTML = '<div class="suivi-log-empty">Erreur de chargement.</div>';
+    }
+  },
+
+  _suiviRelDay(d) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const day   = new Date(d); day.setHours(0,0,0,0);
+    const diff  = Math.round((today - day) / 86400000);
+    if (diff === 0) return 'Aujourd\'hui';
+    if (diff === 1) return 'Hier';
+    if (diff < 7)  return `Il y a ${diff} jours`;
+    return d.toLocaleDateString(getLang()==='en' ? 'en-GB' : 'fr-FR', { day:'2-digit', month:'short' });
+  },
+
+  async _suiviAddLog(id) {
+    const chanEl = document.getElementById(`suivi-chan-${id}`);
+    const noteEl = document.getElementById(`suivi-note-${id}`);
+    if (!chanEl || !noteEl) return;
+    const type    = chanEl.value;
+    const content = noteEl.value.trim() || null;
+    const author  = (typeof App !== 'undefined' && App.user?.name) ? App.user.name : 'Tim';
+    noteEl.value = '';
+    await api.post('/activities', { client_id: id, type, content, author });
+    Toast.show('✓ Activité enregistrée', 'success');
+    // Reload log
+    const slot = document.getElementById(`suivi-log-${id}`);
+    if (slot) { slot.innerHTML = '<div class="suivi-log-empty">Chargement…</div>'; }
+    await this._suiviLoadLog(id);
+  },
+
+  async _suiviSetStatus(id, status) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    await api.patch(`/clients/${id}/suivi`, { suivi_status: status });
+    c.suivi_status = status;
+    // Update left sidebar row highlight color
+    this.render();
+    // Re-select to refresh right panel
+    setTimeout(() => this._suiviLoadRight(id), 0);
+  },
+
+  async _suiviAssign(id, name) {
+    const isAdmin = typeof App !== 'undefined' && App.user?.role === 'admin';
+    if (!isAdmin) return;
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const newVal = c.suivi_assigned_to === name ? null : name;
+    await api.patch(`/clients/${id}/suivi`, { suivi_assigned_to: newVal });
+    c.suivi_assigned_to = newVal;
+    // Update left sidebar avatar + right panel chips
+    this.render();
+    setTimeout(() => this._suiviLoadRight(id), 0);
+  },
+
+  _suiviCtxMenu(id, event) {
+    event.preventDefault();
+    document.querySelectorAll('.suivi-ctx-menu').forEach(m => m.remove());
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const isAdmin = typeof App !== 'undefined' && App.user?.role === 'admin';
+    const cur = this._getSuiviStatus(c);
+
+    const statusItems = this.SUIVI_STATUSES.filter(s => s.key !== cur).map(s =>
+      `<div class="suivi-ctx-item" onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients._suiviSetStatus(${id},'${s.key}')">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:6px;vertical-align:middle"></span>${s.label}
+      </div>`).join('');
+
+    const assignItems = isAdmin ? `
+      <div class="suivi-ctx-sep"></div>
+      <div class="suivi-ctx-item" style="font-size:11px;color:var(--text-3);padding-bottom:2px">Assigner à</div>
+      ${['Tim','Nono','Chompoo'].map(n =>
+        `<div class="suivi-ctx-item ${c.suivi_assigned_to===n?'active':''}"
+          onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients._suiviAssign(${id},'${n}')">
+          ${c.suivi_assigned_to===n?'✓ ':''} ${n}
+        </div>`).join('')}` : '';
+
+    const menu = document.createElement('div');
+    menu.className = 'suivi-ctx-menu';
+    menu.innerHTML = `
+      ${statusItems}
+      <div class="suivi-ctx-sep"></div>
+      <div class="suivi-ctx-item" onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients.openDetailModal(${id})">↗ Voir la fiche</div>
+      ${assignItems}
+      <div class="suivi-ctx-sep"></div>
+      <div class="suivi-ctx-item danger" onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients.archiveClient(${id})">🗄 Archiver</div>`;
+
+    const x = Math.min(event.clientX, window.innerWidth - 210);
+    const y = Math.min(event.clientY, window.innerHeight - 250);
+    menu.style.cssText = `top:${y}px;left:${x}px`;
+    document.body.appendChild(menu);
+    setTimeout(() => {
+      document.addEventListener('click', function h() { menu.remove(); document.removeEventListener('click', h); });
+    }, 50);
+  },
+
+  async archiveClient(id) {
+    await api.patch(`/clients/${id}/archive`);
+    const c = this.data.find(x => x.id === id);
+    if (c) c.archived = 1;
+    if (this.suiviSelectedId === id) this.suiviSelectedId = null;
+    Toast.show('Client archivé');
+    await this.load();
+    this.render();
   },
 
   async syncSheets() {
