@@ -698,11 +698,11 @@ const Clients = {
 
     let cards;
     if (col.ghost) {
-      // Colonne fantôme : clients avec suivi_status = recherche_lancee
-      // qui ne sont pas explicitement en Visite/Offre ou Signé
+      // Colonne fantôme : même filtre que l'onglet Recherches
+      // = clients avec status = 'Recherche active', sauf ceux en Visite/Offre ou Signé
       cards = this.data.filter(c => {
         const ecs = this.effectiveContactStatus(c);
-        return c.suivi_status === 'recherche_lancee'
+        return c.status === 'Recherche active'
           && ecs !== 'Visite / Offre'
           && ecs !== 'Signé';
       }).filter(c => this._matchClientFilters(c));
@@ -711,8 +711,8 @@ const Clients = {
         .filter(c => {
           const ecs = this.effectiveContactStatus(c);
           if (ecs !== col.key) return false;
-          // Pour "À contacter" : exclure les clients en recherche active (ils sont dans la ghost col)
-          if (col.key === 'À contacter' && c.suivi_status === 'recherche_lancee') return false;
+          // Pour les colonnes hors Visite/Offre et Signé : exclure les clients en Recherche active
+          if (col.key !== 'Visite / Offre' && col.key !== 'Signé' && c.status === 'Recherche active') return false;
           return true;
         })
         .filter(c => this._matchClientFilters(c));
@@ -1052,14 +1052,23 @@ const Clients = {
         return;
       }
       const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
-      slot.innerHTML = rows.slice(0, 3).map(r => `
+      slot.innerHTML = rows.slice(0, 3).map(r => {
+        const authorUser = (typeof App !== 'undefined' && App.getUserByName?.(r.author)) || null;
+        const avEl = authorUser && typeof avatarHTML === 'function'
+          ? `<div style="width:20px;height:20px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(authorUser, 20)}</div>`
+          : (() => {
+              const col = this._suiviUserColor?.(r.author||'') || { bg:'#E2E8F0', color:'#64748B' };
+              return `<div style="width:20px;height:20px;border-radius:50%;background:${col.bg};color:${col.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${(r.author||'?')[0].toUpperCase()}</div>`;
+            })();
+        return `
         <div class="card-act-entry">
-          <span class="card-act-icon">${ICONS[r.type] || '📌'}</span>
+          ${avEl}
           <div class="card-act-body">
             <span class="card-act-meta">${r.author} · ${this._relativeTime(r.created_at)}</span>
             ${r.content ? `<p class="card-act-text">${r.content}</p>` : ''}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     } catch {
       slot.innerHTML = '<p class="card-act-empty">—</p>';
     }
