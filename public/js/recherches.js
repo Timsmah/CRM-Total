@@ -17,15 +17,18 @@ const Recherches = {
 
   _t(fr, en) { return (typeof getLang === 'function' && getLang() === 'en') ? en : fr; },
   _isEN()    { return typeof getLang === 'function' && getLang() === 'en'; },
+  _users: [],
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     try {
-      const [allClients, allProposals, allProps] = await Promise.all([
+      const [allClients, allProposals, allProps, users] = await Promise.all([
         api.get('/clients?archived=0'),
         api.get('/proposals'),
         api.get('/properties?archived=false'),
+        api.get('/users').catch(() => []),
       ]);
+      this._users = users || [];
       this.clients  = allClients.filter(c => c.status === 'Recherche active');
       this.allProps = allProps;
       this.proposals = {};
@@ -197,6 +200,12 @@ const Recherches = {
   // ── Helper avatar mini par nom d'utilisateur ─────────────────────────────
   _userAv(name, size = 22) {
     if (!name) return '';
+    // Vrai avatar depuis le cache users
+    const user = this._users.find(u => u.name === name);
+    if (user && typeof avatarHTML === 'function') {
+      return `<div title="${name}" style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;flex-shrink:0">${avatarHTML(user, size)}</div>`;
+    }
+    // Fallback initiale colorée
     const palette = {
       Tim:     { bg: '#EEEDFE', color: '#3C3489' },
       Nono:    { bg: '#E1F5EE', color: '#085041' },

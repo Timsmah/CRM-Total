@@ -204,7 +204,7 @@ const Clients = {
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     api.post('/clients/sync/sheets', {}).catch(() => {}); // fire & forget, ne bloque pas
-    await this.load();
+    await Promise.all([this.load(), this._suiviGetUsers()]); // précharge users pour avatars
     this.render();
     this._checkReminders();
     if (!Clients._keyHandler) {
@@ -2148,10 +2148,17 @@ const Clients = {
     return palette[name] || { bg: '#E6F1FB', color: '#0C447C' };
   },
 
-  _suiviMiniAv(name) {
+  _suiviMiniAv(name, size = 20) {
     if (!name) return '';
+    // Cherche le vrai avatar dans le cache users
+    const users = this._suiviUsers || [];
+    const user  = users.find(u => u.name === name);
+    if (user && typeof avatarHTML === 'function') {
+      return `<div class="suivi-row-av" title="${name}" style="width:${size}px;height:${size}px;overflow:hidden;border-radius:50%;flex-shrink:0">${avatarHTML(user, size)}</div>`;
+    }
+    // Fallback initiale colorée
     const col = this._suiviUserColor(name);
-    return `<div class="suivi-row-av" style="background:${col.bg};color:${col.color}">${name[0]?.toUpperCase()||'?'}</div>`;
+    return `<div class="suivi-row-av" title="${name}" style="background:${col.bg};color:${col.color}">${name[0]?.toUpperCase()||'?'}</div>`;
   },
 
   async _suiviLoadLog(id) {
@@ -2191,9 +2198,11 @@ const Clients = {
         const chan = r.type ? `<span class="suivi-log-channel">${icon} ${r.type}</span>` : '';
         const when = this._relativeTime(r.created_at);
 
-        // Avatar auteur
-        const col = this._suiviUserColor(r.author || '');
-        const avHTML = `<div class="suivi-log-av" style="background:${col.bg};color:${col.color}">${(r.author||'?')[0].toUpperCase()}</div>`;
+        // Avatar auteur — vrai avatar si dispo, sinon initiale colorée
+        const authorUser = (this._suiviUsers || []).find(u => u.name === r.author);
+        const avHTML = (authorUser && typeof avatarHTML === 'function')
+          ? `<div class="suivi-log-av" style="overflow:hidden;padding:0">${avatarHTML(authorUser, 28)}</div>`
+          : (() => { const col = this._suiviUserColor(r.author||''); return `<div class="suivi-log-av" style="background:${col.bg};color:${col.color}">${(r.author||'?')[0].toUpperCase()}</div>`; })();
 
         return `${sep}<div class="suivi-log-entry">
           ${avHTML}
