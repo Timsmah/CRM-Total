@@ -960,7 +960,7 @@ const Clients = {
     const agentAv = (() => {
       const name = c.suivi_assigned_to;
       if (!name) return '';
-      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || null;
+      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || (Clients._suiviUsers||[]).find(u=>u.name===name) || null;
       if (user && typeof avatarHTML === 'function') {
         return `<div title="${name}" style="width:18px;height:18px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(user, 18)}</div>`;
       }
@@ -1064,7 +1064,7 @@ const Clients = {
     const agentAv = (() => {
       const name = c.suivi_assigned_to;
       if (!name) return '';
-      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || null;
+      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || (Clients._suiviUsers||[]).find(u=>u.name===name) || null;
       if (user && typeof avatarHTML === 'function') {
         return `<div title="${name}" style="width:16px;height:16px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(user, 16)}</div>`;
       }
@@ -1122,7 +1122,7 @@ const Clients = {
       }
       const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
       slot.innerHTML = rows.slice(0, 3).map(r => {
-        const authorUser = (typeof App !== 'undefined' && App.getUserByName?.(r.author)) || null;
+        const authorUser = (typeof App !== 'undefined' && App.getUserByName?.(r.author)) || (Clients._suiviUsers||[]).find(u=>u.name===r.author) || null;
         const avEl = authorUser && typeof avatarHTML === 'function'
           ? `<div style="width:20px;height:20px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(authorUser, 20)}</div>`
           : (() => {
