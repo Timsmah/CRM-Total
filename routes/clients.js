@@ -115,12 +115,20 @@ router.patch('/:id/fees', async (req, res) => {
   res.json({ research_fees_paid: newVal });
 });
 
-// ── PATCH /api/clients/:id/suivi — statut suivi + assignation ───────────────
+// ── PATCH /api/clients/:id/suivi — statut suivi + assignation + sync kanban ──
 router.patch('/:id/suivi', async (req, res) => {
   const { suivi_status, suivi_assigned_to } = req.body;
   const update = {};
   if (suivi_status !== undefined) update.suivi_status = suivi_status;
   if ('suivi_assigned_to' in req.body) update.suivi_assigned_to = req.body.suivi_assigned_to || null;
+
+  // Sync automatique suivi_status → status (kanban)
+  if (suivi_status !== undefined) {
+    if (suivi_status === 'signe')            update.status = 'Signé';
+    else if (suivi_status === 'recherche_lancee') update.status = 'Recherche active';
+    else                                      update.status = 'Prospect';
+  }
+
   const { error } = await db.from('clients').update(update).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json(update);

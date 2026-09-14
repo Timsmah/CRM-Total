@@ -96,6 +96,7 @@ const Recherches = {
 
     return `
       <div onclick="Recherches.selectClient(${c.id})"
+        oncontextmenu="Recherches._ctxMenu(${c.id},event)"
         style="padding:9px 12px 9px 10px;cursor:pointer;border-bottom:0.5px solid var(--border);
                background:${isActive ? 'var(--surface-1)' : 'transparent'};
                border-left:3px solid ${isActive ? '#d4a853' : 'transparent'};
@@ -477,6 +478,80 @@ const Recherches = {
       });
       Toast.show('Proposition supprimée');
       this.render();
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  // ── Clic droit sur un client dans la sidebar ────────────────────────────
+  _ctxMenu(id, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.querySelectorAll('.rech-ctx-menu').forEach(m => m.remove());
+
+    const c = this.clients.find(x => x.id === id);
+    if (!c) return;
+    const isEN = this._isEN();
+
+    // Statuts suivi disponibles depuis Recherches
+    const suiviStatuses = [
+      { key: 'recherche_lancee', label: isEN ? '🔍 Search active' : '🔍 Recherche lancée', color: '#1D9E75' },
+      { key: 'en_attente',       label: isEN ? '⏸ On hold'        : '⏸ En attente',        color: '#9B59B6' },
+      { key: 'signe',            label: isEN ? '✅ Signed'         : '✅ Signé',             color: '#888780' },
+      { key: 'a_contacter',      label: isEN ? '↩ Remove from searches' : '↩ Retirer des recherches', color: '#EF9F27' },
+    ];
+
+    const menu = document.createElement('div');
+    menu.className = 'rech-ctx-menu';
+    menu.style.cssText = `position:fixed;z-index:9999;background:var(--surface-2,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:5px 0;min-width:190px;font-size:12.5px`;
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+    menu.style.top  = Math.min(e.clientY, window.innerHeight - 180) + 'px';
+
+    // Titre client
+    const title = document.createElement('div');
+    title.style.cssText = 'padding:6px 14px 5px;font-weight:600;color:var(--text);border-bottom:0.5px solid var(--border);margin-bottom:3px';
+    title.textContent = c.name;
+    menu.appendChild(title);
+
+    // Voir la fiche
+    const detailBtn = document.createElement('div');
+    detailBtn.className = 'rech-ctx-item';
+    detailBtn.innerHTML = `👤 ${isEN ? 'View profile' : 'Voir la fiche'}`;
+    detailBtn.onclick = () => { menu.remove(); this.openClientDetail(id); };
+    menu.appendChild(detailBtn);
+
+    // Séparateur statut
+    const sep = document.createElement('div');
+    sep.style.cssText = 'padding:4px 14px 3px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;border-top:0.5px solid var(--border)';
+    sep.textContent = isEN ? 'Change status' : 'Changer le statut';
+    menu.appendChild(sep);
+
+    suiviStatuses.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'rech-ctx-item';
+      const isCurrent = c.suivi_status === s.key;
+      item.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${s.color};margin-right:7px;flex-shrink:0;vertical-align:middle"></span>${s.label}${isCurrent ? ' <span style="opacity:.45;font-size:10px">✓</span>' : ''}`;
+      item.onclick = () => { menu.remove(); this._setSuiviStatus(id, s.key); };
+      menu.appendChild(item);
+    });
+
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
+  },
+
+  async _setSuiviStatus(id, status) {
+    try {
+      await api.patch(`/clients/${id}/suivi`, { suivi_status: status });
+      const c = this.clients.find(x => x.id === id);
+      if (c) c.suivi_status = status;
+      // Si on retire des recherches → on le retire de la liste
+      if (status === 'a_contacter') {
+        this.clients = this.clients.filter(x => x.id !== id);
+        if (this.selectedId === id) this.selectedId = this.clients[0]?.id || null;
+      }
+      this.render();
+      const isEN = this._isEN();
+      Toast.show(status === 'a_contacter'
+        ? (isEN ? 'Client removed from searches' : 'Client retiré des recherches')
+        : (isEN ? 'Status updated' : 'Statut mis à jour'));
     } catch (err) { Toast.show(err.message, 'error'); }
   },
 };
