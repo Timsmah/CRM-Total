@@ -165,10 +165,11 @@ function scoreBreakdownHTML(c) {
 
 function getContactCols() {
   return [
-    { key: 'À contacter',    label: t('col_a_contacter'), cls: 'col-to-contact', ghost: false },
-    { key: 'en_recherche',   label: t('col_recherche'),   cls: 'col-recherche',  ghost: true  },
-    { key: 'Visite / Offre', label: t('col_visite'),      cls: 'col-visite',     ghost: false },
-    { key: 'Signé',          label: t('col_signe'),        cls: 'col-signed',    ghost: false },
+    { key: 'Nouveau',        label: t('col_nouveau'),      cls: 'col-nouveau',    ghost: false },
+    { key: 'À contacter',    label: t('col_a_contacter'),  cls: 'col-to-contact', ghost: false },
+    { key: 'en_recherche',   label: t('col_recherche'),    cls: 'col-recherche',  ghost: true  },
+    { key: 'Visite / Offre', label: t('col_visite'),       cls: 'col-visite',     ghost: false },
+    { key: 'Signé',          label: t('col_signe'),         cls: 'col-signed',    ghost: false },
   ];
 }
 
@@ -176,9 +177,10 @@ function getContactCols() {
 const CONTACT_STATUS_LEGACY_MAP = {
   'Contacté':         'À contacter',
   'Rappeler':         'À contacter',
-  'Property to Find': 'À contacter', // ces clients seront dans la ghost col si suivi_status=recherche_lancee
+  'Property to Find': 'À contacter',
   'Urgent Sending':   'À contacter',
   'Closed':           'Signé',
+  // suivi: 'nouveau' → colonne Nouveau si pas encore de contact_status
 };
 const CONTACT_COLS = getContactCols(); // kept for compatibility, refreshed in render()
 
@@ -390,7 +392,7 @@ const Clients = {
 
   effectiveContactStatus(c) {
     const s = c.contact_status;
-    if (!s) return 'À contacter';
+    if (!s) return (c.suivi_status === 'nouveau' || !c.suivi_status) ? 'Nouveau' : 'À contacter';
     return CONTACT_STATUS_LEGACY_MAP[s] || s;
   },
 
@@ -900,8 +902,7 @@ const Clients = {
     return `
       <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
-        ondragend="Clients.onDragEnd(event)"
-        style="border-left:3px solid ${suiviColor}">
+        ondragend="Clients.onDragEnd(event)">
 
         <div class="card-inner" id="card-inner-${c.id}"
           onclick="Clients.flipCard(${c.id}, event)"
@@ -925,7 +926,6 @@ const Clients = {
 
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
-              ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
               ${moveinLine}
               ${c.duration ? `<p>⏱ ${tr(c.duration)}</p>` : ''}
             </div>
@@ -1013,7 +1013,6 @@ const Clients = {
           </div>
           <div class="client-details">
             ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
-            ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
           </div>
           <button class="card-ghost-link" onclick="event.stopPropagation();App.navigateTo('recherches');setTimeout(()=>{ if(typeof Recherches!=='undefined') Recherches.selectClient(${c.id}); },200)">
             🔍 Voir dans Recherches →

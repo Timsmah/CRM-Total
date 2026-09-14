@@ -54,7 +54,7 @@ const Recherches = {
       <div style="display:flex;flex-direction:column;height:calc(100vh - 0px);overflow:hidden">
 
         <!-- Barre du haut -->
-        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:16px">
+        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px">
           <div>
             <h1 style="font-size:20px;font-weight:700;margin:0 0 2px">🔍 ${this._t('Recherches','Searches')}</h1>
             <div style="font-size:12px;color:var(--text-3);display:flex;gap:12px">
@@ -64,6 +64,9 @@ const Recherches = {
               ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} ${this._t('en attente','pending')}</span>` : ''}
             </div>
           </div>
+          <button class="btn btn-primary" onclick="Recherches.openAddClientModal()" style="flex-shrink:0">
+            + ${this._t('Ajouter un client','Add client')}
+          </button>
         </div>
 
         <!-- Split -->
@@ -552,6 +555,75 @@ const Recherches = {
       Toast.show(status === 'a_contacter'
         ? (isEN ? 'Client removed from searches' : 'Client retiré des recherches')
         : (isEN ? 'Status updated' : 'Statut mis à jour'));
+    } catch (err) { Toast.show(err.message, 'error'); }
+  },
+
+  // ── Créer un client directement depuis Recherches ────────────────────────
+  openAddClientModal() {
+    const isEN = this._isEN();
+    const sources = ['Formulaire', 'Instagram DM', 'WhatsApp', 'Référence', 'Autre'];
+    Modal.open(isEN ? 'Add client' : 'Nouveau client', `
+      <form onsubmit="Recherches._submitAddClient(event)">
+        <div class="form-row">
+          <label>${isEN ? 'Name' : 'Nom'} *</label>
+          <input name="name" required placeholder="${isEN ? 'Full name' : 'Nom complet'}" autofocus>
+        </div>
+        <div class="form-row">
+          <label>WhatsApp</label>
+          <input name="whatsapp" placeholder="+66 XX XXX XXXX">
+        </div>
+        <div class="form-2">
+          <div class="form-row">
+            <label>${isEN ? 'Budget min' : 'Budget min'} (฿)</label>
+            <input name="budget_min" type="number" placeholder="20000">
+          </div>
+          <div class="form-row">
+            <label>${isEN ? 'Budget max' : 'Budget max'} (฿)</label>
+            <input name="budget_max" type="number" placeholder="40000">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>${isEN ? 'Criteria' : 'Critères'}</label>
+          <textarea name="criteria" rows="2" placeholder="2BR, balcon, piscine…"></textarea>
+        </div>
+        <div class="form-row">
+          <label>${isEN ? 'Source' : 'Source'}</label>
+          <select name="source">
+            ${sources.map(s => `<option>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="Modal.close()">${isEN ? 'Cancel' : 'Annuler'}</button>
+          <button type="submit" class="btn btn-primary">${isEN ? 'Create & add to searches' : 'Créer et ajouter aux recherches'}</button>
+        </div>
+      </form>
+    `);
+  },
+
+  async _submitAddClient(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+      name:       fd.get('name'),
+      whatsapp:   fd.get('whatsapp') || '',
+      budget_min: parseInt(fd.get('budget_min')) || null,
+      budget_max: parseInt(fd.get('budget_max')) || null,
+      criteria:   fd.get('criteria') || '',
+      source:     fd.get('source') || 'Autre',
+      status:     'Recherche active',
+    };
+    try {
+      const client = await api.post('/clients', body);
+      // Passe directement en recherche_lancee
+      await api.patch(`/clients/${client.id}/suivi`, { suivi_status: 'recherche_lancee' });
+      client.suivi_status = 'recherche_lancee';
+      client.status = 'Recherche active';
+      this.clients.push(client);
+      this.proposals[client.id] = [];
+      this.selectedId = client.id;
+      Modal.close();
+      this.render();
+      Toast.show(this._isEN() ? '✓ Client created' : '✓ Client créé et ajouté aux recherches');
     } catch (err) { Toast.show(err.message, 'error'); }
   },
 };
