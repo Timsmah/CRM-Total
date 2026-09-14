@@ -223,12 +223,20 @@ function avatarHTML(user, size = 36) {
 const App = {
   user: { id: null, name: 'Tim', role: 'admin', lang: 'fr', avatar_type: 'preset', avatar_value: '1' },
   get role() { return this.user?.role || 'admin'; }, // rétro-compat
+  _usersCache: [], // cache global des users pour avatars (chargé au démarrage)
+
+  // Retourne l'objet user par nom depuis le cache
+  getUserByName(name) {
+    return this._usersCache.find(u => u.name === name) || null;
+  },
 
   async init() {
     try {
       const data = await api.get('/auth/check');
       if (data.authenticated) {
         this.user = data;
+        // Précharge les users en arrière-plan (admins seulement, ignoré si erreur)
+        api.get('/users').then(users => { this._usersCache = users || []; }).catch(() => {});
         this.showApp();
       } else this.showLogin();
     } catch { this.showLogin(); }

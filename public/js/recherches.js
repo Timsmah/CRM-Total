@@ -200,8 +200,9 @@ const Recherches = {
   // ── Helper avatar mini par nom d'utilisateur ─────────────────────────────
   _userAv(name, size = 22) {
     if (!name) return '';
-    // Vrai avatar depuis le cache users
-    const user = this._users.find(u => u.name === name);
+    // Vrai avatar depuis cache global App ou cache local
+    const user = (typeof App !== 'undefined' && App.getUserByName?.(name))
+               || this._users.find(u => u.name === name);
     if (user && typeof avatarHTML === 'function') {
       return `<div title="${name}" style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:inline-flex;flex-shrink:0">${avatarHTML(user, size)}</div>`;
     }

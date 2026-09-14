@@ -2150,9 +2150,9 @@ const Clients = {
 
   _suiviMiniAv(name, size = 20) {
     if (!name) return '';
-    // Cherche le vrai avatar dans le cache users
-    const users = this._suiviUsers || [];
-    const user  = users.find(u => u.name === name);
+    // Vrai avatar depuis le cache global App ou le cache local
+    const user = (typeof App !== 'undefined' && App.getUserByName?.(name))
+               || (this._suiviUsers || []).find(u => u.name === name);
     if (user && typeof avatarHTML === 'function') {
       return `<div class="suivi-row-av" title="${name}" style="width:${size}px;height:${size}px;overflow:hidden;border-radius:50%;flex-shrink:0">${avatarHTML(user, size)}</div>`;
     }
@@ -2198,10 +2198,11 @@ const Clients = {
         const chan = r.type ? `<span class="suivi-log-channel">${icon} ${r.type}</span>` : '';
         const when = this._relativeTime(r.created_at);
 
-        // Avatar auteur — vrai avatar si dispo, sinon initiale colorée
-        const authorUser = (this._suiviUsers || []).find(u => u.name === r.author);
+        // Avatar auteur — vrai avatar depuis cache global
+        const authorUser = (typeof App !== 'undefined' && App.getUserByName?.(r.author))
+                        || (this._suiviUsers || []).find(u => u.name === r.author);
         const avHTML = (authorUser && typeof avatarHTML === 'function')
-          ? `<div class="suivi-log-av" style="overflow:hidden;padding:0">${avatarHTML(authorUser, 28)}</div>`
+          ? `<div class="suivi-log-av" style="overflow:hidden;padding:0;border-radius:50%">${avatarHTML(authorUser, 28)}</div>`
           : (() => { const col = this._suiviUserColor(r.author||''); return `<div class="suivi-log-av" style="background:${col.bg};color:${col.color}">${(r.author||'?')[0].toUpperCase()}</div>`; })();
 
         return `${sep}<div class="suivi-log-entry">
