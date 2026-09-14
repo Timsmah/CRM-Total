@@ -56,12 +56,17 @@ router.patch('/:id/archive', async (req, res) => {
 });
 
 router.patch('/:id/contact-status', async (req, res) => {
-  const { contact_status, status } = req.body;
+  const { contact_status, status, suivi_status } = req.body;
   const update = { contact_status };
   if (status) update.status = status;
+  if (suivi_status) {
+    update.suivi_status = suivi_status;
+    // Sync macro status quand on signe
+    if (suivi_status === 'signe') update.status = 'Signé';
+  }
   const { error } = await db.from('clients').update(update).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ contact_status });
+  res.json({ contact_status, suivi_status });
 });
 
 router.patch('/:id/note', async (req, res) => {

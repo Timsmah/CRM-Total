@@ -365,6 +365,14 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .col-callback    { color: var(--red); }
 .col-closed      { color: #16A34A; }
 .col-meeting     { color: var(--green); }
+/* ── Nouvelles colonnes C2 ── */
+.col-recherche   { color: #1D9E75; }
+.col-visite      { color: #8B5CF6; }
+.col-signed      { color: #16A34A; }
+/* Ghost column */
+.kanban-col.col-ghost { background: var(--surface-1); border-style: dashed; }
+.kanban-col.col-ghost .kanban-col-header { background: transparent; border-bottom-style: dashed; }
+.kanban-col.col-ghost:not(.col-collapsed):hover { border-color: var(--border) !important; }
 
 .kanban-cards {
   flex: 1; overflow-y: auto;
@@ -380,14 +388,33 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   cursor: pointer;
   /* override .card visual — visuals live on .card-face */
   background: transparent !important;
-  border: none !important;
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  /* border-left est géré inline via suivi_status color */
   box-shadow: none !important;
   padding: 0 !important;
   overflow: visible !important;
   transform: none !important;
   transition: none !important;
+  border-radius: 0 8px 8px 0 !important;
 }
 .kanban-card:hover { box-shadow: none !important; transform: none !important; }
+/* Ghost card */
+.kanban-card-ghost { cursor: default; }
+.kanban-card-ghost .card-face { opacity: .85; }
+.kanban-card-ghost .card-front { border: 1px dashed var(--border) !important; border-left: none !important; }
+/* Quick actions footer */
+.card-quick-row { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding-top: 5px; border-top: 0.5px solid var(--border); }
+.card-quick-btn { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 6px; padding: 2px 7px; font-size: 11px; cursor: pointer; color: var(--text-2); transition: background .1s; line-height: 1.4; }
+.card-quick-btn:hover { background: var(--surface-3); color: var(--text); }
+/* Ghost card link button */
+.card-ghost-link { display: block; width: 100%; margin-top: 8px; padding: 5px 8px; background: #E1F5EE; color: #1D9E75; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; text-align: left; transition: background .12s; }
+.card-ghost-link:hover { background: #c8edd8; }
+@media (prefers-color-scheme: dark) {
+  .card-ghost-link { background: #0d2a1e; color: #4ADE80; }
+  .card-ghost-link:hover { background: #123d2a; }
+}
 
 /* 3D inner */
 .card-inner {

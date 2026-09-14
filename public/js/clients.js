@@ -165,14 +165,21 @@ function scoreBreakdownHTML(c) {
 
 function getContactCols() {
   return [
-    { key: 'À contacter',      label: t('col_prospect'), cls: 'col-to-contact' },
-    { key: 'Contacté',         label: t('col_toclose'),  cls: 'col-contacted'  },
-    { key: 'Property to Find', label: t('col_search'),   cls: 'col-meeting'    },
-    { key: 'Urgent Sending',   label: t('col_proposal'), cls: 'col-urgent'     },
-    { key: 'Rappeler',         label: t('col_visit'),    cls: 'col-callback'   },
-    { key: 'Closed',           label: '✅ Signé',         cls: 'col-closed'     },
+    { key: 'À contacter',    label: t('col_a_contacter'), cls: 'col-to-contact', ghost: false },
+    { key: 'en_recherche',   label: t('col_recherche'),   cls: 'col-recherche',  ghost: true  },
+    { key: 'Visite / Offre', label: t('col_visite'),      cls: 'col-visite',     ghost: false },
+    { key: 'Signé',          label: t('col_signe'),        cls: 'col-signed',    ghost: false },
   ];
 }
+
+// Mapping des anciennes valeurs contact_status vers les nouvelles colonnes
+const CONTACT_STATUS_LEGACY_MAP = {
+  'Contacté':         'À contacter',
+  'Rappeler':         'À contacter',
+  'Property to Find': 'À contacter', // ces clients seront dans la ghost col si suivi_status=recherche_lancee
+  'Urgent Sending':   'À contacter',
+  'Closed':           'Signé',
+};
 const CONTACT_COLS = getContactCols(); // kept for compatibility, refreshed in render()
 
 const Clients = {
@@ -382,7 +389,15 @@ const Clients = {
   },
 
   effectiveContactStatus(c) {
-    return c.contact_status || 'À contacter';
+    const s = c.contact_status;
+    if (!s) return 'À contacter';
+    return CONTACT_STATUS_LEGACY_MAP[s] || s;
+  },
+
+  // Couleur de bordure gauche = statut suivi
+  _suiviBorderColor(c) {
+    const st = this.SUIVI_STATUSES.find(s => s.key === (c.suivi_status || 'nouveau'));
+    return st ? st.color : '#CBD5E1';
   },
 
   filtered() {
@@ -628,7 +643,7 @@ const Clients = {
 
     let inner = '';
     if (type === 'move') {
-      inner = getContactCols().map(col =>
+      inner = getContactCols().filter(col => !col.ghost).map(col =>
         `<button class="bulk-pop-item" onclick="Clients.bulkMove('${col.key}')">${col.label}</button>`
       ).join('');
     } else if (type === 'tag') {
@@ -678,10 +693,30 @@ const Clients = {
     };
 
     const scoreOf = c => { const r = clientScore(c); return r ? r.total : -1; };
-    const cards = this.filtered()
-      .filter(c => this.effectiveContactStatus(c) === col.key)
-      .filter(c => this._matchClientFilters(c))
-      .sort((a, b) => {
+
+    let cards;
+    if (col.ghost) {
+      // Colonne fantôme : clients avec suivi_status = recherche_lancee
+      // qui ne sont pas explicitement en Visite/Offre ou Signé
+      cards = this.data.filter(c => {
+        const ecs = this.effectiveContactStatus(c);
+        return c.suivi_status === 'recherche_lancee'
+          && ecs !== 'Visite / Offre'
+          && ecs !== 'Signé';
+      }).filter(c => this._matchClientFilters(c));
+    } else {
+      cards = this.data
+        .filter(c => {
+          const ecs = this.effectiveContactStatus(c);
+          if (ecs !== col.key) return false;
+          // Pour "À contacter" : exclure les clients en recherche active (ils sont dans la ghost col)
+          if (col.key === 'À contacter' && c.suivi_status === 'recherche_lancee') return false;
+          return true;
+        })
+        .filter(c => this._matchClientFilters(c));
+    }
+
+    cards = cards.sort((a, b) => {
         if (this.sortKey === 'score') {
           return this.sortDir === 'desc'
             ? scoreOf(b) - scoreOf(a)
@@ -705,9 +740,9 @@ const Clients = {
     if (this.hiddenCols.has(col.key)) {
       return `
         <div class="kanban-col col-collapsed"
-          ondragover="Clients.onDragOver(event)"
-          ondragleave="Clients.onDragLeave(event)"
-          ondrop="Clients.onDrop(event, '${col.key}')"
+          ondragover="${col.ghost ? '' : 'Clients.onDragOver(event)'}"
+          ondragleave="${col.ghost ? '' : 'Clients.onDragLeave(event)'}"
+          ondrop="${col.ghost ? '' : `Clients.onDrop(event, '${col.key}')`}"
           onclick="Clients.toggleColHide('${col.key}')" title="Afficher ${col.label}">
           <div class="col-collapsed-inner">
             <span class="kanban-count ${col.cls}">${cards.length}</span>
@@ -717,20 +752,20 @@ const Clients = {
     }
 
     return `
-      <div class="kanban-col ${this.focusedCol === col.key ? 'focused' : ''}"
-        ondragover="Clients.onDragOver(event)"
-        ondragleave="Clients.onDragLeave(event)"
-        ondrop="Clients.onDrop(event, '${col.key}')">
+      <div class="kanban-col ${this.focusedCol === col.key ? 'focused' : ''} ${col.ghost ? 'col-ghost' : ''}"
+        ${col.ghost ? '' : `ondragover="Clients.onDragOver(event)" ondragleave="Clients.onDragLeave(event)" ondrop="Clients.onDrop(event, '${col.key}')"`}>
         <div class="kanban-col-header ${col.cls}" onclick="Clients.toggleFocus('${col.key}')">
           <span>${col.label}</span>
           <div style="display:flex;align-items:center;gap:6px">
-            <button class="sort-btn" onclick="Clients.toggleSort(event)" title="${sortTitle}">${sortIcon} ${sortTitle}</button>
+            ${col.ghost ? `<span style="font-size:9px;opacity:.5;font-style:italic">${t('col_ghost_hint')}</span>` : `<button class="sort-btn" onclick="Clients.toggleSort(event)" title="${sortTitle}">${sortIcon} ${sortTitle}</button>`}
             <span class="kanban-count">${cards.length}</span>
             <button class="col-hide-btn" onclick="event.stopPropagation();Clients.toggleColHide('${col.key}')" title="Masquer">‹</button>
           </div>
         </div>
         <div class="kanban-cards">
-          ${cards.map(c => this.cardHTML(c)).join('') || '<p class="kanban-empty">—</p>'}
+          ${col.ghost
+            ? (cards.map(c => this.ghostCardHTML(c)).join('') || '<p class="kanban-empty">—</p>')
+            : (cards.map(c => this.cardHTML(c)).join('') || '<p class="kanban-empty">—</p>')}
         </div>
       </div>`;
   },
@@ -841,6 +876,21 @@ const Clients = {
           : `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>`)
       : '';
 
+    // Bordure gauche = couleur suivi
+    const suiviColor = this._suiviBorderColor(c);
+
+    // Avatar agent assigné
+    const agentAv = (() => {
+      const name = c.suivi_assigned_to;
+      if (!name) return '';
+      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || null;
+      if (user && typeof avatarHTML === 'function') {
+        return `<div title="${name}" style="width:18px;height:18px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(user, 18)}</div>`;
+      }
+      const col = this._suiviUserColor?.(name) || { bg: '#E2E8F0', color: '#64748B' };
+      return `<div title="${name}" style="width:18px;height:18px;border-radius:50%;background:${col.bg};color:${col.color};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">${name[0]?.toUpperCase()||'?'}</div>`;
+    })();
+
     // Manual card color
     const colorDef = CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0];
     const cardStyle = colorDef.bg
@@ -850,7 +900,8 @@ const Clients = {
     return `
       <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
-        ondragend="Clients.onDragEnd(event)">
+        ondragend="Clients.onDragEnd(event)"
+        style="border-left:3px solid ${suiviColor}">
 
         <div class="card-inner" id="card-inner-${c.id}"
           onclick="Clients.flipCard(${c.id}, event)"
@@ -860,23 +911,23 @@ const Clients = {
           <div class="card-face card-front" style="${cardStyle}">
             ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
 
-            <div class="card-top">
-              ${badge(c.status)}
-              <div style="display:flex;align-items:center;gap:6px">
+            <!-- Top : nom + score -->
+            <div class="card-top" style="margin-bottom:4px">
+              <div class="client-name" style="margin-bottom:0">${c.name}</div>
+              <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
                 ${scoreBadge(c)}
                 <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
-                  onclick="event.stopPropagation();Clients.toggleFees(${c.id})" title="Research fees">
-                  ${c.research_fees_paid ? t('clients_fees_paid') : t('clients_fees_unpaid')}
+                  onclick="event.stopPropagation();Clients.toggleFees(${c.id})" title="Research fees" style="font-size:9px;padding:1px 5px">
+                  ${c.research_fees_paid ? '✓' : t('clients_fees_unpaid')}
                 </button>
               </div>
             </div>
 
-            <div class="client-name">${c.name}</div>
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
               ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
               ${moveinLine}
-              ${c.duration ? `<p>⏱ ${t('card_duration')}: ${tr(c.duration)}</p>` : ''}
+              ${c.duration ? `<p>⏱ ${tr(c.duration)}</p>` : ''}
             </div>
 
             <div class="action-tags-row" onclick="event.stopPropagation()">
@@ -893,7 +944,18 @@ const Clients = {
               </div>
               <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
             </div>
-            ${daysAgo ? `<div style="font-size:10px;color:var(--text-3);margin-top:4px;padding-top:4px;border-top:0.5px solid var(--border)">🕐 ${daysAgo}</div>` : ''}
+
+            <!-- Footer : agent + actions rapides + date -->
+            <div class="card-quick-row" onclick="event.stopPropagation()">
+              <div style="display:flex;align-items:center;gap:4px">
+                ${agentAv}
+                ${daysAgo ? `<span style="font-size:9.5px;color:var(--text-3)">${daysAgo}</span>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:3px">
+                ${c.whatsapp ? `<button class="card-quick-btn" onclick="navigator.clipboard.writeText('${c.whatsapp}').then(()=>Toast.show('📱 Copié','success'))" title="Copier WA">📱</button>` : ''}
+                <button class="card-quick-btn" onclick="Clients.openDetailModal(${c.id})" title="Voir la fiche">↗</button>
+              </div>
+            </div>
 
           </div>
 
@@ -919,6 +981,43 @@ const Clients = {
 
           </div>
 
+        </div>
+      </div>`;
+  },
+
+  // ── Carte fantôme pour la colonne "En recherche" ─────────────────────────
+  ghostCardHTML(c) {
+    const budgetLine = c.budget_max
+      ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿`
+      : null;
+    const suiviColor = '#1D9E75'; // toujours vert recherche_lancee
+
+    const agentAv = (() => {
+      const name = c.suivi_assigned_to;
+      if (!name) return '';
+      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || null;
+      if (user && typeof avatarHTML === 'function') {
+        return `<div title="${name}" style="width:16px;height:16px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(user, 16)}</div>`;
+      }
+      return `<div title="${name}" style="width:16px;height:16px;border-radius:50%;background:#E1F5EE;color:#1D9E75;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">${name[0]?.toUpperCase()||'?'}</div>`;
+    })();
+
+    return `
+      <div class="kanban-card kanban-card-ghost" data-cid="${c.id}"
+        oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)"
+        style="border-left:3px solid ${suiviColor};border-style:solid;border-left-style:solid">
+        <div class="card-face card-front" style="border-style:dashed;border-left-style:solid">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <div class="client-name" style="margin-bottom:0;font-size:13.5px">${c.name}</div>
+            ${agentAv}
+          </div>
+          <div class="client-details">
+            ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
+            ${c.zones ? `<p>📍 ${trZone(c.zones)}</p>` : ''}
+          </div>
+          <button class="card-ghost-link" onclick="event.stopPropagation();App.navigateTo('recherches');setTimeout(()=>{ if(typeof Recherches!=='undefined') Recherches.selectClient(${c.id}); },200)">
+            🔍 Voir dans Recherches →
+          </button>
         </div>
       </div>`;
   },
@@ -1012,7 +1111,7 @@ const Clients = {
         → Déplacer vers <span class="ctx-arrow">›</span>
       </div>
       <div class="ctx-sub hidden">
-        ${getContactCols().filter(col => col.key !== this.effectiveContactStatus(c)).map(col => `
+        ${getContactCols().filter(col => !col.ghost && col.key !== this.effectiveContactStatus(c)).map(col => `
           <div class="ctx-item ctx-sub-item"
             onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.setContactStatus(${id},'${col.key}')">
             ${col.label}
@@ -1209,21 +1308,25 @@ const Clients = {
   },
 
   async setContactStatus(id, status) {
-    await api.patch(`/clients/${id}/contact-status`, { contact_status: status });
+    const body = { contact_status: status };
+    // Sync suivi_status quand on signe depuis le kanban
+    if (status === 'Signé') body.suivi_status = 'signe';
+    await api.patch(`/clients/${id}/contact-status`, body);
     const c = this.data.find(x => x.id === id);
-    if (c) c.contact_status = status;
+    if (c) {
+      c.contact_status = status;
+      if (status === 'Signé') c.suivi_status = 'signe';
+    }
     this.render();
   },
 
   async sendToRecherches(id) {
-    await api.patch(`/clients/${id}/contact-status`, {
-      contact_status: 'Property to Find',
-      status: 'Recherche active',
-    });
+    // Passe suivi_status à recherche_lancee (ce qui sync status → Recherche active via backend)
+    await api.patch(`/clients/${id}/suivi`, { suivi_status: 'recherche_lancee' });
     const c = this.data.find(x => x.id === id);
-    if (c) { c.contact_status = 'Property to Find'; c.status = 'Recherche active'; }
+    if (c) { c.suivi_status = 'recherche_lancee'; c.status = 'Recherche active'; }
     this.render();
-    Toast.show('🔍 Client envoyé en Recherches');
+    Toast.show('🔍 Client en recherche active');
   },
 
   // ── Action Tags ──────────────────────────────────
@@ -1540,10 +1643,11 @@ const Clients = {
   async onDrop(e, colKey) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
+    if (colKey === 'en_recherche') return; // ghost col = read-only
     const id = Number(e.dataTransfer.getData('clientId'));
     if (!id) return;
     await this.setContactStatus(id, colKey);
-    if (colKey === 'Closed') await this._createContractFromClient(id);
+    if (colKey === 'Signé') await this._createContractFromClient(id);
   },
 
   async _createContractFromClient(clientId) {
@@ -1818,18 +1922,18 @@ const Clients = {
       const cardSlot = document.getElementById(`card-act-${clientId}`);
       if (cardSlot) delete cardSlot.dataset.loaded;
 
-      // Auto-advance kanban column on WhatsApp activity
+      // Auto-advance kanban column on WhatsApp activity (skip ghost col)
       if (type === 'whatsapp') {
-        const COLS = getContactCols();
+        const COLS = getContactCols().filter(col => !col.ghost);
         const c = this.data.find(x => x.id === clientId);
         if (c) {
-          const cur = c.contact_status || 'À contacter';
+          const cur = this.effectiveContactStatus(c);
           const idx = COLS.findIndex(col => col.key === cur);
           if (idx !== -1 && idx < COLS.length - 1) {
             const next = COLS[idx + 1].key;
             c.contact_status = next;
             api.patch(`/clients/${clientId}/contact-status`, { contact_status: next }).catch(() => {});
-            Toast.show(`💬 WhatsApp logué · glissé → ${next}`);
+            Toast.show(`💬 WhatsApp logué · → ${next}`);
             this.render();
             return;
           }
