@@ -195,7 +195,7 @@ const Clients = {
   hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
   selectionMode: false,
   selectedClients: new Set(),
-  clientFilters: { name: '', urgency: '', scoreMin: '' },
+  clientFilters: { name: '', urgency: '', scoreMin: '', agent: '' },
   viewMode: localStorage.getItem('crm_clients_view') || 'suivi',
   suiviSelectedId: null,
   _suiviUsers: null, // cached team members
@@ -335,8 +335,9 @@ const Clients = {
 
   filterBarHTML() {
     const f = this.clientFilters;
-    const active = f.name || f.urgency || f.scoreMin;
+    const active = f.name || f.urgency || f.scoreMin || f.agent;
     const filtered = active ? this.countFiltered() : this.data.length;
+    const users = (typeof App !== 'undefined' && App._usersCache) || [];
     return `
       <div class="filter-bar">
         <input class="filter-search" type="text" placeholder="🔍 Rechercher un client…"
@@ -354,6 +355,11 @@ const Clients = {
           <option value="6" ${f.scoreMin==='6'?'selected':''}>⭐ Score ≥ 6</option>
           <option value="7" ${f.scoreMin==='7'?'selected':''}>⭐ Score ≥ 7</option>
           <option value="8" ${f.scoreMin==='8'?'selected':''}>⭐ Score ≥ 8</option>
+        </select>
+        <select class="filter-select" onchange="Clients.setClientFilter('agent',this.value)">
+          <option value="">👤 Tous agents</option>
+          ${users.map(u => `<option value="${u.name}" ${f.agent===u.name?'selected':''}>${u.name}</option>`).join('')}
+          <option value="__none__" ${f.agent==='__none__'?'selected':''}>— Non assigné</option>
         </select>
         ${active ? `<button class="btn btn-ghost btn-sm" onclick="Clients.clearClientFilters()" style="flex-shrink:0">✕ Effacer</button>` : ''}
         <span style="margin-left:auto;font-size:12px;color:var(--text-3);flex-shrink:0">
@@ -377,6 +383,13 @@ const Clients = {
       const r = clientScore(c);
       if (!r || r.total < parseFloat(f.scoreMin)) return false;
     }
+    if (f.agent) {
+      if (f.agent === '__none__') {
+        if (c.suivi_assigned_to) return false;
+      } else {
+        if (c.suivi_assigned_to !== f.agent) return false;
+      }
+    }
     return true;
   },
 
@@ -386,7 +399,7 @@ const Clients = {
   },
 
   clearClientFilters() {
-    this.clientFilters = { name: '', urgency: '', scoreMin: '' };
+    this.clientFilters = { name: '', urgency: '', scoreMin: '', agent: '' };
     this.render();
   },
 
