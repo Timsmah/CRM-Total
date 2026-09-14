@@ -216,6 +216,7 @@ const Clients = {
     await Promise.all([this.load(), this._suiviGetUsers()]); // précharge users pour avatars
     this.render();
     this._checkReminders();
+    this._checkNewAssignments();
     if (!Clients._keyHandler) {
       Clients._keyHandler = (e) => {
         if (e.key !== 's' && e.key !== 'S') return;
@@ -226,6 +227,65 @@ const Clients = {
       };
       document.addEventListener('keydown', Clients._keyHandler);
     }
+  },
+
+  _checkNewAssignments() {
+    const me = (typeof App !== 'undefined' && App.user?.name) || null;
+    if (!me) return;
+
+    // Clients actuellement assignés à moi
+    const myClients = this.data.filter(c => !c.archived && c.suivi_assigned_to === me);
+    const myIds = myClients.map(c => c.id).sort((a, b) => a - b);
+
+    // IDs vus lors de la dernière session
+    let seenIds = [];
+    try { seenIds = JSON.parse(localStorage.getItem(`crm_assign_seen_${me}`) || '[]'); } catch {}
+
+    // Nouveaux = assignés maintenant mais pas dans la liste vue
+    const newIds = myIds.filter(id => !seenIds.includes(id));
+
+    if (newIds.length > 0) {
+      this._newAssignCount = newIds.length;
+      this._newAssignClients = myClients.filter(c => newIds.includes(c.id));
+      this._showAssignBadge(newIds.length);
+
+      // Toast discret
+      const names = this._newAssignClients.slice(0, 2).map(c => c.name.split(' ')[0]).join(', ');
+      const more  = newIds.length > 2 ? ` +${newIds.length - 2}` : '';
+      Toast.show(`👤 ${newIds.length} nouvelle${newIds.length > 1 ? 's' : ''} assignation${newIds.length > 1 ? 's' : ''} : ${names}${more}`, 'info', 5000);
+    } else {
+      this._newAssignCount = 0;
+    }
+  },
+
+  _showAssignBadge(count) {
+    // Retire un badge existant
+    document.querySelectorAll('.nav-assign-badge').forEach(b => b.remove());
+    if (!count) return;
+    const navClients = document.querySelector('.nav-item[data-section="clients"]');
+    if (!navClients) return;
+    navClients.style.position = 'relative';
+    const badge = document.createElement('span');
+    badge.className = 'nav-assign-badge';
+    badge.textContent = count;
+    badge.style.cssText = `
+      position:absolute;top:2px;right:2px;
+      background:#EF4444;color:#fff;
+      font-size:9px;font-weight:700;
+      min-width:16px;height:16px;border-radius:99px;
+      display:flex;align-items:center;justify-content:center;
+      padding:0 4px;pointer-events:none;
+      box-shadow:0 1px 3px rgba(0,0,0,.25)`;
+    navClients.appendChild(badge);
+  },
+
+  _markAssignmentsSeen() {
+    const me = (typeof App !== 'undefined' && App.user?.name) || null;
+    if (!me) return;
+    const myIds = this.data.filter(c => !c.archived && c.suivi_assigned_to === me).map(c => c.id);
+    try { localStorage.setItem(`crm_assign_seen_${me}`, JSON.stringify(myIds)); } catch {}
+    this._newAssignCount = 0;
+    this._showAssignBadge(0);
   },
 
   _checkReminders() {
@@ -395,6 +455,11 @@ const Clients = {
 
   setClientFilter(key, val) {
     this.clientFilters[key] = val;
+    // Quand on filtre par son propre nom → marquer les assignations comme vues
+    if (key === 'agent' && val && val !== '__none__') {
+      const me = (typeof App !== 'undefined' && App.user?.name) || null;
+      if (me && val === me) this._markAssignmentsSeen();
+    }
     this.render();
   },
 
@@ -1180,6 +1245,8 @@ const Clients = {
     const newVal = name || null;
     await api.patch(`/clients/${id}/suivi`, { suivi_assigned_to: newVal });
     c.suivi_assigned_to = newVal;
+    // Si on s'assigne à soi-même → pas de badge pour soi
+    this._markAssignmentsSeen();
     // Update avatar on card without full re-render
     const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
     if (card) {
