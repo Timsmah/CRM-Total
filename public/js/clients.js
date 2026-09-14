@@ -818,9 +818,6 @@ const Clients = {
       }
     }
 
-    const colorDef = CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0];
-    const cardStyle = colorDef.bg ? `background:${colorDef.bg};border-color:${colorDef.border}` : '';
-
     return `
       <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
@@ -829,7 +826,7 @@ const Clients = {
           onclick="Clients.flipCard(${c.id}, event)"
           oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
 
-          <div class="card-face card-front card-focus-front" style="${cardStyle}">
+          <div class="card-face card-front card-focus-front" style="">
             ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px">
               <div class="focus-name" style="flex:1">${c.name}</div>
@@ -843,7 +840,7 @@ const Clients = {
             ${dateBadge ? `<div class="focus-date-row">${dateBadge}</div>` : ''}
           </div>
 
-          <div class="card-face card-back" style="${cardStyle}">
+          <div class="card-face card-back">
             <div class="card-back-header">
               <span class="card-back-name">${c.name.split(' ')[0]}</span>
             </div>
@@ -893,12 +890,6 @@ const Clients = {
       return `<div title="${name}" style="width:18px;height:18px;border-radius:50%;background:${col.bg};color:${col.color};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">${name[0]?.toUpperCase()||'?'}</div>`;
     })();
 
-    // Manual card color
-    const colorDef = CARD_COLORS.find(x => x.key === (c.card_color || null)) || CARD_COLORS[0];
-    const cardStyle = colorDef.bg
-      ? `background:${colorDef.bg};border-color:${colorDef.border}`
-      : '';
-
     return `
       <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
@@ -909,7 +900,7 @@ const Clients = {
           oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
 
           <!-- ── FRONT ── -->
-          <div class="card-face card-front" style="${cardStyle}">
+          <div class="card-face card-front">
             ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
 
             <!-- Top : nom + score -->
@@ -960,7 +951,7 @@ const Clients = {
           </div>
 
           <!-- ── BACK ── -->
-          <div class="card-face card-back" style="${cardStyle}">
+          <div class="card-face card-back">
 
             <div class="card-back-header">
               <span class="card-back-name">${c.name.split(' ')[0]}</span>
@@ -1137,16 +1128,24 @@ const Clients = {
           </div>`).join('')}
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-item ctx-danger" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.archive(${id})">
-        🗄 Archiver
+      <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
+        👤 Assigner à <span class="ctx-arrow">›</span>
+      </div>
+      <div class="ctx-sub hidden">
+        ${(typeof App !== 'undefined' && App._usersCache || []).map(u => `
+          <div class="ctx-item ctx-sub-item ${c.suivi_assigned_to === u.name ? 'ctx-active' : ''}"
+            onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients._kanbanAssign(${id},'${u.name}')">
+            ${c.suivi_assigned_to === u.name ? '✓ ' : ''}${u.name}
+          </div>`).join('')}
+        ${c.suivi_assigned_to ? `
+          <div class="ctx-item ctx-sub-item" style="color:var(--text-3);border-top:0.5px solid var(--border);margin-top:3px;padding-top:5px"
+            onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients._kanbanAssign(${id},null)">
+            ✕ Retirer l'assignation
+          </div>` : ''}
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-colors">
-        ${CARD_COLORS.map(col => `
-          <button class="ctx-dot ${(c.card_color||null)===col.key?'ctx-dot-active':''}"
-            style="background:${col.bg||'#fff'};border-color:${col.border||'#CBD5E1'}"
-            onclick="event.stopPropagation();Clients.setCardColor(${id},'${col.key||''}',this)"
-            title="${col.label}"></button>`).join('')}
+      <div class="ctx-item ctx-danger" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.archive(${id})">
+        🗄 Archiver
       </div>`;
 
     const x = Math.min(event.clientX, window.innerWidth - 210);
@@ -1160,6 +1159,27 @@ const Clients = {
         document.removeEventListener('click', h);
       });
     }, 50);
+  },
+
+  async _kanbanAssign(id, name) {
+    const c = this.data.find(x => x.id === id);
+    if (!c) return;
+    const newVal = name || null;
+    await api.patch(`/clients/${id}/suivi`, { suivi_assigned_to: newVal });
+    c.suivi_assigned_to = newVal;
+    // Update avatar on card without full re-render
+    const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
+    if (card) {
+      // Re-render just this card
+      const col = this.getContactCols ? getContactCols().find(col => this.effectiveContactStatus(c) === col.key) : null;
+      const slot = card.parentElement;
+      if (slot) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = this.cardHTML(c);
+        card.replaceWith(tmp.firstElementChild);
+      }
+    }
+    Toast.show(newVal ? `👤 Assigné à ${newVal}` : '✓ Assignation retirée');
   },
 
   quickLog(id, type, label) {
@@ -2100,6 +2120,7 @@ const Clients = {
         const budget = c.budget_max ? `฿${Number(c.budget_max).toLocaleString('fr-FR')}` : '';
         const type = c.property_type ? tr(c.property_type) : '';
         const sub = [budget, type].filter(Boolean).join(' · ');
+        const tagDots = this._suiviTagDots(c);
         return `<div class="suivi-row ${isSel ? 'sel' : ''}" style="border-left:2.5px solid ${g.color}"
           onclick="Clients._suiviSelect(${c.id})"
           oncontextmenu="Clients._suiviCtxMenu(${c.id},event)">
@@ -2107,7 +2128,10 @@ const Clients = {
             <div class="suivi-row-name">${c.name}</div>
             ${sub ? `<div class="suivi-row-sub">${sub}</div>` : ''}
           </div>
-          ${avHTML}
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+            ${tagDots}
+            ${avHTML}
+          </div>
         </div>`;
       }).join('');
       return `
@@ -2258,6 +2282,31 @@ const Clients = {
       Chompoo: { bg: '#FAEEDA', color: '#633806' },
     };
     return palette[name] || { bg: '#E6F1FB', color: '#0C447C' };
+  },
+
+  _suiviTagDots(c) {
+    // Dots visibles pour les tags clés — max 3 dots
+    const TAG_COLORS = {
+      hot:      '#EF4444', // rouge — prioritaire
+      rappeler: '#F97316', // orange — à relancer
+      appeler:  '#3B82F6', // bleu — à appeler
+      rep:      '#94A3B8', // gris — en attente réponse
+      visite:   '#8B5CF6', // violet — visite à planifier
+      contrat:  '#16A34A', // vert — contrat
+      nego:     '#D97706', // ambre — négociation
+      stop:     '#64748B', // slate — ne pas contacter
+      payer:    '#DC2626', // rouge foncé — à payer
+    };
+    const ORDER = ['hot','stop','payer','rappeler','appeler','contrat','nego','visite','rep'];
+    let tags = [];
+    try { tags = JSON.parse(c.action_tags || '[]'); } catch { tags = []; }
+    if (!Array.isArray(tags)) tags = [];
+    const dots = ORDER.filter(k => tags.includes(k) && TAG_COLORS[k]).slice(0, 3);
+    if (!dots.length) return '';
+    return dots.map(k => {
+      const tag = ACTION_TAGS.find(t => t.key === k);
+      return `<span title="${tag?.label || k}" style="width:6px;height:6px;border-radius:50%;background:${TAG_COLORS[k]};display:inline-block;flex-shrink:0"></span>`;
+    }).join('');
   },
 
   _suiviMiniAv(name, size = 20) {
