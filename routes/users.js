@@ -14,13 +14,12 @@ const COOKIE_OPTS = {
   maxAge  : 7 * 24 * 60 * 60 * 1000
 };
 
-// ── GET /api/users — liste tous les utilisateurs (tous les membres) ─────────
+// ── GET /api/users — liste tous les utilisateurs (admin seulement) ─────────
 router.get('/', async (req, res) => {
-  // Admins voient tout, membres voient les infos publiques (nom + avatar)
-  const select = req.user.role === 'admin'
-    ? 'id, name, email, role, lang, avatar_type, avatar_value, sections, created_at'
-    : 'id, name, avatar_type, avatar_value';
-  const { data, error } = await db.from('crm_users').select(select).order('created_at');
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  const { data, error } = await db.from('crm_users')
+    .select('id, name, email, role, lang, avatar_type, avatar_value, sections, created_at')
+    .order('created_at');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
