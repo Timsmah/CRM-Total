@@ -397,7 +397,7 @@ const Clients = {
     const f = this.clientFilters;
     const active = f.name || f.urgency || f.scoreMin || f.agent;
     const filtered = active ? this.countFiltered() : this.data.length;
-    const users = (typeof App !== 'undefined' && App._usersCache) || [];
+    const users = this._suiviUsers || (typeof App !== 'undefined' && App._usersCache) || [];
     return `
       <div class="filter-bar">
         <input class="filter-search" type="text" placeholder="🔍 Rechercher un client…"
