@@ -2200,7 +2200,6 @@ const Clients = {
         const budget = c.budget_max ? `฿${Number(c.budget_max).toLocaleString('fr-FR')}` : '';
         const type = c.property_type ? tr(c.property_type) : '';
         const sub = [budget, type].filter(Boolean).join(' · ');
-        const tagDots = this._suiviTagDots(c);
         return `<div class="suivi-row ${isSel ? 'sel' : ''}" style="border-left:2.5px solid ${g.color}"
           onclick="Clients._suiviSelect(${c.id})"
           oncontextmenu="Clients._suiviCtxMenu(${c.id},event)">
@@ -2208,10 +2207,7 @@ const Clients = {
             <div class="suivi-row-name">${c.name}</div>
             ${sub ? `<div class="suivi-row-sub">${sub}</div>` : ''}
           </div>
-          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-            ${tagDots}
-            ${avHTML}
-          </div>
+          ${avHTML}
         </div>`;
       }).join('');
       return `
