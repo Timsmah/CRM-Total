@@ -14,7 +14,7 @@ const Dashboard = {
       const [clients, properties, finance, notes] = await Promise.all([
         api.get('/clients?archived=0'),
         api.get('/properties?archived=0'),
-        api.get('/finance'),
+        api.get('/finance').catch(() => []),
         api.get(`/notes?date=${this._viewDate}`).catch(() => ({ tasks: [], notes: '' })),
       ]);
       this.clients    = clients;
