@@ -9,7 +9,6 @@ const Properties = {
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
-    api.post('/properties/sync/sheets', {}).catch(() => {}); // fire & forget
     await this.load();
     this.render();
   },
