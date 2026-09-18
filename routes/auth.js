@@ -31,11 +31,10 @@ router.post('/login', async (req, res) => {
       role        : user.role,
       lang        : user.lang,
       avatar_type : user.avatar_type,
-      avatar_value: user.avatar_value,
       sections    : user.sections || null,
     };
     res.cookie('crm_auth', JSON.stringify(payload), COOKIE_OPTS);
-    return res.json({ success: true, ...payload });
+    return res.json({ success: true, ...payload, avatar_value: user.avatar_value });
   }
 
   // ── Fallback temporaire (à supprimer après création des comptes) ──────────
@@ -65,7 +64,11 @@ router.get('/check', (req, res) => {
   // Nouveau format JSON
   try {
     const user = JSON.parse(val);
-    if (user?.id) return res.json({ authenticated: true, ...user });
+    if (user?.id) {
+      // Charge avatar_value depuis la DB (non stocké dans le cookie pour éviter des cookies trop lourds)
+      const { data } = await db.from('crm_users').select('avatar_value').eq('id', user.id).maybeSingle();
+      return res.json({ authenticated: true, ...user, avatar_value: data?.avatar_value || null });
+    }
   } catch {}
 
   res.json({ authenticated: false });

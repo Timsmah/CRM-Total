@@ -90,8 +90,8 @@ router.patch('/me', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  // Mettre à jour le cookie avec les nouvelles infos
-  res.cookie('crm_auth', JSON.stringify(data), COOKIE_OPTS);
+  const { avatar_value, ...cookiePayload } = data;
+  res.cookie('crm_auth', JSON.stringify(cookiePayload), COOKIE_OPTS);
   res.json(data);
 });
 
@@ -128,7 +128,8 @@ router.post('/me/avatar', async (req, res) => {
     .select('id, name, email, role, lang, avatar_type, avatar_value').single();
 
   if (error) return res.status(500).json({ error: error.message });
-  res.cookie('crm_auth', JSON.stringify(data), COOKIE_OPTS);
+  const { avatar_value: _av, ...cookiePayload2 } = data;
+  res.cookie('crm_auth', JSON.stringify(cookiePayload2), COOKIE_OPTS);
   res.json(data);
 });
 
