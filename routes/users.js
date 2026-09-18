@@ -90,7 +90,7 @@ router.patch('/me', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const { avatar_value, ...cookiePayload } = data;
+  const { avatar_value: _ignored, ...cookiePayload } = data;
   res.cookie('crm_auth', JSON.stringify(cookiePayload), COOKIE_OPTS);
   res.json(data);
 });
