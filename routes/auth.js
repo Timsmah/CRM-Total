@@ -53,7 +53,7 @@ router.post('/logout', (req, res) => {
 });
 
 // ── Check session ─────────────────────────────────────────────────────────────
-router.get('/check', (req, res) => {
+router.get('/check', async (req, res) => {
   const val = req.signedCookies?.crm_auth;
   if (!val) return res.json({ authenticated: false });
 
