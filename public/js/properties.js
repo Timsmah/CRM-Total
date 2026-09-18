@@ -105,13 +105,18 @@ const Properties = {
       <div class="section-header">
         <h2>Properties</h2>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="Properties.openAddModal()">+ Add</button>
-          <button class="btn btn-secondary" onclick="Properties.syncSheets()">↻ Sheets</button>
-          <button class="btn btn-secondary" onclick="Properties.cachePhotos()" title="Fetch & cache all photos from Drive">📸 Cache photos</button>
-          <button class="btn btn-ghost" onclick="Properties.toggleArchived()">
-            ${this.showArchived ? '← Active' : '🗃 Archived'}
-          </button>
+          ${!this.showArchived ? `
+            <button class="btn btn-primary" onclick="Properties.openAddModal()">+ Add</button>
+            <button class="btn btn-secondary" onclick="Properties.syncSheets()">↻ Sheets</button>
+            <button class="btn btn-secondary" onclick="Properties.cachePhotos()" title="Fetch & cache all photos from Drive">📸 Cache photos</button>
+            <button class="btn btn-ghost" onclick="Properties.archiveAll()" title="Basculer les propriétés actuelles en ancien listing">🗃 Archiver ancien listing</button>
+          ` : ''}
         </div>
+      </div>
+
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
+        <button onclick="Properties.setTab(false)" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:${!this.showArchived?'600':'400'};color:${!this.showArchived?'var(--accent)':'var(--text-2)'};border-bottom:2px solid ${!this.showArchived?'var(--accent)':'transparent'};margin-bottom:-2px;transition:all .15s">Listing actuel</button>
+        <button onclick="Properties.setTab(true)"  style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:${this.showArchived?'600':'400'};color:${this.showArchived?'var(--accent)':'var(--text-2)'};border-bottom:2px solid ${this.showArchived?'var(--accent)':'transparent'};margin-bottom:-2px;transition:all .15s">Ancien listing</button>
       </div>
 
       <div class="filter-bar" style="margin-bottom:20px">
@@ -212,8 +217,20 @@ const Properties = {
   },
 
   // ── Actions ─────────────────────────────────────────────────────────────────
+  async setTab(archived) {
+    this.showArchived = archived;
+    await this.load();
+    this.render();
+  },
+
   async toggleArchived() {
-    this.showArchived = !this.showArchived;
+    await this.setTab(!this.showArchived);
+  },
+
+  async archiveAll() {
+    if (!confirm('Archiver toutes les propriétés actives ? Elles resteront consultables dans "Ancien listing".')) return;
+    await api.post('/properties/archive-all', {});
+    Toast.show('✓ Ancien listing archivé');
     await this.load();
     this.render();
   },

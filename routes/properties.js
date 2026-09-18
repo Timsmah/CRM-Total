@@ -70,44 +70,63 @@ router.patch('/:id/archive', async (req, res) => {
   res.json({ archived: !!newVal });
 });
 
-// Sync depuis Google Sheet public (CSV)
+// Archive tous les biens actifs (pour basculer l'ancien listing en archive)
+router.post('/archive-all', async (req, res) => {
+  const { error } = await db.from('properties').update({ archived: 1 }).eq('archived', 0);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Sync depuis Google Sheet public (CSV) — nouveau listing septembre 2026
 router.post('/sync/sheets', async (req, res) => {
   try {
-    const SHEET_ID = '1S7Hwemso7y2wxWH7CvmJ17BzMikpzW_P49jfqxys-NA';
+    const SHEET_ID = '1_HOR2jL4CtiXufRR3AKDyxA8UEEefwrsF2m53X5igNg';
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
     const response = await fetch(url, { redirect: 'follow' });
     if (!response.ok) throw new Error(`Sheet HTTP ${response.status}`);
 
-    const rows = parseCSV(await response.text()).slice(1); // skip header
-    let imported = 0, updated = 0;
-
+    const rows = parseCSV(await response.text()).slice(1); // skip header row
     const payload = [];
+
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (!r[2] || !r[2].trim()) continue;
+      const name = (r[1] || '').trim();
+      // Ignore lignes vides et sous-titres de section ("1 Bedroom", "2 Bedroom"…)
+      if (!name || /^\d+\s*(Bedroom|BR)/i.test(name)) continue;
+
+      // Conversion "X Bed Y Bath" → "XBR YBath"
+      const rawType = (r[4] || '').trim();
+      const room_type = rawType.replace(/(\d+)\s+Beds?\s+(\S+)\s+Baths?/i, '$1BR $2Bath');
+
+      // Prix : extraire le premier nombre de 4+ chiffres
+      const rawPrice = (r[6] || '').replace(/,/g, '');
+      const priceMatch = rawPrice.match(/\d{4,}/);
+      const price = priceMatch ? parseInt(priceMatch[0]) : null;
+
       payload.push({
-        title        : r[2].trim(),
-        zone         : r[0].trim(),
-        room_no      : r[3].trim(),
-        floor        : r[4].trim(),
-        room_type    : r[5].trim(),
-        sqm          : r[6].trim(),
-        price        : parseInt(r[7].replace(/[^0-9]/g, '')) || null,
-        owner_contact: r[8].trim(),
-        drive_link   : r[9] ? r[9].trim() : '',
+        title        : name,
+        zone         : (r[2] || '').trim(),
+        floor        : (r[3] || '').trim(),
+        room_type,
+        sqm          : (r[5] || '').trim(),
+        price,
+        description  : (r[7] || '').trim(),
+        owner_contact: (r[8] || '').trim(),
+        drive_link   : (r[9] || '').trim(),
         status       : 'Disponible',
         sheet_row    : i + 2,
         photos       : '[]'
       });
     }
 
+    // Remplace les propriétés issues du Sheets (non archivées) par le nouveau listing
+    await db.from('properties').delete().not('sheet_row', 'is', null).eq('archived', 0);
     if (payload.length) {
-      const { error } = await db.from('properties')
-        .upsert(payload, { onConflict: 'sheet_row', ignoreDuplicates: false });
+      const { error } = await db.from('properties').insert(payload);
       if (error) throw new Error(error.message);
     }
 
-    res.json({ imported: payload.length, updated: 0, total: payload.length });
+    res.json({ imported: payload.length, total: payload.length });
   } catch (err) {
     console.error('Properties sync error:', err);
     res.status(500).json({ error: err.message });
