@@ -10,29 +10,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(SECRET));
 
-// ── Auth middleware — supporte ancien cookie ('admin'/'guest') ET nouveau JSON ─
+// ── Auth middleware ────────────────────────────────────────────────────────────
 const requireAuth = (req, res, next) => {
   const val = req.signedCookies?.crm_auth;
   if (!val) return res.status(401).json({ error: 'Non autorisé' });
-
-  // Legacy
-  if (val === 'admin') { req.user = { id: null, name: 'Tim',  role: 'admin',  lang: 'fr', avatar_type: 'preset', avatar_value: '1' }; return next(); }
-  if (val === 'guest') { req.user = { id: null, name: 'Nono', role: 'guest',  lang: 'fr', avatar_type: 'preset', avatar_value: '2' }; return next(); }
-
-  // Nouveau format JSON
   try {
     const user = JSON.parse(val);
     if (user?.id) { req.user = user; return next(); }
   } catch {}
-
   res.status(401).json({ error: 'Non autorisé' });
 };
 
 // Admin-only routes (finance, contracts)
 const requireAdmin = (req, res, next) => {
-  const val = req.signedCookies?.crm_auth;
-  if (val === 'admin') return next();
-  try { const u = JSON.parse(val || '{}'); if (u.role === 'admin') return next(); } catch {}
+  try { const u = JSON.parse(req.signedCookies?.crm_auth || '{}'); if (u.role === 'admin') return next(); } catch {}
   res.status(403).json({ error: 'Accès réservé à l\'administrateur' });
 };
 

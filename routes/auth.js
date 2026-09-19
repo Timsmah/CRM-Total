@@ -13,37 +13,27 @@ const COOKIE_OPTS = {
 // ── Login ─────────────────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  if (!email || !email.trim()) return res.status(401).json({ error: 'Identifiants incorrects' });
 
-  // ── Nouveau login multi-utilisateur (email + mot de passe) ────────────────
-  if (email && email.trim()) {
-    const { data: user } = await db.from('crm_users')
-      .select('*')
-      .eq('email', email.trim().toLowerCase()).maybeSingle();
+  const { data: user } = await db.from('crm_users')
+    .select('*')
+    .eq('email', email.trim().toLowerCase()).maybeSingle();
 
-    if (!user) return res.status(401).json({ error: 'Identifiants incorrects' });
+  if (!user) return res.status(401).json({ error: 'Identifiants incorrects' });
 
-    const ok = await verifyPassword(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Identifiants incorrects' });
+  const ok = await verifyPassword(password, user.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Identifiants incorrects' });
 
-    const payload = {
-      id          : user.id,
-      name        : user.name,
-      role        : user.role,
-      lang        : user.lang,
-      avatar_type : user.avatar_type,
-      sections    : user.sections || null,
-    };
-    res.cookie('crm_auth', JSON.stringify(payload), COOKIE_OPTS);
-    return res.json({ success: true, ...payload, avatar_value: user.avatar_value });
-  }
-
-  // ── Fallback temporaire (à supprimer après création des comptes) ──────────
-  const adminPw = process.env.CRM_PASSWORD;
-  if (adminPw && password === adminPw) {
-    res.cookie('crm_auth', 'admin', COOKIE_OPTS);
-    return res.json({ success: true, role: 'admin', name: 'Tim', lang: 'fr', id: null, avatar_type: 'preset', avatar_value: '1' });
-  }
-  res.status(401).json({ error: 'Identifiants incorrects' });
+  const payload = {
+    id          : user.id,
+    name        : user.name,
+    role        : user.role,
+    lang        : user.lang,
+    avatar_type : user.avatar_type,
+    sections    : user.sections || null,
+  };
+  res.cookie('crm_auth', JSON.stringify(payload), COOKIE_OPTS);
+  return res.json({ success: true, ...payload, avatar_value: user.avatar_value });
 });
 
 // ── Logout ────────────────────────────────────────────────────────────────────
@@ -57,11 +47,7 @@ router.get('/check', async (req, res) => {
   const val = req.signedCookies?.crm_auth;
   if (!val) return res.json({ authenticated: false });
 
-  // Legacy
-  if (val === 'admin') return res.json({ authenticated: true, id: null, role: 'admin', name: 'Tim', lang: 'fr', avatar_type: 'preset', avatar_value: '1' });
-  if (val === 'guest') return res.json({ authenticated: true, id: null, role: 'guest', name: 'Nono', lang: 'fr', avatar_type: 'preset', avatar_value: '2' });
-
-  // Nouveau format JSON
+  // Format JSON
   try {
     const user = JSON.parse(val);
     if (user?.id) {
