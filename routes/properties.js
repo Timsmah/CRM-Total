@@ -119,6 +119,8 @@ router.post('/sync/sheets', async (req, res) => {
       });
     }
 
+    // Libère les sheet_row des archivées pour éviter la contrainte unique
+    await db.from('properties').update({ sheet_row: null }).not('sheet_row', 'is', null).eq('archived', 1);
     // Remplace les propriétés issues du Sheets (non archivées) par le nouveau listing
     await db.from('properties').delete().not('sheet_row', 'is', null).eq('archived', 0);
     if (payload.length) {
