@@ -329,13 +329,13 @@ const Clients = {
       <div class="section-header">
         <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
         <div class="header-actions">
-          ${isMobile() ? `<button class="btn btn-ghost btn-sm" onclick="Clients._setMobileView('list')">← Liste</button>` : ''}
+          ${isMobile() ? `<button class="btn btn-ghost btn-sm" onclick="Clients._setMobileView('list')" style="padding:6px 10px;font-size:13px">← Retour</button>` : ''}
           <div class="view-toggle">
             <button class="view-toggle-btn ${isSuivi ? 'active' : ''}" onclick="Clients._setView('suivi')">📋 Suivi</button>
             <button class="view-toggle-btn ${!isSuivi ? 'active' : ''}" onclick="Clients._setView('kanban')">⠿ Kanban</button>
           </div>
-          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
-          ${!isSuivi ? `<button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
+          <button class="btn btn-primary${isMobile() ? ' btn-sm' : ''}" onclick="Clients.openAddModal()">+${isMobile() ? '' : ' Ajouter'}</button>
+          ${!isSuivi && !isMobile() ? `<button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
             ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
           </button>` : ''}
           <div style="position:relative">
@@ -377,7 +377,12 @@ const Clients = {
         const id = Number(card.dataset.cid);
         addLongPress(card, () => {
           const rect = card.getBoundingClientRect();
-          const fakeEvent = { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, stopPropagation() {} };
+          const fakeEvent = {
+            clientX: rect.left + 12,
+            clientY: rect.top + rect.height / 2,
+            stopPropagation() {},
+            target: { closest: () => null }
+          };
           Clients.showCardMenu(id, fakeEvent);
         });
       });
