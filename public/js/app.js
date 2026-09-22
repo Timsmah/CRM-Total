@@ -17,6 +17,45 @@ const api = {
   del:    (p)    => api.request('DELETE', p),
 };
 
+// ── Mobile helpers ────────────────────────────────────────────────────────────
+const isMobile = () => window.innerWidth <= 700;
+
+const MobileMenu = {
+  toggle() {
+    const el = document.getElementById('mobile-more-overlay');
+    if (el) el.classList.toggle('hidden');
+  },
+  close() {
+    const el = document.getElementById('mobile-more-overlay');
+    if (el) el.classList.add('hidden');
+  },
+  async go(section) {
+    this.close();
+    await Router.navigate(section);
+  }
+};
+
+const ActionSheet = {
+  open(title, actions) {
+    document.getElementById('action-sheet-title').textContent = title;
+    document.getElementById('action-sheet-body').innerHTML = actions.map(a =>
+      `<div class="action-sheet-item${a.cls ? ' ' + a.cls : ''}" onclick="ActionSheet.close();(${a.fn})()">${a.icon || ''} ${a.label}</div>`
+    ).join('');
+    document.getElementById('action-sheet-overlay').classList.remove('hidden');
+  },
+  close() {
+    document.getElementById('action-sheet-overlay').classList.add('hidden');
+  }
+};
+
+// Long-press helper: fn called after 500ms hold, cancels on move/release
+function addLongPress(el, fn) {
+  let timer;
+  el.addEventListener('touchstart', (e) => { timer = setTimeout(() => { fn(); e.preventDefault(); }, 500); }, { passive: true });
+  el.addEventListener('touchend',   () => clearTimeout(timer));
+  el.addEventListener('touchmove',  () => clearTimeout(timer));
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 const Modal = {
   open(title, html) {
@@ -173,6 +212,9 @@ const Router = {
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
+      el.classList.toggle('active', el.dataset.section === section)
+    );
+    document.querySelectorAll('.bnav-item[data-section]').forEach(el =>
       el.classList.toggle('active', el.dataset.section === section)
     );
 

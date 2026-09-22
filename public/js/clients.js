@@ -321,6 +321,7 @@ const Clients = {
   },
 
   render() {
+    if (isMobile()) { this.renderMobile(); return; }
     const total = this.data.length;
     const isSuivi = this.viewMode === 'suivi';
     document.getElementById('content').innerHTML = `
@@ -368,6 +369,80 @@ const Clients = {
       const stillExists = this.data.find(c => c.id === this.suiviSelectedId);
       if (stillExists) this._suiviLoadRight(this.suiviSelectedId);
     }
+  },
+
+  _mobileFilter: 'all',
+
+  renderMobile() {
+    const filter = this._mobileFilter;
+    let clients = this.data;
+    if (filter === 'active')   clients = clients.filter(c => !c.archived);
+    if (filter === 'archived') clients = clients.filter(c => c.archived);
+
+    const STATUSES = this.SUIVI_STATUSES;
+
+    const grouped = {};
+    STATUSES.forEach(s => { grouped[s.key] = []; });
+    clients.forEach(c => {
+      const key = c.suivi_status || STATUSES[0].key;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(c);
+    });
+
+    const avatarEl = (c) => {
+      if (c.avatar_url) return `<img class="mobile-avatar" src="${c.avatar_url}" alt="">`;
+      const initials = (c.name || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+      return `<div class="mobile-avatar mobile-avatar-initials">${initials}</div>`;
+    };
+
+    const rowsHTML = STATUSES.map(({ key, label }) => {
+      const group = grouped[key] || [];
+      if (!group.length) return '';
+      const rows = group.map(c => {
+        const sub = [c.nationality, c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : ''].filter(Boolean).join(' · ');
+        return `<div class="mobile-client-row" onclick="Clients.openDetailModal(${c.id})" data-id="${c.id}">
+          ${avatarEl(c)}
+          <div class="mobile-client-info">
+            <div class="mobile-client-name">${c.name || '—'}</div>
+            ${sub ? `<div class="mobile-client-sub">${sub}</div>` : ''}
+          </div>
+          <span class="mobile-client-chevron">›</span>
+        </div>`;
+      }).join('');
+      return `<div class="mobile-section-label">${label} <span>${group.length}</span></div>${rows}`;
+    }).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="section-header" style="padding:14px 14px 0">
+        <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3)">${clients.length}</span></h2>
+        <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Ajouter</button>
+      </div>
+      <div class="mobile-filter-pills">
+        <button class="mobile-pill${filter==='all'?' active':''}" onclick="Clients._setMobileFilter('all')">Tous</button>
+        <button class="mobile-pill${filter==='active'?' active':''}" onclick="Clients._setMobileFilter('active')">Actifs</button>
+        <button class="mobile-pill${filter==='archived'?' active':''}" onclick="Clients._setMobileFilter('archived')">Archivés</button>
+      </div>
+      <div class="mobile-client-list">${rowsHTML || '<p class="empty" style="padding:20px">Aucun client</p>'}</div>`;
+
+    // Attach long-press for action sheet
+    document.querySelectorAll('.mobile-client-row').forEach(row => {
+      const id = Number(row.dataset.id);
+      addLongPress(row, () => {
+        const c = this.data.find(x => x.id === id);
+        if (!c) return;
+        const phone = (c.whatsapp || c.phone || '').replace(/\D/g,'');
+        ActionSheet.open(c.name, [
+          ...(phone ? [{ icon:'💬', label:'WhatsApp', fn: `()=>window.open('https://wa.me/${phone}','_blank')` }] : []),
+          { icon:'✏️', label:'Modifier', fn: `()=>Clients.openDetailModal(${id})` },
+          { icon:'🗄', label: 'Archiver', fn: `()=>Clients.archiveClient(${id})` },
+        ]);
+      });
+    });
+  },
+
+  _setMobileFilter(f) {
+    this._mobileFilter = f;
+    this.renderMobile();
   },
 
   _setView(mode) {

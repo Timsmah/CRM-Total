@@ -11,7 +11,10 @@ const Deals = {
     ]);
   },
 
+  _mobileTab: 'En cours',
+
   render() {
+    if (isMobile()) { this.renderMobile(); return; }
     document.getElementById('content').innerHTML = `
       <div class="section-header">
         <h2>Deals</h2>
@@ -22,6 +25,65 @@ const Deals = {
       <div class="deals-list">
         ${this.data.map(d => this.cardHTML(d)).join('') || '<p class="empty">Aucun deal</p>'}
       </div>`;
+  },
+
+  renderMobile() {
+    const statuses = ['En cours','Envoyé au client','Visite planifiée','Signé','Annulé'];
+    const tab = this._mobileTab;
+    const byStatus = (s) => this.data.filter(d => d.status === s);
+    const NEXT = { 'En cours': 'Envoyé au client', 'Envoyé au client': 'Visite planifiée', 'Visite planifiée': 'Signé' };
+
+    const tabsHTML = statuses.map(s => {
+      const n = byStatus(s).length;
+      return `<div class="mobile-deal-tab${s === tab ? ' active' : ''}" onclick="Deals.setMobileTab('${s}')">
+        ${s}<span class="mobile-deal-tab-count">${n}</span>
+      </div>`;
+    }).join('');
+
+    const colItems = byStatus(tab);
+    const next = NEXT[tab];
+    const cardsHTML = colItems.length
+      ? colItems.map(d => {
+          const price = d.property_price ? Number(d.property_price).toLocaleString('fr-FR') + ' ฿' : '';
+          const advBtn = next ? `<button class="mobile-deal-btn advance" onclick="event.stopPropagation();Deals.advance(${d.id},'${next}')">→ ${next.split(' ')[0]}</button>` : '';
+          return `<div class="mobile-deal-card" onclick="Deals.openEditModal(${d.id})">
+            <div class="mobile-deal-name">${d.client_name || '—'}</div>
+            <div class="mobile-deal-prop">${d.property_title || '—'}${d.property_zone ? ' · ' + d.property_zone : ''}</div>
+            <div class="mobile-deal-footer">
+              <span class="mobile-deal-price">${price}</span>
+              <div class="mobile-deal-btns">
+                ${d.client_whatsapp ? `<button class="mobile-deal-btn" onclick="event.stopPropagation();Deals.sendToClient(${d.id})">📤</button>` : ''}
+                ${advBtn}
+              </div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<p class="empty" style="padding:20px">Aucun deal ici</p>';
+
+    document.getElementById('content').innerHTML = `
+      <div class="section-header" style="padding:14px 14px 10px">
+        <h2>Deals</h2>
+        <button class="btn btn-primary btn-sm" onclick="Deals.openAddModal()">+ Nouveau</button>
+      </div>
+      <div class="mobile-deals-wrap">
+        <div class="mobile-deals-tabs">${tabsHTML}</div>
+        <div class="mobile-deals-col">${cardsHTML}</div>
+      </div>`;
+  },
+
+  setMobileTab(status) {
+    this._mobileTab = status;
+    this.renderMobile();
+  },
+
+  async advance(id, nextStatus) {
+    try {
+      const d = this.data.find(x => x.id === id);
+      await api.put(`/deals/${id}`, { ...d, status: nextStatus });
+      d.status = nextStatus;
+      Toast.show(`→ ${nextStatus}`);
+      this.renderMobile();
+    } catch (err) { Toast.show(err.message, 'error'); }
   },
 
   cardHTML(d) {

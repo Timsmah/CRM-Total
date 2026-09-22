@@ -77,6 +77,48 @@
     </aside>
 
     <main id="content"></main>
+
+    <!-- BOTTOM NAV (mobile only) -->
+    <nav id="bottom-nav">
+      <a class="bnav-item" data-section="dashboard" onclick="Router.navigate('dashboard')">
+        <span class="bnav-icon">📊</span><span class="bnav-label">Home</span>
+      </a>
+      <a class="bnav-item" data-section="clients" onclick="Router.navigate('clients')">
+        <span class="bnav-icon">👥</span><span class="bnav-label">Clients</span>
+      </a>
+      <a class="bnav-item" data-section="properties" onclick="Router.navigate('properties')">
+        <span class="bnav-icon">🏠</span><span class="bnav-label">Biens</span>
+      </a>
+      <a class="bnav-item" data-section="deals" onclick="Router.navigate('deals')">
+        <span class="bnav-icon">🤝</span><span class="bnav-label">Deals</span>
+      </a>
+      <a class="bnav-item" id="bnav-more" onclick="MobileMenu.toggle()">
+        <span class="bnav-icon">⋯</span><span class="bnav-label">Plus</span>
+      </a>
+    </nav>
+
+    <!-- MOBILE MORE MENU -->
+    <div id="mobile-more-overlay" class="hidden" onclick="MobileMenu.close()">
+      <div id="mobile-more-sheet" onclick="event.stopPropagation()">
+        <div class="mobile-more-handle"></div>
+        <a class="mobile-more-item" onclick="MobileMenu.go('recherches')">🔍 Recherches</a>
+        <a class="mobile-more-item" onclick="MobileMenu.go('finance')">💰 Finance</a>
+        <a class="mobile-more-item" onclick="MobileMenu.go('contracts')">📋 Contrats</a>
+        <a class="mobile-more-item" onclick="MobileMenu.go('visas')">🛂 Visas</a>
+        <div class="mobile-more-sep"></div>
+        <a class="mobile-more-item" onclick="MobileMenu.close();App.openProfileModal()">👤 Profil</a>
+        <a class="mobile-more-item danger" onclick="MobileMenu.close();document.getElementById('logout-btn').click()">⎋ Déconnexion</a>
+      </div>
+    </div>
+
+    <!-- BOTTOM SHEET (actions rapides) -->
+    <div id="action-sheet-overlay" class="hidden" onclick="ActionSheet.close()">
+      <div id="action-sheet" onclick="event.stopPropagation()">
+        <div class="action-sheet-handle"></div>
+        <div id="action-sheet-title" class="action-sheet-title"></div>
+        <div id="action-sheet-body" class="action-sheet-body"></div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL -->
@@ -135,7 +177,7 @@
   <script src="/js/dashboard.js?v=4"></script>
   <script src="/js/clients.js?v=4"></script>
   <script src="/js/properties.js?v=4"></script>
-  <script src="/js/deals.js?v=3"></script>
+  <script src="/js/deals.js?v=4"></script>
   <script src="/js/finance.js?v=3"></script>
   <script src="/js/contracts.js?v=3"></script>
   <script src="/js/recherches.js?v=3"></script>
