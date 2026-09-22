@@ -463,8 +463,9 @@ const Clients = {
   },
 
   renderMobileKanban() {
-    const COLS = getContactCols().filter(c => !c.ghost);
-    const tab = this._mobileKanbanTab || COLS[0].key;
+    const COLS = getContactCols().filter(c => !c.ghost && c.key !== 'Signé');
+    const tab = (this._mobileKanbanTab && COLS.find(c => c.key === this._mobileKanbanTab))
+      ? this._mobileKanbanTab : COLS[0].key;
     const cards = this.data.filter(c => !c.archived && this.effectiveContactStatus(c) === tab);
 
     const tabsHTML = COLS.map(col => {
@@ -480,14 +481,24 @@ const Clients = {
       const arrival = c.arrival_date ? new Date(c.arrival_date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
       const score   = c.score ? `⭐ ${c.score}` : '';
       const phone   = (c.whatsapp || c.phone || '').replace(/\D/g,'');
+      const leadDate = (c.form_submitted_at || c.created_at)
+        ? new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})
+        : '';
+      const tags = (c.action_tags || []).slice(0,2).map(k => {
+        const def = ACTION_TAGS.find(t => t.key === k);
+        return def ? `<span class="mkc-tag">${def.emoji}</span>` : '';
+      }).join('');
       return `<div class="mobile-kanban-card" data-cid="${c.id}">
         <div class="mkc-header">
           <span class="mkc-name">${c.name || '—'}</span>
-          ${score ? `<span class="mkc-score">${score}</span>` : ''}
+          <span class="mkc-meta-right">${score}${tags}</span>
         </div>
-        ${budget ? `<div class="mkc-row">💰 ${budget}</div>` : ''}
-        ${arrival ? `<div class="mkc-row mkc-date">📅 ${arrival}</div>` : ''}
-        ${c.nationality ? `<div class="mkc-row mkc-nat">🌍 ${c.nationality}</div>` : ''}
+        ${budget || arrival ? `<div class="mkc-pills">
+          ${budget ? `<span class="mkc-pill mkc-pill-budget">💰 ${budget}</span>` : ''}
+          ${arrival ? `<span class="mkc-pill mkc-pill-date">📅 ${arrival}</span>` : ''}
+          ${c.nationality ? `<span class="mkc-pill">🌍 ${c.nationality}</span>` : ''}
+        </div>` : ''}
+        ${leadDate ? `<div class="mkc-lead-date">Lead · ${leadDate}</div>` : ''}
         <div class="mkc-actions">
           ${phone ? `<button class="mkc-btn" onclick="event.stopPropagation();window.open('https://wa.me/${phone}','_blank')">💬 WhatsApp</button>` : ''}
           <button class="mkc-btn mkc-btn-primary" onclick="Clients.openDetailModal(${c.id})">↗ Fiche</button>
@@ -1947,6 +1958,7 @@ const Clients = {
         ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 ${t('detail_bedrooms')}</span><span>${c.bedrooms}</span></div>` : ''}
         ${c.criteria ? `<div class="detail-row"><span class="detail-label">📝 ${t('detail_criteria')}</span><span>${c.criteria}</span></div>` : ''}
         ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
+        ${(c.form_submitted_at || c.created_at) ? `<div class="detail-row"><span class="detail-label">📋 Lead depuis</span><span>${new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
         ${c.reminder_date ? `<div class="detail-row"><span class="detail-label">🔔 ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
       </div>
 
