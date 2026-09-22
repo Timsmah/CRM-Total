@@ -165,6 +165,7 @@ function scoreBreakdownHTML(c) {
 
 function getContactCols() {
   return [
+    { key: 'Nouveau',        label: t('col_nouveau'),      cls: 'col-nouveau',    ghost: false },
     { key: 'À contacter',    label: t('col_a_contacter'),  cls: 'col-to-contact', ghost: false },
     { key: 'en_recherche',   label: t('col_recherche'),    cls: 'col-recherche',  ghost: true  },
     { key: 'Visite / Offre', label: t('col_visite'),       cls: 'col-visite',     ghost: false },
@@ -174,7 +175,6 @@ function getContactCols() {
 
 // Mapping des anciennes valeurs contact_status vers les nouvelles colonnes
 const CONTACT_STATUS_LEGACY_MAP = {
-  'Nouveau':          'À contacter',
   'Contacté':         'À contacter',
   'Rappeler':         'À contacter',
   'Property to Find': 'À contacter',
@@ -566,7 +566,7 @@ const Clients = {
 
   effectiveContactStatus(c) {
     const s = c.contact_status;
-    if (!s) return 'À contacter';
+    if (!s) return (c.suivi_status === 'nouveau' || !c.suivi_status) ? 'Nouveau' : 'À contacter';
     return CONTACT_STATUS_LEGACY_MAP[s] || s;
   },
 
