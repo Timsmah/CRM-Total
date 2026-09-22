@@ -1974,27 +1974,27 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   #sidebar { display: none; }
   #content { padding: 0 0 84px; }
 
-  /* ── Bottom nav — dock flottant style Insta ── */
+  /* ── Bottom nav — dock flottant ── */
   #bottom-nav {
     display: flex; align-items: center; justify-content: space-around;
     position: fixed; bottom: 16px; left: 16px; right: 16px;
-    background: #1a1a1a;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 32px;
-    box-shadow: 0 8px 32px rgba(0,0,0,.35);
-    z-index: 200; height: 58px;
-    padding: 0 8px;
-    padding-bottom: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,.10);
+    z-index: 200; height: 54px;
+    padding: 0 6px;
   }
   .bnav-item {
     flex: 1; display: flex; align-items: center; justify-content: center;
-    height: 44px; border-radius: 22px;
+    height: 42px; border-radius: 21px;
     cursor: pointer; text-decoration: none; border: none; background: none;
     -webkit-tap-highlight-color: transparent; transition: background .15s;
   }
-  .bnav-item.active { background: #333; }
-  .bnav-icon { font-size: 22px; line-height: 1; filter: grayscale(1) brightness(10); opacity: .5; transition: opacity .15s; }
-  .bnav-item.active .bnav-icon { opacity: 1; filter: none; }
-  .bnav-item:active { background: #2a2a2a; }
+  .bnav-item.active { background: var(--accent-light, rgba(185,142,60,.12)); }
+  .bnav-icon { font-size: 22px; line-height: 1; opacity: .4; transition: opacity .15s; }
+  .bnav-item.active .bnav-icon { opacity: 1; }
+  .bnav-item:active { background: var(--surface-2); }
   .bnav-label { display: none; }
 
   /* ── Section header mobile ── */
