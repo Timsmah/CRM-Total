@@ -387,6 +387,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .kanban-card {
   perspective: 900px;
   cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
   /* override .card visual — visuals live on .card-face */
   background: transparent !important;
   border: none !important;
