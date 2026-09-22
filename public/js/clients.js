@@ -321,11 +321,9 @@ const Clients = {
   },
 
   _mobileView: 'list',
-  _mobileKanbanTab: 'Nouveau',
 
   render() {
-    if (isMobile() && this._mobileView === 'list')   { this.renderMobile(); return; }
-    if (isMobile() && this._mobileView === 'kanban') { this.renderMobileKanban(); return; }
+    if (isMobile() && this._mobileView === 'list') { this.renderMobile(); return; }
     const total = this.data.length;
     const isSuivi = this.viewMode === 'suivi';
     document.getElementById('content').innerHTML = `
@@ -373,6 +371,17 @@ const Clients = {
     if (isSuivi && this.suiviSelectedId) {
       const stillExists = this.data.find(c => c.id === this.suiviSelectedId);
       if (stillExists) this._suiviLoadRight(this.suiviSelectedId);
+    }
+
+    if (isMobile()) {
+      document.querySelectorAll('.kanban-card[data-cid]').forEach(card => {
+        const id = Number(card.dataset.cid);
+        addLongPress(card, () => {
+          const rect = card.getBoundingClientRect();
+          const fakeEvent = { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, stopPropagation() {} };
+          Clients.showCardMenu(id, fakeEvent);
+        });
+      });
     }
   },
 
@@ -456,92 +465,6 @@ const Clients = {
   _setMobileView(v) {
     this._mobileView = v;
     this.render();
-  },
-
-  renderMobileKanban() {
-    const COLS = getContactCols().filter(c => !c.ghost);
-    const tab = this._mobileKanbanTab;
-
-    const effectiveStatus = (c) => {
-      const s = c.contact_status;
-      if (!s || s === 'Nouveau') return 'Nouveau';
-      return CONTACT_STATUS_LEGACY_MAP[s] || s;
-    };
-
-    const byCol = (key) => this.data.filter(c => !c.archived && effectiveStatus(c) === key);
-
-    const tabsHTML = COLS.map(col => {
-      const n = byCol(col.key).length;
-      return `<div class="mobile-deal-tab${col.key === tab ? ' active' : ''}"
-        onclick="Clients._setMobileKanbanTab('${col.key.replace(/'/g,"\\'")}')">
-        ${col.label}<span class="mobile-deal-tab-count">${n}</span>
-      </div>`;
-    }).join('');
-
-    const cards = byCol(tab);
-    const otherCols = COLS.filter(c => c.key !== tab);
-
-    const cardsHTML = cards.length
-      ? cards.map(c => {
-          const budget = c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : '';
-          const phone  = (c.whatsapp || c.phone || '').replace(/\D/g,'');
-          const moveOpts = otherCols.map(col =>
-            `<option value="${col.key}">${col.label}</option>`
-          ).join('');
-          return `<div class="mobile-deal-card" onclick="Clients.openDetailModal(${c.id})" data-id="${c.id}">
-            <div class="mobile-deal-name">${c.name || '—'}</div>
-            <div class="mobile-deal-prop">${budget}${c.nationality ? ' · ' + c.nationality : ''}</div>
-            <div class="mobile-deal-footer">
-              <div class="mobile-deal-btns">
-                ${phone ? `<button class="mobile-deal-btn" onclick="event.stopPropagation();window.open('https://wa.me/${phone}','_blank')">💬</button>` : ''}
-                <select class="mobile-kanban-move" onclick="event.stopPropagation()"
-                  onchange="event.stopPropagation();Clients._mobileKanbanMove(${c.id},this.value);this.value=''">
-                  <option value="">→ Déplacer…</option>
-                  ${moveOpts}
-                </select>
-              </div>
-            </div>
-          </div>`;
-        }).join('')
-      : '<p class="empty" style="padding:20px">Aucun client ici</p>';
-
-    document.getElementById('content').innerHTML = `
-      <div class="section-header" style="padding:12px 14px 0">
-        <button class="btn btn-ghost btn-sm" onclick="Clients._setMobileView('list')">← Liste</button>
-        <h2 style="font-size:16px">Kanban</h2>
-        <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Ajouter</button>
-      </div>
-      <div class="mobile-deals-wrap">
-        <div class="mobile-deals-tabs">${tabsHTML}</div>
-        <div class="mobile-deals-col">${cardsHTML}</div>
-      </div>`;
-
-    document.querySelectorAll('.mobile-deal-card').forEach(row => {
-      const id = Number(row.dataset.id);
-      addLongPress(row, () => {
-        const c = this.data.find(x => x.id === id);
-        if (!c) return;
-        const phone = (c.whatsapp || c.phone || '').replace(/\D/g,'');
-        ActionSheet.open(c.name, [
-          ...(phone ? [{ icon:'💬', label:'WhatsApp', fn:`()=>window.open('https://wa.me/${phone}','_blank')` }] : []),
-          { icon:'✏️', label:'Modifier', fn:`()=>Clients.openDetailModal(${id})` },
-          ...otherCols.map(col => ({ icon:'→', label: col.label, fn:`()=>Clients._mobileKanbanMove(${id},'${col.key.replace(/'/g,"\\'")}')` })),
-        ]);
-      });
-    });
-  },
-
-  _setMobileKanbanTab(key) {
-    this._mobileKanbanTab = key;
-    this.renderMobileKanban();
-  },
-
-  async _mobileKanbanMove(id, status) {
-    try {
-      await this.setContactStatus(id, status);
-      Toast.show(`→ ${status}`);
-      this.renderMobileKanban();
-    } catch (err) { Toast.show(err.message, 'error'); }
   },
 
   _setView(mode) {
