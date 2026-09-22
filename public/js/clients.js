@@ -1912,27 +1912,7 @@ const Clients = {
       <div id="matching-slot-${id}" class="sub-list-slot"><span class="spinner-sm">…</span></div>
 
       <div class="modal-sep"></div>
-      <div class="modal-sub-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>📋 ${t('proposals_title')}</span>
-        <button class="btn btn-sm btn-secondary" onclick="Clients.openProposalPickModal(${id})">+ ${t('proposals_add')}</button>
-      </div>
-      <div id="proposals-slot-${id}" class="sub-list-slot"><span class="spinner-sm">…</span></div>
-
-      <div class="modal-sep"></div>
       <div class="modal-sub-title">📓 Activity log</div>
-
-      <!-- Note épinglée -->
-      <div class="pinned-note" id="pinned-note-${id}">
-        <div class="pinned-note-header">
-          <span class="pinned-note-label">📌 Note rapide</span>
-          <button class="pinned-note-btn" onclick="Clients.editPinnedNote(${id})">Modifier</button>
-        </div>
-        <div class="pinned-note-body" id="pinned-note-body-${id}">
-          ${(c.note_tim || c.note_alex)
-            ? `<p class="pinned-note-text">${c.note_tim || c.note_alex}</p>`
-            : `<p class="pinned-note-empty">Aucune note…</p>`}
-        </div>
-      </div>
 
       <!-- Boutons + timeline -->
       <div class="activity-quick-btns" style="margin-top:10px">
@@ -1950,7 +1930,6 @@ const Clients = {
       </div>`);
     // Async-load all sections
     this._loadMatching(id, c);
-    this._loadProposals(id);
     this._loadActivities(id);
   },
 
