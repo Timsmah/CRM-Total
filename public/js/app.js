@@ -50,10 +50,17 @@ const ActionSheet = {
 
 // Long-press helper: fn called after 500ms hold, cancels on move/release
 function addLongPress(el, fn) {
-  let timer;
-  el.addEventListener('touchstart', (e) => { timer = setTimeout(() => { fn(); e.preventDefault(); }, 500); }, { passive: true });
-  el.addEventListener('touchend',   () => clearTimeout(timer));
-  el.addEventListener('touchmove',  () => clearTimeout(timer));
+  let timer, startX, startY;
+  el.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    timer = setTimeout(() => { fn(); }, 500);
+  }, { passive: true });
+  el.addEventListener('touchend',  () => clearTimeout(timer));
+  el.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) clearTimeout(timer);
+  }, { passive: true });
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────

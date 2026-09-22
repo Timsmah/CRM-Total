@@ -412,12 +412,17 @@ const Clients = {
       const group = grouped[key] || [];
       if (!group.length) return '';
       const rows = group.map(c => {
-        const sub = [c.nationality, c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : ''].filter(Boolean).join(' · ');
+        const budget  = c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : '';
+        const arrival = c.arrival_date ? new Date(c.arrival_date).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : '';
+        const score   = c.score ? `⭐ ${c.score}` : '';
+        const sub1    = [budget, c.nationality].filter(Boolean).join(' · ');
+        const sub2    = [arrival ? '📅 ' + arrival : '', score].filter(Boolean).join('  ');
         return `<div class="mobile-client-row" onclick="Clients.openDetailModal(${c.id})" data-id="${c.id}">
           ${avatarEl(c)}
           <div class="mobile-client-info">
             <div class="mobile-client-name">${c.name || '—'}</div>
-            ${sub ? `<div class="mobile-client-sub">${sub}</div>` : ''}
+            ${sub1 ? `<div class="mobile-client-sub">${sub1}</div>` : ''}
+            ${sub2 ? `<div class="mobile-client-sub">${sub2}</div>` : ''}
           </div>
           <span class="mobile-client-chevron">›</span>
         </div>`;
@@ -993,7 +998,7 @@ const Clients = {
     }
 
     return `
-      <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
+      <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${isMobile() || this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)">
         <div class="card-inner" id="card-inner-${c.id}"
@@ -1065,7 +1070,7 @@ const Clients = {
     })();
 
     return `
-      <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${this.selectionMode ? 'false' : 'true'}"
+      <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${isMobile() || this.selectionMode ? 'false' : 'true'}"
         ondragstart="Clients.onDragStart(event, ${c.id})"
         ondragend="Clients.onDragEnd(event)">
 
