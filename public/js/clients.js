@@ -319,10 +319,11 @@ const Clients = {
     this.data = await api.get('/clients?archived=' + this.showArchived);
   },
 
-  _mobileView: 'list',
+  _mobileView: 'kanban',
+  _mobileKanbanTab: null,
 
   render() {
-    if (isMobile() && this._mobileView === 'list') { this.renderMobile(); return; }
+    if (isMobile()) { this.renderMobileKanban(); return; }
     const total = this.data.length;
     const isSuivi = this.viewMode === 'suivi';
     document.getElementById('content').innerHTML = `
@@ -372,21 +373,6 @@ const Clients = {
       if (stillExists) this._suiviLoadRight(this.suiviSelectedId);
     }
 
-    if (isMobile()) {
-      document.querySelectorAll('.kanban-card[data-cid]').forEach(card => {
-        const id = Number(card.dataset.cid);
-        addLongPress(card, () => {
-          const rect = card.getBoundingClientRect();
-          const fakeEvent = {
-            clientX: rect.left + 12,
-            clientY: rect.top + rect.height / 2,
-            stopPropagation() {},
-            target: { closest: () => null }
-          };
-          Clients.showCardMenu(id, fakeEvent);
-        });
-      });
-    }
   },
 
   _mobileFilter: 'all',
@@ -474,6 +460,64 @@ const Clients = {
   _setMobileView(v) {
     this._mobileView = v;
     this.render();
+  },
+
+  renderMobileKanban() {
+    const COLS = getContactCols().filter(c => !c.ghost);
+    const tab = this._mobileKanbanTab || COLS[0].key;
+    const cards = this.data.filter(c => !c.archived && this.effectiveContactStatus(c) === tab);
+
+    const tabsHTML = COLS.map(col => {
+      const n = this.data.filter(c => !c.archived && this.effectiveContactStatus(c) === col.key).length;
+      return `<div class="mobile-deal-tab${col.key === tab ? ' active' : ''}"
+        onclick="Clients._setMobileKanbanTab('${col.key.replace(/'/g,"\\'")}')" data-key="${col.key}">
+        ${col.label}<span class="mobile-deal-tab-count">${n}</span>
+      </div>`;
+    }).join('');
+
+    const cardsHTML = cards.length ? cards.map(c => {
+      const budget  = c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : '';
+      const arrival = c.arrival_date ? new Date(c.arrival_date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+      const score   = c.score ? `⭐ ${c.score}` : '';
+      const phone   = (c.whatsapp || c.phone || '').replace(/\D/g,'');
+      return `<div class="mobile-kanban-card" data-cid="${c.id}">
+        <div class="mkc-header">
+          <span class="mkc-name">${c.name || '—'}</span>
+          ${score ? `<span class="mkc-score">${score}</span>` : ''}
+        </div>
+        ${budget ? `<div class="mkc-row">💰 ${budget}</div>` : ''}
+        ${arrival ? `<div class="mkc-row mkc-date">📅 ${arrival}</div>` : ''}
+        ${c.nationality ? `<div class="mkc-row mkc-nat">🌍 ${c.nationality}</div>` : ''}
+        <div class="mkc-actions">
+          ${phone ? `<button class="mkc-btn" onclick="event.stopPropagation();window.open('https://wa.me/${phone}','_blank')">💬 WhatsApp</button>` : ''}
+          <button class="mkc-btn mkc-btn-primary" onclick="Clients.openDetailModal(${c.id})">↗ Fiche</button>
+        </div>
+      </div>`;
+    }).join('') : '<p class="empty">Aucun client dans cette colonne</p>';
+
+    document.getElementById('content').innerHTML = `
+      <div class="mkb-header">
+        <h2 class="mkb-title">Clients <span>${this.data.filter(c=>!c.archived).length}</span></h2>
+        <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Nouveau</button>
+      </div>
+      <div class="mobile-deals-tabs mkb-tabs">${tabsHTML}</div>
+      <div class="mkb-cards">${cardsHTML}</div>`;
+
+    document.querySelectorAll('.mobile-kanban-card').forEach(card => {
+      const id = Number(card.dataset.cid);
+      addLongPress(card, () => {
+        const rect = card.getBoundingClientRect();
+        Clients.showCardMenu(id, {
+          clientX: rect.left + 16, clientY: rect.top + 40,
+          stopPropagation(){}, target:{ closest:()=>null }
+        });
+      });
+    });
+  },
+
+  _setMobileKanbanTab(key) {
+    this._mobileKanbanTab = key;
+    this.renderMobileKanban();
   },
 
   _setView(mode) {

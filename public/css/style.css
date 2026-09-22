@@ -1976,25 +1976,30 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 
   /* ── Bottom nav — dock flottant ── */
   #bottom-nav {
-    display: flex; align-items: center; justify-content: space-around;
-    position: fixed; bottom: 16px; left: 16px; right: 16px;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center; justify-content: space-around;
+    position: fixed; bottom: 12px; left: 12px; right: 12px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 32px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.10);
-    z-index: 200; height: 54px;
-    padding: 0 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.12);
+    z-index: 500; height: 52px;
+    padding: 0 4px;
   }
   .bnav-item {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    height: 42px; border-radius: 21px;
+    flex: 1 1 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 44px; border-radius: 22px;
     cursor: pointer; text-decoration: none; border: none; background: none;
     -webkit-tap-highlight-color: transparent; transition: background .15s;
+    min-width: 0;
   }
-  .bnav-item.active { background: var(--accent-light, rgba(185,142,60,.12)); }
-  .bnav-icon { font-size: 22px; line-height: 1; opacity: .4; transition: opacity .15s; }
+  .bnav-item.active { background: rgba(185,142,60,.12); }
+  .bnav-icon { font-size: 20px; line-height: 1; opacity: .4; transition: opacity .15s; }
   .bnav-item.active .bnav-icon { opacity: 1; }
-  .bnav-item:active { background: var(--surface-2); }
+  .bnav-item:active .bnav-icon { opacity: .6; }
   .bnav-label { display: none; }
 
   /* ── Section header mobile ── */
@@ -2014,6 +2019,31 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   #toast-container { left: 12px; right: 12px; bottom: 88px; }
 
   /* ── Filtres scrollables ── */
+  /* ── Kanban mobile ── */
+  .mkb-header { display:flex; align-items:center; justify-content:space-between; padding:14px 14px 10px; }
+  .mkb-title { font-size:20px; font-weight:700; }
+  .mkb-title span { font-size:13px; font-weight:400; color:var(--text-3); margin-left:6px; }
+  .mkb-tabs { border-bottom: 1px solid var(--border); }
+  .mkb-cards { padding: 12px 14px 20px; display:flex; flex-direction:column; gap:12px; }
+  .mobile-kanban-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  .mkc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .mkc-name { font-size:15px; font-weight:700; color:var(--text); }
+  .mkc-score { font-size:12px; }
+  .mkc-row { font-size:13px; color:var(--text-2); margin-bottom:4px; }
+  .mkc-date { color:var(--accent); font-weight:500; }
+  .mkc-actions { display:flex; gap:8px; margin-top:10px; }
+  .mkc-btn {
+    flex:1; padding:7px 10px; border-radius:10px; font-size:12px; font-weight:500;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    cursor:pointer; text-align:center; -webkit-tap-highlight-color:transparent;
+  }
+  .mkc-btn-primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+
   .filter-bar {
     display: flex; overflow-x: auto; gap: 6px;
     padding: 10px 14px; -webkit-overflow-scrolling: touch;
