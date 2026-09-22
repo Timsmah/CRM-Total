@@ -508,14 +508,16 @@ const Clients = {
     }).join('') : '<p class="empty">Aucun client dans cette colonne</p>';
 
     document.getElementById('content').innerHTML = `
-      <div class="mkb-sticky">
-        <div class="mkb-header">
-          <h2 class="mkb-title">Clients <span>${this.data.filter(c=>!c.archived).length}</span></h2>
-          <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Nouveau</button>
+      <div class="mkb-wrap">
+        <div class="mkb-sticky">
+          <div class="mkb-header">
+            <h2 class="mkb-title">Clients <span>${this.data.filter(c=>!c.archived).length}</span></h2>
+            <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Nouveau</button>
+          </div>
+          <div class="mobile-deals-tabs mkb-tabs">${tabsHTML}</div>
         </div>
-        <div class="mobile-deals-tabs mkb-tabs">${tabsHTML}</div>
-      </div>
-      <div class="mkb-cards">${cardsHTML}</div>`;
+        <div class="mkb-cards">${cardsHTML}</div>
+      </div>`;
 
     document.querySelectorAll('.mobile-kanban-card').forEach(card => {
       const id = Number(card.dataset.cid);
