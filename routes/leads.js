@@ -44,7 +44,7 @@ router.post('/', async (req, res) => {
       project        : projet || null,
       source         : 'Formulaire',
       status         : 'Prospect',
-      contact_status : 'À contacter',
+      contact_status : 'Nouveau',
     };
 
     // Dédup par téléphone si disponible, sinon insert
