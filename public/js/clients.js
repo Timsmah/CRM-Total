@@ -320,14 +320,17 @@ const Clients = {
     this.data = await api.get('/clients?archived=' + this.showArchived);
   },
 
+  _mobileView: 'list',
+
   render() {
-    if (isMobile()) { this.renderMobile(); return; }
+    if (isMobile() && this._mobileView === 'list') { this.renderMobile(); return; }
     const total = this.data.length;
     const isSuivi = this.viewMode === 'suivi';
     document.getElementById('content').innerHTML = `
       <div class="section-header">
         <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
         <div class="header-actions">
+          ${isMobile() ? `<button class="btn btn-ghost btn-sm" onclick="Clients._setMobileView('list')">← Liste</button>` : ''}
           <div class="view-toggle">
             <button class="view-toggle-btn ${isSuivi ? 'active' : ''}" onclick="Clients._setView('suivi')">📋 Suivi</button>
             <button class="view-toggle-btn ${!isSuivi ? 'active' : ''}" onclick="Clients._setView('kanban')">⠿ Kanban</button>
@@ -415,7 +418,10 @@ const Clients = {
     document.getElementById('content').innerHTML = `
       <div class="section-header" style="padding:14px 14px 0">
         <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3)">${clients.length}</span></h2>
-        <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Ajouter</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="Clients._setMobileView('kanban')" title="Vue kanban">⠿</button>
+          <button class="btn btn-primary btn-sm" onclick="Clients.openAddModal()">+ Ajouter</button>
+        </div>
       </div>
       <div class="mobile-filter-pills">
         <button class="mobile-pill${filter==='all'?' active':''}" onclick="Clients._setMobileFilter('all')">Tous</button>
@@ -443,6 +449,11 @@ const Clients = {
   _setMobileFilter(f) {
     this._mobileFilter = f;
     this.renderMobile();
+  },
+
+  _setMobileView(v) {
+    this._mobileView = v;
+    this.render();
   },
 
   _setView(mode) {
