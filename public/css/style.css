@@ -1972,7 +1972,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   /* ── Layout général ── */
   #app { flex-direction: column; }
   #sidebar { display: none; }
-  #content { padding: 0 0 84px; position: relative; }
+  #content { padding: 0 0 84px; }
 
   /* ── Bottom nav — dock flottant ── */
   #bottom-nav {
@@ -2023,14 +2023,12 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   .mkb-header { display:flex; align-items:center; justify-content:space-between; padding:14px 14px 10px; }
   .mkb-title { font-size:20px; font-weight:700; }
   .mkb-title span { font-size:13px; font-weight:400; color:var(--text-3); margin-left:6px; }
-  .mkb-wrap {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; overflow: hidden;
+  .mkb-sticky {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 200; background: var(--bg);
   }
-  .mkb-sticky { flex-shrink: 0; background: var(--bg); z-index: 10; }
   .mkb-tabs { border-bottom: 1px solid var(--border); }
   .mkb-cards {
-    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
     padding: 12px 14px 84px;
     display: flex; flex-direction: column; gap: 12px;
   }
