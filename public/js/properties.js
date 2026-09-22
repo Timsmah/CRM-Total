@@ -188,31 +188,129 @@ const Properties = {
       </div>`;
   },
 
-  // ── Modal détail ────────────────────────────────────────────────────────────
+  // ── Modal détail mozaïque ───────────────────────────────────────────────────
+  _detailId: null,
+
   openDetailModal(id, e) {
     if (e && (e.target.closest('button') || e.target.closest('a'))) return;
     const p = this.data.find(x => x.id === id);
     if (!p) return;
+    this._detailId = id;
     const photos = this.getPhotos(p);
-    const idx    = this.photoIndex[id] || 0;
-    Modal.open(p.title, `
-      <div id="modal-photo-slot-${id}" style="margin-bottom:14px">
-        ${this.carouselHTML(photos, idx, id, 'height:220px')}
-      </div>
-      <div class="detail-grid">
-        ${p.price        ? `<div class="detail-row"><span class="detail-label">💰 Price</span><span style="color:var(--accent);font-weight:700">${Number(p.price).toLocaleString('fr-FR')} ฿/mois</span></div>` : ''}
-        ${p.zone         ? `<div class="detail-row"><span class="detail-label">📍 Zone</span><span>${p.zone}</span></div>` : ''}
-        ${p.room_type    ? `<div class="detail-row"><span class="detail-label">🛏 Type</span><span>${p.room_type}${p.sqm ? ' · ' + p.sqm : ''}</span></div>` : ''}
-        ${p.floor        ? `<div class="detail-row"><span class="detail-label">🏢 Floor</span><span>${p.floor}</span></div>` : ''}
-        ${p.room_no      ? `<div class="detail-row"><span class="detail-label">🔑 Unit</span><span>${p.room_no}</span></div>` : ''}
-        ${p.owner_contact ? `<div class="detail-row"><span class="detail-label">👤 Contact</span><span>${p.owner_contact}</span></div>` : ''}
-        ${p.description  ? `<div class="detail-row"><span class="detail-label">📝 Notes</span><span>${p.description}</span></div>` : ''}
-        ${p.drive_link   ? `<div class="detail-row"><span class="detail-label">📸 Drive</span><a href="${p.drive_link}" target="_blank" style="color:var(--blue)">Open folder</a></div>` : ''}
-      </div>
-      <div class="form-actions" style="margin-top:16px">
-        <button class="btn btn-ghost" onclick="Modal.close()">Close</button>
-        <button class="btn btn-secondary" onclick="Modal.close();Properties.openEditModal(${id})">Edit</button>
-      </div>`);
+
+    // ── Gallery ────────────────────────────────────────────────────
+    const galleryEl = document.getElementById('prop-detail-gallery');
+    const placeholder = '<div class="pdm-gallery-placeholder">🏠</div>';
+    const imgMain  = photos[0] ? `<img src="${photos[0].thumbnail}" alt="" onerror="this.parentNode.innerHTML='${placeholder.replace(/'/g,"\\'")}'" loading="lazy">` : placeholder;
+    const img2     = photos[1] ? `<img src="${photos[1].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : '';
+    const img3html = photos.length > 3
+      ? `${photos[2] ? `<img src="${photos[2].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : ''}<div class="pdm-gallery-more"><span style="font-size:20px">🖼</span>+${photos.length - 2} photos</div>`
+      : (photos[2] ? `<img src="${photos[2].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : '');
+    galleryEl.innerHTML = `
+      <div class="pdm-gallery-main">${imgMain}</div>
+      <div class="pdm-gallery-thumb">${img2}</div>
+      <div class="pdm-gallery-thumb" style="position:relative">${img3html}</div>`;
+
+    // ── Title, price, badge ────────────────────────────────────────
+    document.getElementById('pdm-title').textContent = p.title || '';
+    const priceEl = document.getElementById('pdm-price');
+    const perEl   = document.getElementById('pdm-per');
+    if (p.price) { priceEl.textContent = Number(p.price).toLocaleString('fr-FR') + ' ฿'; perEl.textContent = '/ mois'; }
+    else          { priceEl.textContent = ''; perEl.textContent = ''; }
+
+    const badge = document.getElementById('pdm-badge');
+    const statusLow = (p.status || '').toLowerCase();
+    badge.textContent = p.status || '';
+    badge.className = 'pdm-badge ' + (statusLow.includes('dispo') ? 'dispo' : statusLow.includes('propos') ? 'propose' : statusLow.includes('lou') ? 'loue' : '');
+
+    // ── Chips ──────────────────────────────────────────────────────
+    const chips = [
+      p.zone      && `<span class="pdm-chip">📍 ${p.zone}</span>`,
+      p.room_type && `<span class="pdm-chip">🛏 ${p.room_type}</span>`,
+      p.sqm       && `<span class="pdm-chip">📐 ${p.sqm}</span>`,
+      p.floor     && `<span class="pdm-chip">🏢 Étage ${p.floor}</span>`,
+      p.room_no   && `<span class="pdm-chip">🔑 Unité ${p.room_no}</span>`,
+    ].filter(Boolean);
+    document.getElementById('pdm-chips').innerHTML = chips.join('');
+
+    // ── Description ────────────────────────────────────────────────
+    document.getElementById('pdm-desc').textContent = p.description || '';
+    document.getElementById('pdm-desc').style.display = p.description ? '' : 'none';
+
+    // ── Boutons bas gauche ─────────────────────────────────────────
+    document.getElementById('pdm-edit-btn').onclick = () => { this.closeDetail(); this.openEditModal(id); };
+    const archBtn = document.getElementById('pdm-archive-btn');
+    archBtn.textContent = this.showArchived ? 'Désarchiver' : 'Archiver';
+    archBtn.onclick = () => { this.closeDetail(); this.archive(id); };
+    const shareBtn = document.getElementById('pdm-share-btn');
+    if (p.share_token) {
+      shareBtn.style.display = '';
+      shareBtn.onclick = (ev) => { ev.stopPropagation(); this.share(p.share_token, ev); };
+    } else { shareBtn.style.display = 'none'; }
+
+    // ── Stats ──────────────────────────────────────────────────────
+    const statsData = [
+      { l: 'Zone',      v: p.zone      || '—' },
+      { l: 'Surface',   v: p.sqm       || '—' },
+      { l: 'Type',      v: p.room_type || '—' },
+      { l: 'Étage',     v: p.floor     || '—' },
+    ];
+    document.getElementById('pdm-stats').innerHTML = statsData.map(s =>
+      `<div class="pdm-stat"><div class="pdm-stat-label">${s.l}</div><div class="pdm-stat-value">${s.v}</div></div>`
+    ).join('');
+
+    // ── Statut ─────────────────────────────────────────────────────
+    const statuses = ['Disponible', 'Proposé', 'Loué'];
+    document.getElementById('pdm-status-btns').innerHTML = statuses.map(s => {
+      const slug = s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace('e','e');
+      const cls  = s === p.status ? ('active-' + (s==='Disponible'?'dispo':s==='Proposé'?'propose':'loue')) : '';
+      return `<button class="pdm-status-btn ${cls}" onclick="Properties.setDetailStatus(${id},'${s}',this)">${s}</button>`;
+    }).join('');
+
+    // ── Contact ────────────────────────────────────────────────────
+    let contactHTML = '';
+    if (p.owner_contact) {
+      const waNum = p.owner_contact.replace(/\D/g, '');
+      const waLink = waNum.length >= 8 ? 'https://wa.me/' + (waNum.startsWith('0') ? '66' + waNum.slice(1) : waNum) : null;
+      contactHTML = `
+        <div class="pdm-contact-label">Propriétaire</div>
+        <div class="pdm-contact-name">${p.owner_contact}</div>
+        ${waLink ? `<button class="pdm-wap-btn" onclick="window.open('${waLink}','_blank')">📱 Contacter WhatsApp</button>` : ''}
+        ${p.drive_link ? `<a href="${p.drive_link}" target="_blank" class="pdm-drive-link">📁 Dossier Drive</a>` : ''}`;
+    } else if (p.drive_link) {
+      contactHTML = `<a href="${p.drive_link}" target="_blank" class="pdm-drive-link">📁 Dossier Drive</a>`;
+    }
+    document.getElementById('pdm-contact').innerHTML = contactHTML;
+    document.getElementById('pdm-contact').style.display = contactHTML ? '' : 'none';
+
+    // ── Afficher ───────────────────────────────────────────────────
+    document.getElementById('prop-detail-overlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  },
+
+  async setDetailStatus(id, status, btn) {
+    try {
+      await api.put(`/properties/${id}`, { ...this.data.find(p => p.id === id), status });
+      const p = this.data.find(x => x.id === id);
+      if (p) p.status = status;
+      // Mettre à jour le badge
+      const badge = document.getElementById('pdm-badge');
+      badge.textContent = status;
+      badge.className = 'pdm-badge ' + (status==='Disponible'?'dispo':status==='Proposé'?'propose':'loue');
+      // Mettre à jour les boutons statut
+      document.querySelectorAll('.pdm-status-btn').forEach(b => {
+        b.className = 'pdm-status-btn';
+        if (b.textContent === status) b.className += ' active-' + (status==='Disponible'?'dispo':status==='Proposé'?'propose':'loue');
+      });
+      Toast.show('Statut mis à jour');
+      this.render();
+    } catch(err) { Toast.show(err.message, 'error'); }
+  },
+
+  closeDetail() {
+    document.getElementById('prop-detail-overlay').classList.add('hidden');
+    document.body.style.overflow = '';
+    this._detailId = null;
   },
 
   // ── Actions ─────────────────────────────────────────────────────────────────

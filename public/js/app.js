@@ -311,8 +311,14 @@ const App = {
       if (e.target.id === 'modal-overlay') Modal.close();
     });
     document.getElementById('modal-close').onclick = Modal.close;
+    document.getElementById('prop-detail-overlay').addEventListener('click', (e) => {
+      if (e.target.id === 'prop-detail-overlay') Properties.closeDetail();
+    });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') Modal.close();
+      if (e.key === 'Escape') {
+        Modal.close();
+        Properties.closeDetail();
+      }
     });
 
     const langBtn = document.getElementById('lang-toggle');

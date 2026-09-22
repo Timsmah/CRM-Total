@@ -90,13 +90,51 @@
     </div>
   </div>
 
+  <!-- PROPERTY DETAIL OVERLAY (mozaïque) -->
+  <div id="prop-detail-overlay" class="hidden">
+    <div id="prop-detail-modal">
+      <button id="prop-detail-close" aria-label="Fermer" onclick="Properties.closeDetail()">✕</button>
+      <!-- Gallery -->
+      <div id="prop-detail-gallery" class="pdm-gallery"></div>
+      <!-- Body -->
+      <div class="pdm-body">
+        <div class="pdm-left">
+          <div class="pdm-title-row">
+            <h2 id="pdm-title" class="pdm-title"></h2>
+            <span id="pdm-badge" class="pdm-badge"></span>
+          </div>
+          <div class="pdm-price-row">
+            <span id="pdm-price" class="pdm-price"></span>
+            <span id="pdm-per" class="pdm-per"></span>
+          </div>
+          <div id="pdm-chips" class="pdm-chips-row"></div>
+          <p id="pdm-desc" class="pdm-desc"></p>
+          <div class="pdm-actions">
+            <button class="btn btn-ghost btn-sm" onclick="Properties.closeDetail()">Fermer</button>
+            <button id="pdm-edit-btn" class="btn btn-secondary btn-sm">Modifier</button>
+            <button id="pdm-archive-btn" class="btn btn-ghost btn-sm"></button>
+            <button id="pdm-share-btn" class="btn btn-primary btn-sm" style="margin-left:auto;display:none"><span>🔗</span> Lien client</button>
+          </div>
+        </div>
+        <div class="pdm-right">
+          <div id="pdm-stats" class="pdm-stats"></div>
+          <div class="pdm-status-section">
+            <div class="pdm-section-label">Statut</div>
+            <div id="pdm-status-btns" class="pdm-status-btns"></div>
+          </div>
+          <div id="pdm-contact" class="pdm-contact-card"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOASTS -->
   <div id="toast-container"></div>
 
-  <script src="/js/app.js?v=3"></script>
-  <script src="/js/dashboard.js?v=3"></script>
-  <script src="/js/clients.js?v=3"></script>
-  <script src="/js/properties.js?v=3"></script>
+  <script src="/js/app.js?v=4"></script>
+  <script src="/js/dashboard.js?v=4"></script>
+  <script src="/js/clients.js?v=4"></script>
+  <script src="/js/properties.js?v=4"></script>
   <script src="/js/deals.js?v=3"></script>
   <script src="/js/finance.js?v=3"></script>
   <script src="/js/contracts.js?v=3"></script>
