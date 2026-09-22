@@ -1972,30 +1972,30 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   /* ── Layout général ── */
   #app { flex-direction: column; }
   #sidebar { display: none; }
-  #content { padding: 0 0 62px; }
+  #content { padding: 0 0 84px; }
 
-  /* ── Bottom nav — dock compact ── */
+  /* ── Bottom nav — dock flottant style Insta ── */
   #bottom-nav {
-    display: flex; align-items: center;
-    position: fixed; bottom: 0; left: 0; right: 0; height: 54px;
-    background: rgba(var(--surface-rgb, 255,255,255), 0.88);
-    backdrop-filter: saturate(180%) blur(16px);
-    -webkit-backdrop-filter: saturate(180%) blur(16px);
-    border-top: 0.5px solid var(--border);
-    z-index: 200;
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    display: flex; align-items: center; justify-content: space-around;
+    position: fixed; bottom: 16px; left: 16px; right: 16px;
+    background: #1a1a1a;
+    border-radius: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    z-index: 200; height: 58px;
+    padding: 0 8px;
+    padding-bottom: 0;
   }
   .bnav-item {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 8px 4px; cursor: pointer; gap: 3px;
-    text-decoration: none; border: none; background: none;
-    -webkit-tap-highlight-color: transparent;
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    height: 44px; border-radius: 22px;
+    cursor: pointer; text-decoration: none; border: none; background: none;
+    -webkit-tap-highlight-color: transparent; transition: background .15s;
   }
-  .bnav-icon { font-size: 22px; line-height: 1; opacity: .55; transition: opacity .15s; }
+  .bnav-item.active { background: #333; }
+  .bnav-icon { font-size: 22px; line-height: 1; filter: grayscale(1) brightness(10); opacity: .5; transition: opacity .15s; }
+  .bnav-item.active .bnav-icon { opacity: 1; filter: none; }
+  .bnav-item:active { background: #2a2a2a; }
   .bnav-label { display: none; }
-  .bnav-item.active .bnav-icon { opacity: 1; }
-  .bnav-item:active .bnav-icon { opacity: .7; transform: scale(.9); }
 
   /* ── Section header mobile ── */
   .section-header {
