@@ -484,7 +484,8 @@ const Clients = {
       const leadDate = (c.form_submitted_at || c.created_at)
         ? new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})
         : '';
-      const tags = (c.action_tags || []).slice(0,2).map(k => {
+      const _atags = Array.isArray(c.action_tags) ? c.action_tags : (c.action_tags ? JSON.parse(c.action_tags) : []);
+      const tags = _atags.slice(0,2).map(k => {
         const def = ACTION_TAGS.find(t => t.key === k);
         return def ? `<span class="mkc-tag">${def.emoji}</span>` : '';
       }).join('');
