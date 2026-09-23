@@ -1254,8 +1254,8 @@ const Clients = {
           <div class="client-details">
             ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
           </div>
-          <button class="card-ghost-link" onclick="event.stopPropagation();App.navigateTo('recherches');setTimeout(()=>{ if(typeof Recherches!=='undefined') Recherches.selectClient(${c.id}); },200)">
-            🔍 Voir dans Recherches →
+          <button class="card-ghost-link" onclick="event.stopPropagation();Router.navigate('recherches').then(()=>{ if(typeof Recherches!=='undefined') Recherches.selectClient(${c.id}); })">
+            🔍 ${t('link_voir_recherches')}
           </button>
         </div>
       </div>`;

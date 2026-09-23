@@ -5,6 +5,7 @@ const I18N = {
     nav_dashboard:       'Dashboard',
     nav_clients:         'Clients',
     nav_properties:      'Properties',
+    nav_recherches:      'Search',
     nav_finance:         'Finance',
     nav_logout:          '⎋ Log out',
     clients_add:         '+ Add',
@@ -96,6 +97,7 @@ const I18N = {
     col_visite:          '🏠 Visit / Offer',
     col_signe:           '✅ Signed',
     col_ghost_hint:      'managed in Searches',
+    link_voir_recherches:'View in Search →',
     lang_switch:         '🇫🇷 Français',
     // Notes
     form_duration:       'Duration',
@@ -140,6 +142,7 @@ const I18N = {
     nav_dashboard:       'Tableau de bord',
     nav_clients:         'Clients',
     nav_properties:      'Biens',
+    nav_recherches:      'Recherches',
     nav_finance:         'Finance',
     nav_logout:          '⎋ Déconnexion',
     clients_add:         '+ Ajouter',
@@ -231,6 +234,7 @@ const I18N = {
     col_visite:          '🏠 Visite / Offre',
     col_signe:           '✅ Signé',
     col_ghost_hint:      'géré dans Recherches',
+    link_voir_recherches:'Voir dans Recherches →',
     lang_switch:         '🇬🇧 English',
     // Notes
     form_duration:       'Durée',
