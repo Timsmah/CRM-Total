@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n.js?v=2"></script>
 </head>
 <body>
 
@@ -98,7 +98,7 @@
     <div id="mobile-more-overlay" class="hidden" onclick="MobileMenu.close()">
       <div id="mobile-more-sheet" onclick="event.stopPropagation()">
         <div class="mobile-more-handle"></div>
-        <a class="mobile-more-item" onclick="MobileMenu.go('recherches')">🔍 Recherches</a>
+        <a class="mobile-more-item" onclick="MobileMenu.go('recherches')">🔍 <span data-i18n="nav_recherches">Recherches</span></a>
         <a class="mobile-more-item" onclick="MobileMenu.go('finance')">💰 Finance</a>
         <a class="mobile-more-item" onclick="MobileMenu.go('contracts')">📋 Contrats</a>
         <a class="mobile-more-item" onclick="MobileMenu.go('visas')">🛂 Visas</a>
