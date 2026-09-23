@@ -317,7 +317,35 @@ const Recherches = {
     this._pendingPhotos  = [];
     this._propPickerData = this.allProps;
 
+    // 6 biens récents pour les chips rapides
+    const recentProps = this.allProps.slice(0, 6);
+    const recentChips = recentProps.map(p => {
+      const label = [p.title, p.zone].filter(Boolean).join(' · ');
+      const price  = p.price ? Number(p.price).toLocaleString('fr-FR') + ' ฿' : '';
+      return `<div class="crm-prop-chip" onclick="Recherches._selectProp(${p.id})">
+        <span class="crm-prop-chip-title">${p.title || '—'}</span>
+        <span class="crm-prop-chip-meta">${[p.zone, price].filter(Boolean).join(' · ')}</span>
+      </div>`;
+    }).join('');
+
     Modal.open(`📤 Proposer un bien — ${client?.name || ''}`, `
+      <div class="form-row">
+        <label style="font-weight:600">🏠 Depuis votre CRM</label>
+        <div style="position:relative;margin-bottom:8px">
+          <input id="p-crm-search" placeholder="Rechercher par titre ou zone…" oninput="Recherches._filterProps(this.value)" autocomplete="off">
+          <div id="prop-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
+        </div>
+        <div id="crm-prop-chips" style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">${recentChips}</div>
+        <input type="hidden" id="prop-selected-id">
+        <div id="prop-selected-label" style="font-size:11px;color:#22C55E;margin-top:4px;display:none"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin:12px 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:11px;color:var(--text-3)">ou saisir manuellement</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
       <div class="form-row">
         <label>Titre du bien <span style="color:#EF4444">*</span></label>
         <input id="p-title" placeholder="Ex : Studio Thong Lo 45m², appt FB Asoke…">
@@ -346,15 +374,6 @@ const Recherches = {
           ).join('')}
         </select>
       </div>
-      <details style="margin-bottom:16px">
-        <summary style="cursor:pointer;font-size:12px;color:var(--text-3);padding:4px 0;list-style:none">🏠 Lier à un bien du CRM (optionnel)</summary>
-        <div style="margin-top:8px;position:relative">
-          <input id="p-crm-search" placeholder="Rechercher par titre ou zone…" oninput="Recherches._filterProps(this.value)" autocomplete="off">
-          <div id="prop-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
-          <input type="hidden" id="prop-selected-id">
-          <div id="prop-selected-label" style="font-size:11px;color:#22C55E;margin-top:4px;display:none"></div>
-        </div>
-      </details>
       <button class="btn btn-primary" onclick="Recherches._submitPropose(${clientId})" style="width:100%">Enregistrer</button>
     `);
   },
@@ -410,7 +429,7 @@ const Recherches = {
       .slice(0, 8);
     if (!matches.length) { res.style.display = 'none'; return; }
     res.innerHTML = matches.map(p => `
-      <div onclick="Recherches._selectProp(${p.id}, \`${(p.title||'').replace(/`/g,'\\`')}\`)"
+      <div onclick="Recherches._selectProp(${p.id})"
         style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)"
         onmouseenter="this.style.background='var(--surface-2,#1a1a1a)'" onmouseleave="this.style.background=''">
         <div style="font-size:13px;font-weight:500">${p.title}</div>
@@ -419,12 +438,28 @@ const Recherches = {
     res.style.display = 'block';
   },
 
-  _selectProp(id, title) {
-    document.getElementById('prop-selected-id').value = id;
-    document.getElementById('p-crm-search').value     = title;
+  _selectProp(id) {
+    const prop = this._propPickerData.find(p => p.id === id);
+    if (!prop) return;
+    document.getElementById('prop-selected-id').value    = id;
+    document.getElementById('p-crm-search').value        = prop.title || '';
     document.getElementById('prop-results').style.display = 'none';
+
+    // Auto-remplir titre et URL
+    const titleEl = document.getElementById('p-title');
+    const urlEl   = document.getElementById('p-url');
+    if (titleEl && !titleEl.value) titleEl.value = prop.title || '';
+    if (urlEl   && !urlEl.value)   urlEl.value   = prop.external_url || '';
+
+    // Highlight la chip sélectionnée
+    document.querySelectorAll('.crm-prop-chip').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll(`.crm-prop-chip`).forEach(el => {
+      if (el.querySelector('.crm-prop-chip-title')?.textContent === prop.title) el.classList.add('selected');
+    });
+
     const lbl = document.getElementById('prop-selected-label');
-    lbl.textContent = `✓ ${title}`;
+    const price = prop.price ? ' · ' + Number(prop.price).toLocaleString('fr-FR') + ' ฿' : '';
+    lbl.textContent = `✓ ${prop.title}${prop.zone ? ' · ' + prop.zone : ''}${price}`;
     lbl.style.display = 'block';
   },
 

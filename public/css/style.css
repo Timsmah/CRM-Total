@@ -1190,6 +1190,18 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 #modal-body { padding: 20px 22px; overflow-y: auto; }
 
 /* ── FORMS ───────────────────────────────────────── */
+/* ── CRM property picker chips ── */
+.crm-prop-chip {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  cursor: pointer; transition: border-color .12s, background .12s;
+}
+.crm-prop-chip:hover { border-color: var(--accent); background: var(--surface); }
+.crm-prop-chip.selected { border-color: var(--accent); background: rgba(201,146,42,.08); }
+.crm-prop-chip-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.crm-prop-chip-meta  { font-size: 11px; color: var(--text-3); }
+
 .form-row { margin-bottom: 13px; }
 .form-row label { display: block; font-size: 12px; color: var(--text-2); margin-bottom: 5px; font-weight: 500; }
 .form-row input,
