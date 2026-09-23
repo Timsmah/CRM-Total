@@ -312,21 +312,53 @@ const Recherches = {
   },
 
   // ── Modal "Proposer un bien" ──────────────────────────────────────────────
+  _matchPropsForClient(c, props) {
+    const ZONE_ALIASES = { 'thonglhor':'thonglor','thonglor':'thonglor','sathon':'sathorn','silom/sathon':'sathorn','silom':'silom','sathorn':'sathorn','onnut':'onnut','onut':'onnut','phrompong':'phromphong','phromphong':'phromphong','promphong':'phromphong','ekkamai':'ekkamai','asoke':'asoke','ploenchit':'ploenchit','ari':'ari','ratchada':'ratchada','sukhumvit':'sukhumvit' };
+    const normZone = z => { const n = (z||'').toLowerCase().replace(/[\s\-_\.]/g,''); return ZONE_ALIASES[n]||n; };
+    const NO_PREF  = ['nonprécisé','nonprecise','jesaispasencore','pasencoredécidé',''];
+    const budget   = c.budget || c.budget_max;
+    const hasZone  = c.zones && !NO_PREF.includes(normZone(c.zones));
+
+    const matched = [], rest = [];
+    for (const p of props) {
+      const overBudget = budget && p.price && Number(p.price) > Number(budget) + 5000;
+      const wrongZone  = hasZone && p.zone && !c.zones.split(/,\s*/).map(z=>normZone(z)).some(z=>z&&(normZone(p.zone).includes(z)||z.includes(normZone(p.zone))));
+      if (!overBudget && !wrongZone) matched.push(p);
+      else rest.push(p);
+    }
+    return { matched, rest };
+  },
+
   openProposeModal(clientId) {
     const client = this.clients.find(c => c.id === clientId);
     this._pendingPhotos  = [];
     this._propPickerData = this.allProps;
 
-    // 6 biens récents pour les chips rapides
-    const recentProps = this.allProps.slice(0, 6);
-    const recentChips = recentProps.map(p => {
-      const label = [p.title, p.zone].filter(Boolean).join(' · ');
-      const price  = p.price ? Number(p.price).toLocaleString('fr-FR') + ' ฿' : '';
-      return `<div class="crm-prop-chip" onclick="Recherches._selectProp(${p.id})">
-        <span class="crm-prop-chip-title">${p.title || '—'}</span>
-        <span class="crm-prop-chip-meta">${[p.zone, price].filter(Boolean).join(' · ')}</span>
+    // Tri : matching en premier, reste ensuite
+    const available = this.allProps.filter(p => (p.status||'').toLowerCase() === 'disponible');
+    const others    = this.allProps.filter(p => (p.status||'').toLowerCase() !== 'disponible');
+    const { matched, rest } = client ? this._matchPropsForClient(client, available) : { matched: available, rest: [] };
+
+    const hasMatch = matched.length > 0;
+    const chipSection = (label, list, accent) => {
+      if (!list.length) return '';
+      return `<div style="margin-bottom:${accent?'10':'4'}px">
+        ${label ? `<div style="font-size:11px;font-weight:600;color:${accent?'var(--accent)':'var(--text-3)'};margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">${label}</div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:5px">
+          ${list.slice(0,8).map(p => {
+            const price = p.price ? Number(p.price).toLocaleString('fr-FR')+' ฿' : '';
+            return `<div class="crm-prop-chip" onclick="Recherches._selectProp(${p.id})">
+              <span class="crm-prop-chip-title">${p.title||'—'}</span>
+              <span class="crm-prop-chip-meta">${[p.zone,price].filter(Boolean).join(' · ')}</span>
+            </div>`;
+          }).join('')}
+        </div>
       </div>`;
-    }).join('');
+    };
+
+    const chipsHTML = hasMatch
+      ? chipSection('✓ Correspondent aux critères', matched, true) + chipSection('Autres biens', rest.slice(0,4), false)
+      : chipSection('Tous les biens disponibles', available.slice(0,8), false);
 
     Modal.open(`📤 Proposer un bien — ${client?.name || ''}`, `
       <div class="form-row">
@@ -335,7 +367,7 @@ const Recherches = {
           <input id="p-crm-search" placeholder="Rechercher par titre ou zone…" oninput="Recherches._filterProps(this.value)" autocomplete="off">
           <div id="prop-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
         </div>
-        <div id="crm-prop-chips" style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">${recentChips}</div>
+        <div id="crm-prop-chips">${chipsHTML}</div>
         <input type="hidden" id="prop-selected-id">
         <div id="prop-selected-label" style="font-size:11px;color:#22C55E;margin-top:4px;display:none"></div>
       </div>
