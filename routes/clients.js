@@ -176,13 +176,27 @@ router.post('/sync/sheets', async (req, res) => {
 
     if (!payload.length) return res.json({ imported: 0, updated: 0, total: 0 });
 
-    // 1 seule requête upsert au lieu de N×SELECT + N×INSERT/UPDATE
-    const { error } = await db.from('clients')
-      .upsert(payload, { onConflict: 'sheet_row', ignoreDuplicates: false });
+    // Distingue nouveaux vs existants pour ne pas écraser contact_status
+    const sheetRows = payload.map(r => r.sheet_row).filter(Boolean);
+    const { data: existing } = await db.from('clients')
+      .select('sheet_row').in('sheet_row', sheetRows);
+    const existingRows = new Set((existing || []).map(r => r.sheet_row));
 
-    if (error) throw new Error(error.message);
+    const newRows      = payload.filter(r => !existingRows.has(r.sheet_row))
+      .map(r => ({ ...r, contact_status: 'Nouveau' }));
+    const updateRows   = payload.filter(r => existingRows.has(r.sheet_row));
 
-    res.json({ imported: payload.length, updated: 0, total: payload.length });
+    if (newRows.length) {
+      const { error } = await db.from('clients').insert(newRows);
+      if (error) throw new Error(error.message);
+    }
+    if (updateRows.length) {
+      const { error } = await db.from('clients')
+        .upsert(updateRows, { onConflict: 'sheet_row', ignoreDuplicates: false });
+      if (error) throw new Error(error.message);
+    }
+
+    res.json({ imported: newRows.length, updated: updateRows.length, total: payload.length });
   } catch (err) {
     console.error('Sheets sync error:', err);
     res.status(500).json({ error: err.message });
