@@ -169,6 +169,7 @@ function getContactCols() {
     { key: 'À contacter',    label: t('col_a_contacter'),  cls: 'col-to-contact', ghost: false },
     { key: 'en_recherche',   label: t('col_recherche'),    cls: 'col-recherche',  ghost: true  },
     { key: 'Visite / Offre', label: t('col_visite'),       cls: 'col-visite',     ghost: false },
+    { key: 'Closing',        label: t('col_closing'),       cls: 'col-closing',    ghost: false },
     { key: 'Signé',          label: t('col_signe'),         cls: 'col-signed',    ghost: false },
   ];
 }

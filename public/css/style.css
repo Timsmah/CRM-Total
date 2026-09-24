@@ -369,6 +369,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .col-nouveau     { color: var(--blue, #3B82F6); }
 .col-recherche   { color: #1D9E75; }
 .col-visite      { color: #8B5CF6; }
+.col-closing     { color: #EA580C; }
 .col-signed      { color: #16A34A; }
 /* Ghost column */
 .kanban-col.col-ghost { background: var(--surface-1); border-style: dashed; }
