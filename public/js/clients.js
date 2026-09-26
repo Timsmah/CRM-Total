@@ -163,6 +163,8 @@ function scoreBreakdownHTML(c) {
   </div>`;
 }
 
+const _phn = n => n ? (String(n)[0] === '+' ? String(n) : '+' + String(n)) : '';
+
 function getContactCols() {
   return [
     { key: 'Nouveau',        label: t('col_nouveau'),      cls: 'col-nouveau',    ghost: false },
@@ -708,7 +710,7 @@ const Clients = {
           <div class="cl-body">
             <div class="cl-name">${c.name}</div>
             <div class="cl-meta">
-              ${c.whatsapp ? `<button class="cl-phone" onclick="navigator.clipboard.writeText('${c.whatsapp}'.replace(/^\+?/,'+')).then(()=>Toast.show('Copié ✓','success'))">📱 ${c.whatsapp}</button>` : '<span class="cl-no-phone">Pas de numéro</span>'}
+              ${c.whatsapp ? `<button class="cl-phone" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))">📱 ${_phn(c.whatsapp)}</button>` : '<span class="cl-no-phone">Pas de numéro</span>'}
               ${budget ? `<span>💰 ${budget}</span>` : ''}
               ${c.zones ? `<span>📍 ${c.zones}</span>` : ''}
               ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
@@ -785,7 +787,7 @@ const Clients = {
             <div class="cl-name">${c.name}</div>
             <div class="cl-meta">
               ${c.whatsapp
-                ? `<button class="cl-phone" onclick="navigator.clipboard.writeText('${c.whatsapp}'.replace(/^\+?/,'+')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📱 ${c.whatsapp}</button>`
+                ? `<button class="cl-phone" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📱 ${_phn(c.whatsapp)}</button>`
                 : `<span class="cl-no-phone">Pas de numéro</span>`}
               ${budget ? `<span>💰 ${budget}</span>` : ''}
               ${c.zones ? `<span>📍 ${c.zones}</span>` : ''}
@@ -1097,8 +1099,8 @@ const Clients = {
             ${c.whatsapp
               ? `<div class="card-contact-row" onclick="event.stopPropagation()">
                   <span>📱</span>
-                  <span class="card-contact-link">${c.whatsapp}</span>
-                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}'.replace(/^\+?/,'+')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
+                  <span class="card-contact-link">${_phn(c.whatsapp)}</span>
+                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
                 </div>`
               : `<p class="card-no-contact">Pas de numéro</p>`}
             <div class="card-act-log" id="card-act-${c.id}">
@@ -1193,7 +1195,7 @@ const Clients = {
                 ${daysAgo ? `<span style="font-size:9.5px;color:var(--text-3)">${daysAgo}</span>` : ''}
               </div>
               <div style="display:flex;align-items:center;gap:3px">
-                ${c.whatsapp ? `<button class="card-quick-btn" onclick="navigator.clipboard.writeText('${c.whatsapp}'.replace(/^\+?/,'+')).then(()=>Toast.show('📱 Copié','success'))" title="Copier WA">📱</button>` : ''}
+                ${c.whatsapp ? `<button class="card-quick-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('📱 Copié','success'))" title="Copier WA">📱</button>` : ''}
                 <button class="card-quick-btn" onclick="Clients.openDetailModal(${c.id})" title="Voir la fiche">↗</button>
               </div>
             </div>
@@ -1210,12 +1212,12 @@ const Clients = {
             ${c.whatsapp
               ? `<div class="card-contact-row" onclick="event.stopPropagation()">
                   <span>📱</span>
-                  <span class="card-contact-link">${c.whatsapp}</span>
-                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('${c.whatsapp}'.replace(/^\+?/,'+')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
+                  <span class="card-contact-link">${_phn(c.whatsapp)}</span>
+                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
                 </div>`
               : `<p class="card-no-contact">Pas de numéro</p>`}
 
-            <!-- Recent activity log (loaded on flip) -->
+<!-- Recent activity log (loaded on flip) -->
             <div class="card-act-log" id="card-act-${c.id}">
               <span class="card-act-loading">…</span>
             </div>
