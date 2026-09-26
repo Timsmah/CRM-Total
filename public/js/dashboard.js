@@ -364,7 +364,6 @@ const Dashboard = {
         <div>
           <div style="font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Revenus — ${monthName}</div>
           <div style="font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1">${monthEUR.toLocaleString('fr-FR')} €</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:4px">≈ ${monthTHB.toLocaleString('fr-FR')} ฿</div>
         </div>
         <div style="text-align:right">
           ${trendPct !== null ? `<div style="font-size:13px;font-weight:600;color:${trendUp ? '#4ADE80' : '#F87171'}">${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}%</div><div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">vs mois précédent</div>` : ''}
