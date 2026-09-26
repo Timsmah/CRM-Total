@@ -329,20 +329,19 @@ const Dashboard = {
     const now      = new Date();
     const eurRate  = kpis.eurRate;
 
-    // Revenus mois en cours
+    // Revenus mois en cours — sans conversion croisée
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const toTHB = tr => tr.currency === 'EUR' ? Math.round(Number(tr.amount) * eurRate) : Number(tr.amount);
     const txMonth   = this.finance.filter(tr => tr.date?.startsWith(currentMonth));
-    const monthTHB  = txMonth.reduce((s,tr) => s + toTHB(tr), 0);
-    const monthEUR  = Math.round(monthTHB / eurRate);
-    const weekEUR   = Math.round(kpis.revenueWeek / eurRate);
+    const monthTHB  = txMonth.filter(tr => tr.currency !== 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
+    const monthEUR  = txMonth.filter(tr => tr.currency === 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
     const onbCount  = txMonth.filter(tr => tr.type === 'onboarding').length;
     const visaCount = txMonth.filter(tr => tr.type === 'visa').length;
 
     // Trend vs mois précédent
     const prevMonth = (() => { const d = new Date(now.getFullYear(), now.getMonth()-1, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
-    const prevTHB   = this.finance.filter(tr => tr.date?.startsWith(prevMonth)).reduce((s,tr) => s + toTHB(tr), 0);
-    const trendPct  = prevTHB > 0 ? Math.round((monthTHB - prevTHB) / prevTHB * 100) : null;
+    const prevTHB   = this.finance.filter(tr => tr.date?.startsWith(prevMonth) && tr.currency !== 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
+    const prevEUR   = this.finance.filter(tr => tr.date?.startsWith(prevMonth) && tr.currency === 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
+    const trendPct  = (prevTHB + prevEUR) > 0 ? Math.round(((monthTHB + monthEUR * eurRate) - (prevTHB + prevEUR * eurRate)) / (prevTHB + prevEUR * eurRate) * 100) : null;
     const trendUp   = trendPct !== null && trendPct >= 0;
 
     const monthName = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
@@ -363,11 +362,12 @@ const Dashboard = {
       <div style="background:#1C2B3A;border-radius:14px;padding:18px 22px;margin-bottom:14px;color:#fff;display:flex;justify-content:space-between;align-items:flex-end">
         <div>
           <div style="font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Revenus — ${monthName}</div>
-          <div style="font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1">${monthEUR.toLocaleString('fr-FR')} €</div>
+          ${monthEUR > 0 ? `<div style="font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1">${monthEUR.toLocaleString('fr-FR')} €</div>` : ''}
+          ${monthTHB > 0 ? `<div style="font-size:${monthEUR > 0 ? '16' : '28'}px;font-weight:700;letter-spacing:-.6px;line-height:1.3;${monthEUR > 0 ? 'color:rgba(255,255,255,.6)' : ''}">${monthTHB.toLocaleString('fr-FR')} ฿</div>` : ''}
+          ${monthEUR === 0 && monthTHB === 0 ? `<div style="font-size:28px;font-weight:700">0 €</div>` : ''}
         </div>
         <div style="text-align:right">
           ${trendPct !== null ? `<div style="font-size:13px;font-weight:600;color:${trendUp ? '#4ADE80' : '#F87171'}">${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}%</div><div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">vs mois précédent</div>` : ''}
-          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.5)">Cette semaine : <strong style="color:#fff">${weekEUR.toLocaleString('fr-FR')} €</strong></div>
         </div>
       </div>
 
