@@ -1973,6 +1973,8 @@ const Clients = {
         ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
         ${(c.form_submitted_at || c.created_at) ? `<div class="detail-row"><span class="detail-label">📋 Lead depuis</span><span>${new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
         ${c.reminder_date ? `<div class="detail-row"><span class="detail-label">🔔 ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
+        ${c.has_visa ? `<div class="detail-row"><span class="detail-label">🛂 ${t('detail_has_visa')}</span><span>${c.has_visa === 'oui' ? '✅ Oui' : '❌ Non'}</span></div>` : ''}
+        ${c.has_visa === 'non' && c.needs_visa_help ? `<div class="detail-row"><span class="detail-label">💼 ${t('detail_needs_visa_help')}</span><span>${c.needs_visa_help === 'oui' ? '✅ Oui' : '❌ Non'}</span></div>` : ''}
       </div>
 
       <div class="modal-sep"></div>
@@ -2289,11 +2291,34 @@ const Clients = {
             <input type="date" name="move_in_date" value="${c?.move_in_date || ''}">
           </div>
         </div>
+        <div class="form-2">
+          <div class="form-row">
+            <label>🛂 ${t('form_has_visa')}</label>
+            <select name="has_visa" id="has-visa-select" onchange="Clients._toggleVisaHelp(this.value)">
+              <option value="" ${!c?.has_visa ? 'selected' : ''}>—</option>
+              <option value="oui" ${c?.has_visa === 'oui' ? 'selected' : ''}>Oui</option>
+              <option value="non" ${c?.has_visa === 'non' ? 'selected' : ''}>Non</option>
+            </select>
+          </div>
+          <div class="form-row" id="visa-help-row" style="${c?.has_visa === 'non' ? '' : 'display:none'}">
+            <label>💼 ${t('form_needs_visa_help')}</label>
+            <select name="needs_visa_help">
+              <option value="" ${!c?.needs_visa_help ? 'selected' : ''}>—</option>
+              <option value="oui" ${c?.needs_visa_help === 'oui' ? 'selected' : ''}>Oui</option>
+              <option value="non" ${c?.needs_visa_help === 'non' ? 'selected' : ''}>Non</option>
+            </select>
+          </div>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="Modal.close()">${t('clients_cancel')}</button>
           <button type="submit" class="btn btn-primary">${c ? t('clients_save') : t('clients_add_btn')}</button>
         </div>
       </form>`;
+  },
+
+  _toggleVisaHelp(val) {
+    const row = document.getElementById('visa-help-row');
+    if (row) row.style.display = val === 'non' ? '' : 'none';
   },
 
   async submit(e, id) {

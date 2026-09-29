@@ -28,14 +28,16 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const { name, whatsapp, budget_min, budget_max, zones, criteria, source, status, research_fees_paid, archived, duration, move_in_date } = req.body;
+  const { name, whatsapp, budget_min, budget_max, zones, criteria, source, status, research_fees_paid, archived, duration, move_in_date, has_visa, needs_visa_help } = req.body;
   const { data, error } = await db.from('clients')
     .update({ name, whatsapp, budget_min: budget_min || null, budget_max: budget_max || null,
               zones, criteria, source, status,
               duration: duration || null,
               move_in_date: move_in_date || null,
               research_fees_paid: research_fees_paid ? 1 : 0,
-              archived: archived ? 1 : 0 })
+              archived: archived ? 1 : 0,
+              has_visa: has_visa || null,
+              needs_visa_help: needs_visa_help || null })
     .eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
