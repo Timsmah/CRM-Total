@@ -75,7 +75,7 @@ app.get('/api/bot/clients', async (req, res) => {
   res.json(data);
 });
 
-// Bot scraping — batch upsert annonces Facebook (SCRAPING_API_KEY)
+// Bot scraping — batch upsert annonces Facebook (SCRAPING_API_KEY), max 10 par appel
 app.post('/api/bot/scraping', async (req, res) => {
   const key = req.headers['x-api-key'];
   if (!process.env.SCRAPING_API_KEY || key !== process.env.SCRAPING_API_KEY)
@@ -83,15 +83,25 @@ app.post('/api/bot/scraping', async (req, res) => {
   const db = require('./db');
 
   const annonces = Array.isArray(req.body) ? req.body : (req.body.annonces || []);
-  if (!annonces.length) return res.json({ upserted: 0 });
-  const batch = annonces.slice(0, 50);
+  if (!annonces.length) return res.json({ created: 0, updated: 0, errors: [] });
+  const batch = annonces.slice(0, 10);
 
-  const results = [];
+  // Récupère les source_ids existants pour distinguer créations vs mises à jour
+  const ids = batch.map(a => a.source_id).filter(Boolean);
+  const { data: existing } = await db.from('fb_annonces').select('source_id, photos').in('source_id', ids);
+  const existingMap = Object.fromEntries((existing || []).map(r => [r.source_id, r]));
+
+  let created = 0, updated = 0;
+  const errors = [];
+
   for (const a of batch) {
-    // Upload photos base64 → Supabase Storage
-    const photoUrls = [];
-    if (Array.isArray(a.photos_base64)) {
-      for (let i = 0; i < Math.min(a.photos_base64.length, 3); i++) {
+    if (!a.source_id) { errors.push({ source_id: null, error: 'source_id manquant' }); continue; }
+
+    // Photos : upload base64 si fourni, sinon garder les photos existantes
+    let photos = JSON.stringify([]);
+    if (Array.isArray(a.photos_base64) && a.photos_base64.length) {
+      const photoUrls = [];
+      for (let i = 0; i < Math.min(a.photos_base64.length, 6); i++) {
         try {
           const b64 = a.photos_base64[i].replace(/^data:image\/\w+;base64,/, '');
           const buf = Buffer.from(b64, 'base64');
@@ -101,35 +111,55 @@ app.post('/api/bot/scraping', async (req, res) => {
           photoUrls.push(urlData.publicUrl);
         } catch {}
       }
+      photos = JSON.stringify(photoUrls);
+    } else if (Array.isArray(a.photos) && a.photos.length) {
+      photos = JSON.stringify(a.photos);
+    } else if (existingMap[a.source_id]) {
+      photos = existingMap[a.source_id].photos || '[]'; // garder les photos existantes
     }
 
     const row = {
       source_id    : a.source_id,
-      title        : a.title        || null,
-      price        : a.price        || null,
-      zone         : a.zone         || null,
-      description  : a.description  || null,
-      url          : a.url          || null,
-      photos       : JSON.stringify(photoUrls.length ? photoUrls : (Array.isArray(a.photos) ? a.photos : [])),
-      bedrooms     : a.bedrooms     || null,
-      sqm          : a.sqm          || null,
-      floor        : a.floor        || null,
-      transport    : a.transport    || null,
-      min_lease    : a.min_lease    || null,
-      transaction  : a.transaction  || 'location',
-      poster_status: a.poster_status|| null,
-      contact      : a.contact      || null,
-      posted_at    : a.posted_at    || null,
+      title        : a.title         ?? null,
+      price        : a.price         ?? null,
+      zone         : a.zone          ?? null,
+      description  : a.description   ?? null,
+      url          : a.url           ?? null,
+      photos,
+      condo        : a.condo         ?? null,
+      property_type: a.property_type ?? null,
+      bedrooms     : a.bedrooms      ?? null,
+      bathrooms    : a.bathrooms     ?? null,
+      sqm          : a.sqm           ?? null,
+      floor        : a.floor         ?? null,
+      transport    : a.transport     ?? null,
+      min_lease    : a.min_lease     ?? null,
+      transaction  : a.transaction   || 'location',
+      furnished    : a.furnished     ?? null,
+      pets         : a.pets          ?? null,
+      poster_status: a.poster_status ?? null,
+      poster_reason: a.poster_reason ?? null,
+      contact_name : a.contact_name  ?? null,
+      contact_url  : a.contact_url   ?? null,
+      phone        : a.phone         ?? null,
+      line         : a.line          ?? null,
+      whatsapp     : a.whatsapp      ?? null,
+      posted_at    : a.posted_at     ?? null,
+      last_seen_at : a.last_seen_at  ?? null,
+      repost_count : a.repost_count  ?? null,
+      fb_group     : a.fb_group      ?? null,
+      tags         : JSON.stringify(Array.isArray(a.tags) ? a.tags : []),
       active       : a.active !== false,
-      source       : a.source       || 'Facebook',
+      source       : a.source        || 'Facebook',
     };
 
     const { error } = await db.from('fb_annonces')
       .upsert(row, { onConflict: 'source_id', ignoreDuplicates: false });
-    results.push({ source_id: a.source_id, ok: !error, error: error?.message });
+    if (error) { errors.push({ source_id: a.source_id, error: error.message }); }
+    else if (existingMap[a.source_id]) updated++; else created++;
   }
 
-  res.json({ upserted: results.filter(r => r.ok).length, total: batch.length, results });
+  res.json({ created, updated, errors, total: batch.length });
 });
 
 // Bot scraping — envoi des matchings client ↔ annonces
