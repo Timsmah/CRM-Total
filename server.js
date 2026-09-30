@@ -53,7 +53,21 @@ app.get('/api/bot/properties', async (req, res) => {
     return res.status(401).json({ error: 'Clé invalide' });
   const db = require('./db');
   const { data, error } = await db.from('properties')
-    .select('id, title, price, zone, floor, unit, available, photos, cached_photos, drive_link, created_at')
+    .select('id, title, price, zone, floor, room_no, available, photos, cached_photos, drive_link, created_at')
+    .eq('archived', 0)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// Bot scraping — clients actifs, lecture seule
+app.get('/api/bot/clients', async (req, res) => {
+  const key = req.headers['x-api-key'];
+  if (!process.env.BOT_API_KEY || key !== process.env.BOT_API_KEY)
+    return res.status(401).json({ error: 'Clé invalide' });
+  const db = require('./db');
+  const { data, error } = await db.from('clients')
+    .select('id, name, status, contact_status, project, property_type, bedrooms, budget_min, budget_max, zones, criteria, move_in_date, duration')
     .eq('archived', 0)
     .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
