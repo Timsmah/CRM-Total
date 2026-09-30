@@ -46,6 +46,20 @@ app.get('/listing/:token', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'listing.html'));
 });
 
+// Bot scraping — lecture seule, protégée par BOT_API_KEY
+app.get('/api/bot/properties', async (req, res) => {
+  const key = req.headers['x-api-key'];
+  if (!process.env.BOT_API_KEY || key !== process.env.BOT_API_KEY)
+    return res.status(401).json({ error: 'Clé invalide' });
+  const db = require('./db');
+  const { data, error } = await db.from('properties')
+    .select('id, title, price, zone, floor, unit, available, photos, cached_photos, drive_link, created_at')
+    .eq('archived', 0)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // Chrome extension import — uses API key, not session
 app.post('/api/properties/import', (req, res, next) => {
   const key = req.headers['x-import-key'];
