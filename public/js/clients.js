@@ -1973,8 +1973,8 @@ const Clients = {
         ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
         ${(c.form_submitted_at || c.created_at) ? `<div class="detail-row"><span class="detail-label">📋 Lead depuis</span><span>${new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
         ${c.reminder_date ? `<div class="detail-row"><span class="detail-label">🔔 ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
-        ${c.has_visa ? `<div class="detail-row"><span class="detail-label">🛂 ${t('detail_has_visa')}</span><span>${c.has_visa === 'oui' ? '✅ Oui' : '❌ Non'}</span></div>` : ''}
-        ${c.has_visa === 'non' && c.needs_visa_help ? `<div class="detail-row"><span class="detail-label">💼 ${t('detail_needs_visa_help')}</span><span>${c.needs_visa_help === 'oui' ? '✅ Oui' : '❌ Non'}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label">🛂 ${t('detail_has_visa')}</span><span>${c.has_visa === 'oui' ? '✅ Oui' : c.has_visa === 'non' ? '❌ Non' : '—'}</span></div>
+        ${c.has_visa === 'non' ? `<div class="detail-row"><span class="detail-label">💼 ${t('detail_needs_visa_help')}</span><span>${c.needs_visa_help === 'oui' ? '✅ Oui' : c.needs_visa_help === 'non' ? '❌ Non' : '—'}</span></div>` : ''}
       </div>
 
       <div class="modal-sep"></div>
