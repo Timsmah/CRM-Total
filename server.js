@@ -151,6 +151,7 @@ app.post('/api/bot/scraping', async (req, res) => {
       tags         : JSON.stringify(Array.isArray(a.tags) ? a.tags : []),
       active       : a.active !== false,
       source       : a.source        || 'Facebook',
+      status       : 'new',
     };
 
     const { error } = await db.from('fb_annonces')
