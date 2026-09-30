@@ -6,7 +6,12 @@ const Scraping = {
 
   async load() {
     const q = this.filter === 'all' ? '/scraping' : `/scraping?status=${this.filter}`;
-    this.data = await api.get(q);
+    try {
+      this.data = await api.get(q);
+    } catch(e) {
+      document.getElementById('content').innerHTML = `<div style="padding:24px;color:#EF4444;font-family:monospace">Erreur Scraping: ${e.message}</div>`;
+      throw e;
+    }
   },
 
   render() {
