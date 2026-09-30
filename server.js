@@ -60,7 +60,7 @@ app.get('/api/bot/properties', async (req, res) => {
   res.json(data);
 });
 
-// Bot scraping — clients actifs, lecture seule
+// Bot scraping — clients en recherche active uniquement (pour matching)
 app.get('/api/bot/clients', async (req, res) => {
   const key = req.headers['x-api-key'];
   if (!process.env.BOT_API_KEY || key !== process.env.BOT_API_KEY)
@@ -69,6 +69,7 @@ app.get('/api/bot/clients', async (req, res) => {
   const { data, error } = await db.from('clients')
     .select('id, name, status, contact_status, project, property_type, bedrooms, budget_min, budget_max, zones, criteria, move_in_date, duration')
     .eq('archived', 0)
+    .eq('status', 'Recherche active')
     .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
