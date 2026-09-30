@@ -53,7 +53,7 @@ app.get('/api/bot/properties', async (req, res) => {
     return res.status(401).json({ error: 'Clé invalide' });
   const db = require('./db');
   const { data, error } = await db.from('properties')
-    .select('id, title, price, zone, floor, room_no, available, photos, cached_photos, drive_link, created_at')
+    .select('id, title, price, zone, floor, room_type, sqm, status, photos, cached_photos, drive_link, created_at')
     .eq('archived', 0)
     .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
