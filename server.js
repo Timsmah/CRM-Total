@@ -75,20 +75,82 @@ app.get('/api/bot/clients', async (req, res) => {
   res.json(data);
 });
 
-// Bot scraping — écriture des annonces Facebook (protégé par SCRAPING_API_KEY)
+// Bot scraping — batch upsert annonces Facebook (SCRAPING_API_KEY)
 app.post('/api/bot/scraping', async (req, res) => {
   const key = req.headers['x-api-key'];
   if (!process.env.SCRAPING_API_KEY || key !== process.env.SCRAPING_API_KEY)
     return res.status(401).json({ error: 'Clé invalide' });
   const db = require('./db');
-  const { title, price, zone, description, url, photos, source } = req.body;
-  const { data, error } = await db.from('scraping')
-    .insert({ title, price: price || null, zone, description, url,
-              photos: JSON.stringify(Array.isArray(photos) ? photos : []),
-              source: source || 'Facebook' })
-    .select().single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+
+  const annonces = Array.isArray(req.body) ? req.body : (req.body.annonces || []);
+  if (!annonces.length) return res.json({ upserted: 0 });
+  const batch = annonces.slice(0, 50);
+
+  const results = [];
+  for (const a of batch) {
+    // Upload photos base64 → Supabase Storage
+    const photoUrls = [];
+    if (Array.isArray(a.photos_base64)) {
+      for (let i = 0; i < Math.min(a.photos_base64.length, 3); i++) {
+        try {
+          const b64 = a.photos_base64[i].replace(/^data:image\/\w+;base64,/, '');
+          const buf = Buffer.from(b64, 'base64');
+          const path = `${a.source_id}/${i}.jpg`;
+          await db.storage.from('fb-photos').upload(path, buf, { contentType: 'image/jpeg', upsert: true });
+          const { data: urlData } = db.storage.from('fb-photos').getPublicUrl(path);
+          photoUrls.push(urlData.publicUrl);
+        } catch {}
+      }
+    }
+
+    const row = {
+      source_id    : a.source_id,
+      title        : a.title        || null,
+      price        : a.price        || null,
+      zone         : a.zone         || null,
+      description  : a.description  || null,
+      url          : a.url          || null,
+      photos       : JSON.stringify(photoUrls.length ? photoUrls : (Array.isArray(a.photos) ? a.photos : [])),
+      bedrooms     : a.bedrooms     || null,
+      sqm          : a.sqm          || null,
+      floor        : a.floor        || null,
+      transport    : a.transport    || null,
+      min_lease    : a.min_lease    || null,
+      transaction  : a.transaction  || 'location',
+      poster_status: a.poster_status|| null,
+      contact      : a.contact      || null,
+      posted_at    : a.posted_at    || null,
+      active       : a.active !== false,
+      source       : a.source       || 'Facebook',
+    };
+
+    const { error } = await db.from('fb_annonces')
+      .upsert(row, { onConflict: 'source_id', ignoreDuplicates: false });
+    results.push({ source_id: a.source_id, ok: !error, error: error?.message });
+  }
+
+  res.json({ upserted: results.filter(r => r.ok).length, total: batch.length, results });
+});
+
+// Bot scraping — envoi des matchings client ↔ annonces
+app.post('/api/bot/scraping/matching', async (req, res) => {
+  const key = req.headers['x-api-key'];
+  if (!process.env.SCRAPING_API_KEY || key !== process.env.SCRAPING_API_KEY)
+    return res.status(401).json({ error: 'Clé invalide' });
+  const db = require('./db');
+
+  const matchings = Array.isArray(req.body.matchings) ? req.body.matchings : [];
+  for (const m of matchings) {
+    const { client_id, matches } = m;
+    if (!client_id || !Array.isArray(matches)) continue;
+    // Supprime l'ancien matching de ce client
+    await db.from('fb_matching').delete().eq('client_id', client_id);
+    if (matches.length) {
+      const rows = matches.map(x => ({ client_id, source_id: x.source_id, score: x.score || null, reason: x.reason || null }));
+      await db.from('fb_matching').insert(rows);
+    }
+  }
+  res.json({ ok: true, clients: matchings.length });
 });
 
 // Chrome extension import — uses API key, not session
