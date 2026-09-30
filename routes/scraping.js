@@ -5,7 +5,7 @@ const db      = require('../db');
 // Liste des annonces FB
 router.get('/', async (req, res) => {
   const { status, active } = req.query;
-  let query = db.from('fb_annonces').select('*').order('scraped_at', { ascending: false });
+  let query = db.from('fb_annonces').select('*').order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   if (active !== undefined) query = query.eq('active', active !== 'false');
   const { data, error } = await query;
