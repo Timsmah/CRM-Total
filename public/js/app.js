@@ -215,7 +215,7 @@ const Search = {
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches, visas: Visas };
+    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches, visas: Visas, scraping: Scraping };
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
@@ -348,6 +348,8 @@ const App = {
     // Bouton admin visible seulement pour les admins
     const adminBtn = document.getElementById('admin-users-btn');
     if (adminBtn && this.user.role === 'admin') adminBtn.style.display = 'block';
+    const scrapingNav = document.getElementById('nav-scraping');
+    if (scrapingNav && this.user.role === 'admin') scrapingNav.style.display = '';
 
     // Logout
     document.getElementById('logout-btn').onclick = async () => {

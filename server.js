@@ -75,6 +75,22 @@ app.get('/api/bot/clients', async (req, res) => {
   res.json(data);
 });
 
+// Bot scraping — écriture des annonces Facebook (protégé par SCRAPING_API_KEY)
+app.post('/api/bot/scraping', async (req, res) => {
+  const key = req.headers['x-api-key'];
+  if (!process.env.SCRAPING_API_KEY || key !== process.env.SCRAPING_API_KEY)
+    return res.status(401).json({ error: 'Clé invalide' });
+  const db = require('./db');
+  const { title, price, zone, description, url, photos, source } = req.body;
+  const { data, error } = await db.from('scraping')
+    .insert({ title, price: price || null, zone, description, url,
+              photos: JSON.stringify(Array.isArray(photos) ? photos : []),
+              source: source || 'Facebook' })
+    .select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // Chrome extension import — uses API key, not session
 app.post('/api/properties/import', (req, res, next) => {
   const key = req.headers['x-import-key'];
@@ -95,6 +111,7 @@ app.use('/api/activities',  requireAuth, require('./routes/activities'));
 app.use('/api/call-lists', requireAuth, require('./routes/call-lists'));
 app.use('/api/notes',     requireAuth, require('./routes/notes'));
 app.use('/api/visas',     requireAuth, require('./routes/visas'));
+app.use('/api/scraping',  requireAdmin, require('./routes/scraping'));
 
 // Static files & SPA fallback — no-cache on JS/CSS so deploys take effect immediately
 app.use(express.static(path.join(__dirname, 'public'), {
