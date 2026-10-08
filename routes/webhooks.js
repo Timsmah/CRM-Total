@@ -115,4 +115,90 @@ router.post('/calendly', async (req, res) => {
   }
 });
 
+// ── Webhook formulaire HSC (web3forms) ────────────────────────────────────────
+// POST /api/webhooks/hsc
+// web3forms envoie les champs du formulaire en JSON.
+// Protégé par HSC_WEBHOOK_SECRET en query param (?secret=...) ou header X-HSC-Secret.
+router.post('/hsc', async (req, res) => {
+  const secret = process.env.HSC_WEBHOOK_SECRET;
+  if (secret) {
+    const provided = req.query.secret || req.headers['x-hsc-secret'];
+    if (provided !== secret) return res.status(401).json({ error: 'Secret invalide' });
+  }
+
+  try {
+    const b = req.body || {};
+
+    // Champs acceptés : noms camelCase (timthld.com) ET labels français (web3forms)
+    const nom          = b.nom    || b.name   || b['Nom']          || null;
+    const tel          = b.tel    || b.phone  || b['Téléphone']    || b['Tel'] || null;
+    const projet       = b.projet || b['Projet']                   || null;
+    const localisation = b.localisation || b['Localisation']       || null;
+    const typeBien     = b.typeBien     || b['Type de bien']       || null;
+    const ville        = b.ville        || b['Ville']              || null;
+    const chambres     = b.chambres     || b['Chambres']           || null;
+    const budgetThbRaw = b.budgetThb    || b['Budget THB']         || b['Budget'] || null;
+    const budgetEurRaw = b.budgetEur    || b['Budget EUR']         || null;
+    const dateEmmen    = b.dateEmmenagement || b['Emménagement']   || null;
+    const duree        = b.duree        || b['Durée']              || null;
+    const quartiers    = b.quartiers    || b['Quartiers']          || null;
+    const criteres     = b.criteres     || b['Critères']           || null;
+    const email        = b.email        || b['Email']              || null;
+
+    if (!nom || !String(nom).trim()) {
+      return res.status(400).json({ error: 'Champ nom requis' });
+    }
+
+    const parseBudget = (raw) => {
+      if (!raw) return null;
+      const digits = String(raw).replace(/[^\d]/g, '');
+      return parseInt(digits) || null;
+    };
+
+    const phone = tel ? String(tel).replace(/\D/g, '') : null;
+
+    const payload = {
+      name           : String(nom).trim(),
+      whatsapp       : phone || null,
+      budget_max     : parseBudget(budgetThbRaw),
+      budget_eur     : parseBudget(budgetEurRaw),
+      zones          : quartiers || localisation || null,
+      criteria       : criteres || null,
+      property_type  : typeBien || null,
+      city           : ville || null,
+      bedrooms       : chambres || null,
+      move_in_date   : dateEmmen || null,
+      duration       : duree || null,
+      project        : projet || null,
+      source         : 'Formulaire HSC',
+      status         : 'Prospect',
+      contact_status : 'Nouveau',
+    };
+
+    let clientId = null;
+    if (phone) {
+      const { data } = await db.from('clients').select('id').eq('whatsapp', phone).maybeSingle();
+      if (data) { await db.from('clients').update(payload).eq('id', data.id); clientId = data.id; }
+    }
+
+    if (!clientId) {
+      const { data: inserted, error } = await db.from('clients').insert(payload).select('id').single();
+      if (error) throw new Error(error.message);
+      clientId = inserted.id;
+    }
+
+    await db.from('activities').insert({
+      client_id : clientId,
+      type      : 'note',
+      author    : 'Système',
+      content   : `📋 Formulaire HSC reçu${email ? ` — ${email}` : ''}${projet ? ` — projet : ${projet}` : ''}`,
+    });
+
+    res.json({ ok: true, client_id: clientId });
+  } catch (err) {
+    console.error('HSC webhook error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
