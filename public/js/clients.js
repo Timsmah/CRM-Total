@@ -1157,7 +1157,7 @@ const Clients = {
 
             <!-- Top : nom + score -->
             <div class="card-top" style="margin-bottom:4px">
-              <div class="client-name" style="margin-bottom:0">${c.name}${c.source === 'Formulaire HSC' && c.created_at && (Date.now() - new Date(c.created_at).getTime() < 3 * 86400000) ? ' <span style="font-size:9px;background:#6366F1;color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle;font-weight:600">📥 HSC</span>' : ''}</div>
+              <div class="client-name" style="margin-bottom:0">${c.name}${(c.source === 'Formulaire HSC' || c.source === 'Formulaire') && c.created_at && (Date.now() - new Date(c.created_at).getTime() < 3 * 86400000) ? ' <span style="font-size:9px;background:#6366F1;color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle;font-weight:600">📥 HSC</span>' : ''}</div>
               <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
                 ${scoreBadge(c)}
                 <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
