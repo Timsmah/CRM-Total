@@ -339,6 +339,7 @@ const Clients = {
       <div class="section-header">
         <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
         <div class="header-actions">
+          <button class="btn btn-ghost" onclick="Clients.openCallPanel()" title="Session d'appel">📞 Session</button>
           <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
           <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
             ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
@@ -762,123 +763,223 @@ const Clients = {
   },
 
   // ── Session d'appel ───────────────────────────────────────────────────────
-  _cs: { clients: [], idx: 0, results: [] },
+  _cs: { clients: [], idx: 0, results: [], state: 'intro', selectedIds: new Set(), pickedOutcome: null },
+
+  // ── Ouvre le panel drawer ─────────────────────────
+  openCallPanel(preSelected) {
+    let panel = document.getElementById('call-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'call-panel';
+      panel.className = 'call-panel';
+      document.body.appendChild(panel);
+    }
+    this._cs = { clients: [], idx: 0, results: [], state: 'intro', selectedIds: new Set(preSelected || []), pickedOutcome: null };
+    this._csPanelRender();
+    requestAnimationFrame(() => panel.classList.add('open'));
+  },
 
   startCallSession() {
-    const clients = [...this.selectedClients]
-      .map(id => this.data.find(c => c.id === id)).filter(Boolean);
-    if (!clients.length) return;
-
-    this._cs = { clients, idx: 0, results: [] };
-    this.toggleSelectionMode(); // quitte le mode sélection
-
-    // Overlay plein écran
-    let overlay = document.getElementById('call-session-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'call-session-overlay';
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg);display:flex;flex-direction:column;overflow:hidden';
-      document.body.appendChild(overlay);
-    }
-    overlay.style.display = 'flex';
-    this._csRender();
+    // Called from selection mode bar — pre-select those clients then open panel
+    const preSelected = [...this.selectedClients];
+    if (this.selectionMode) this.toggleSelectionMode();
+    this.openCallPanel(preSelected);
   },
 
   _csClose() {
-    const overlay = document.getElementById('call-session-overlay');
-    if (overlay) overlay.style.display = 'none';
-    // Refresh activity counts
+    const panel = document.getElementById('call-panel');
+    if (panel) panel.classList.remove('open');
     api.get('/activities/counts').then(c => { this.actCounts = c || {}; this.render(); }).catch(() => {});
   },
 
+  _csPanelRender() {
+    const panel = document.getElementById('call-panel');
+    if (!panel) return;
+    const { state } = this._cs;
+    if (state === 'intro')   this._csPanelRenderIntro(panel);
+    else if (state === 'calling') this._csPanelRenderCall(panel);
+    else if (state === 'summary') this._csPanelRenderSummary(panel);
+  },
+
+  _csPanelRenderIntro(panel) {
+    const clients = this.data.filter(c => !c.archived);
+    const me = (typeof App !== 'undefined' && App.user?.name) || 'Tim';
+    const users = this._suiviUsers || [];
+    const selIds = this._cs.selectedIds;
+
+    const rows = clients.map(c => {
+      const r = clientScore(c);
+      const score  = r ? `⭐ ${r.total.toFixed(1)}` : '';
+      const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : '';
+      const daysNum = this.urgencyDays(c.move_in_date);
+      const dateStr = c.move_in_date
+        ? (daysNum < 0 ? `⚠️ J+${Math.abs(daysNum)}` : `📅 ${new Date(c.move_in_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`)
+        : '';
+      const sel = selIds.has(c.id);
+      return `<div class="cp-row${sel ? ' selected' : ''}" onclick="Clients._csPanelToggle(${c.id})" data-id="${c.id}">
+        <div class="cp-row-cb">${sel ? '<span class="cp-row-check">✓</span>' : ''}</div>
+        <div style="flex:1;min-width:0">
+          <div class="cp-row-name">${c.name}</div>
+          <div class="cp-row-meta">${[score, budget, dateStr].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const selCount = selIds.size;
+    const userOptions = [me, ...users.filter(u => u.name !== me).map(u => u.name)]
+      .map(n => `<option value="${n}">${n}</option>`).join('');
+
+    panel.innerHTML = `
+      <div class="cp-header">
+        <span class="cp-title">📞 Session d'appel</span>
+        <button class="cp-close" onclick="Clients._csClose()">✕</button>
+      </div>
+      <div class="cp-body-intro">
+        <div class="cp-intro-title">Sélectionner les clients</div>
+        <div class="cp-intro-sub">Cocher ceux à appeler dans cette session</div>
+        <div class="cp-assign-row">
+          <span class="cp-assign-lbl">Assigner à</span>
+          <select class="cp-assign-sel" id="cp-assignee">${userOptions}</select>
+          <button class="cp-sel-all-btn" onclick="Clients._csPanelSelectAll()">${selCount === clients.length ? 'Aucun' : 'Tout'}</button>
+        </div>
+        <div class="cp-list">${rows || '<p style="font-size:12px;color:var(--text-3);padding:8px 0">Aucun client actif</p>'}</div>
+      </div>
+      <div style="padding:0 16px 16px;flex-shrink:0">
+        <button class="cp-start-btn" onclick="Clients._csPanelStart()" ${selCount === 0 ? 'disabled' : ''}>
+          ▶ Lancer la session · ${selCount} appel${selCount !== 1 ? 's' : ''}
+        </button>
+      </div>`;
+  },
+
+  _csPanelToggle(id) {
+    if (this._cs.selectedIds.has(id)) this._cs.selectedIds.delete(id);
+    else this._cs.selectedIds.add(id);
+    // Update just the row and button without full re-render
+    const panel = document.getElementById('call-panel');
+    const row = panel?.querySelector(`.cp-row[data-id="${id}"]`);
+    if (row) {
+      const sel = this._cs.selectedIds.has(id);
+      row.classList.toggle('selected', sel);
+      row.querySelector('.cp-row-cb').innerHTML = sel ? '<span class="cp-row-check">✓</span>' : '';
+    }
+    const btn = panel?.querySelector('.cp-start-btn');
+    const selCount = this._cs.selectedIds.size;
+    if (btn) {
+      btn.disabled = selCount === 0;
+      btn.textContent = `▶ Lancer la session · ${selCount} appel${selCount !== 1 ? 's' : ''}`;
+    }
+    // Update "Tout/Aucun" toggle
+    const totalClients = this.data.filter(c => !c.archived).length;
+    const allBtn = panel?.querySelector('.cp-sel-all-btn');
+    if (allBtn) allBtn.textContent = selCount === totalClients ? 'Aucun' : 'Tout';
+  },
+
+  _csPanelSelectAll() {
+    const clients = this.data.filter(c => !c.archived);
+    if (this._cs.selectedIds.size === clients.length) {
+      this._cs.selectedIds.clear();
+    } else {
+      clients.forEach(c => this._cs.selectedIds.add(c.id));
+    }
+    this._csPanelRender();
+  },
+
+  _csPanelStart() {
+    const clients = [...this._cs.selectedIds]
+      .map(id => this.data.find(c => c.id === id)).filter(Boolean);
+    if (!clients.length) return;
+    this._cs.clients  = clients;
+    this._cs.idx      = 0;
+    this._cs.results  = [];
+    this._cs.state    = 'calling';
+    this._cs.pickedOutcome = null;
+    this._csRender();
+  },
+
   _csRender() {
-    const overlay = document.getElementById('call-session-overlay');
-    if (!overlay) return;
+    const panel = document.getElementById('call-panel');
+    if (!panel) return;
     const { clients, idx } = this._cs;
     const c = clients[idx];
-    if (!c) { this._csShowSummary(); return; }
+    if (!c) { this._cs.state = 'summary'; this._csPanelRenderSummary(panel); return; }
 
-    const total  = clients.length;
-    const pct    = Math.round(idx / total * 100);
-    const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
+    const total   = clients.length;
+    const pct     = Math.round(idx / total * 100);
+    const budget  = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
     const daysNum = this.urgencyDays(c.move_in_date);
     const dateLine = c.move_in_date
       ? (daysNum < 0 ? `⚠️ En retard · ${Math.abs(daysNum)}j` : `📅 Arrivée ${formatDate(c.move_in_date)}`)
       : null;
-    const prevResults = this._cs.results.slice(-3).reverse();
 
-    overlay.innerHTML = `
-      <!-- Header -->
-      <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">📞 Session d'appel</div>
-        <div style="flex:1;height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden">
-          <div style="height:4px;width:${pct}%;background:var(--accent);border-radius:2px;transition:width .3s"></div>
+    // Mini-queue: show prev (done) + current + next 2
+    const miniQueue = clients.slice(Math.max(0, idx - 1), idx + 3).map((qc, qi) => {
+      const absIdx = Math.max(0, idx - 1) + qi;
+      const cls    = absIdx < idx ? 'mq-done' : absIdx === idx ? 'mq-current' : 'mq-next';
+      return `<div class="cp-mq-item ${cls}">
+        <div class="cp-mq-dot"></div>
+        <span class="cp-mq-name">${qc.name.split(' ')[0]}</span>
+        ${absIdx < idx ? (this._cs.results[absIdx] ? `<span style="font-size:10px;margin-left:auto">${this._cs.results[absIdx].type === 'appel_ok' ? '✅' : this._cs.results[absIdx].type === 'pas_reponse' ? '📵' : this._cs.results[absIdx].type === 'rappeler' ? '🔄' : '⏭'}</span>` : '') : ''}
+      </div>`;
+    }).join('');
+
+    const picked = this._cs.pickedOutcome;
+
+    panel.innerHTML = `
+      <div class="cp-header">
+        <span class="cp-title">📞 Session d'appel</span>
+        <span class="cp-prog">${idx + 1} / ${total}</span>
+        <button class="cp-close" onclick="Clients._csClose()">✕</button>
+      </div>
+      <div class="cp-progressbar"><div class="cp-progressbar-fill" style="width:${pct}%"></div></div>
+
+      ${miniQueue ? `<div class="cp-miniqueue"><div class="cp-mq-lbl">File d'appels</div><div class="cp-mq-items">${miniQueue}</div></div>` : ''}
+
+      <div class="cp-call-card">
+        <div class="cp-call-n">${c.name}</div>
+        <div class="cp-call-meta">
+          ${budget ? `<div class="cp-call-line">💰 ${budget}</div>` : ''}
+          ${dateLine ? `<div class="cp-call-line" style="color:${daysNum < 0 ? '#dc2626' : daysNum < 14 ? '#d97706' : 'var(--text-2)'}">${dateLine}</div>` : ''}
+          ${c.zones ? `<div class="cp-call-line">📍 ${c.zones}</div>` : ''}
         </div>
-        <div style="font-size:13px;color:var(--text-2);flex-shrink:0;font-variant-numeric:tabular-nums">${idx + 1} / ${total}</div>
-        <button onclick="Clients._csClose()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-3);padding:0 4px;line-height:1" title="Fermer">✕</button>
+        ${c.whatsapp ? `
+          <div class="cp-phone-row">
+            <span class="cp-phone">📱 ${_phn(c.whatsapp)}</span>
+            <button class="cp-copy-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Numéro copié ✓','success'))">Copier</button>
+            <button class="cp-wa-btn" onclick="window.open('https://wa.me/${(c.whatsapp||'').replace(/\D/g,'')}','_blank')">WA</button>
+          </div>` : `<p style="font-size:12.5px;color:var(--text-3)">Pas de numéro WhatsApp</p>`}
       </div>
 
-      <!-- Corps -->
-      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:20px">
+      <div class="cp-outcomes">
+        <div class="cp-out-lbl">Résultat</div>
+        <button class="cp-out-btn${picked==='appel_ok'?' picked-green':''}"    onclick="Clients._csPickOutcome('appel_ok')">✅ Appelé</button>
+        <button class="cp-out-btn${picked==='pas_reponse'?' picked-blue':''}" onclick="Clients._csPickOutcome('pas_reponse')">📵 Pas de réponse</button>
+        <button class="cp-out-btn${picked==='rappeler'?' picked-amber':''}"   onclick="Clients._csPickOutcome('rappeler')">🔄 À rappeler</button>
+      </div>
 
-        <!-- Fiche client -->
-        <div style="width:100%;max-width:480px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
-          <div style="font-size:20px;font-weight:700;margin-bottom:12px">${c.name}</div>
-          ${c.whatsapp ? `
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-              <span style="font-size:22px">📱</span>
-              <span style="font-size:16px;font-weight:600;letter-spacing:.5px">${_phn(c.whatsapp)}</span>
-              <button onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Numéro copié ✓','success'))"
-                style="margin-left:auto;padding:5px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text-2)">Copier</button>
-            </div>` : '<p style="color:var(--text-3);margin-bottom:8px">Pas de numéro WhatsApp</p>'}
-          ${budget ? `<div style="font-size:13px;color:var(--text-2);margin-bottom:4px">💰 ${budget}</div>` : ''}
-          ${dateLine ? `<div style="font-size:13px;color:${daysNum < 0 ? '#dc2626' : daysNum < 14 ? '#ef9f27' : 'var(--text-2)'};margin-bottom:4px">${dateLine}</div>` : ''}
-          ${c.zones ? `<div style="font-size:13px;color:var(--text-2);margin-bottom:4px">📍 ${c.zones}</div>` : ''}
-          ${c.duration ? `<div style="font-size:13px;color:var(--text-2)">⏱ ${tr(c.duration)}</div>` : ''}
+      <div class="cp-body-call">
+        <div>
+          <div class="cp-section-lbl">Notes de l'appel</div>
+          <textarea id="cs-notes" class="cp-note" placeholder="Résumé, suite à donner…"></textarea>
         </div>
+      </div>
 
-        <!-- Notes -->
-        <div style="width:100%;max-width:480px">
-          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2);display:block;margin-bottom:6px">Notes de l'appel</label>
-          <textarea id="cs-notes" rows="3" placeholder="Résumé de l'appel, suite à donner…"
-            style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);resize:none;line-height:1.5;box-sizing:border-box"></textarea>
-        </div>
-
-        <!-- Boutons d'action -->
-        <div style="width:100%;max-width:480px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <button onclick="Clients._csLog('appel_ok')"
-            style="padding:14px;background:#1D9E75;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
-            ✅ Appelé
-          </button>
-          <button onclick="Clients._csLog('pas_reponse')"
-            style="padding:14px;background:#3B82F6;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
-            📵 Pas de réponse
-          </button>
-          <button onclick="Clients._csLog('rappeler')"
-            style="padding:14px;background:#EF9F27;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
-            🔄 À rappeler
-          </button>
-          <button onclick="Clients._csSkip()"
-            style="padding:14px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
-            ⏭ Skip
-          </button>
-        </div>
-
-        <!-- Log récent -->
-        ${prevResults.length ? `
-          <div style="width:100%;max-width:480px">
-            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin-bottom:6px">Derniers appels logués</div>
-            ${prevResults.map(r => `
-              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2)">
-                <span>${r.type === 'appel_ok' ? '✅' : r.type === 'pas_reponse' ? '📵' : '🔄'}</span>
-                <span style="font-weight:500">${r.name}</span>
-                ${r.note ? `<span style="color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${r.note}</span>` : ''}
-              </div>`).join('')}
-          </div>` : ''}
+      <div class="cp-footer">
+        <button class="cp-next-btn" onclick="Clients._csLogAndNext()" ${!picked ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}>
+          ${idx + 1 < total ? 'Suivant →' : 'Terminer'}
+        </button>
+        <button class="cp-skip-btn" onclick="Clients._csSkip()">⏭ Skip</button>
       </div>`;
   },
 
-  async _csLog(type) {
+  _csPickOutcome(type) {
+    this._cs.pickedOutcome = type;
+    this._csRender();
+    // Restore notes if user had typed something
+  },
+
+  async _csLogAndNext() {
+    const type = this._cs.pickedOutcome;
+    if (!type) return;
     const { clients, idx } = this._cs;
     const c = clients[idx];
     if (!c) return;
@@ -890,60 +991,61 @@ const Clients = {
     await api.post('/activities', { client_id: c.id, type: 'appel', content, author }).catch(() => {});
     this.actCounts[c.id] = (this.actCounts[c.id] || 0) + 1;
 
-    // Si rappeler : ajouter tag rappeler
     if (type === 'rappeler') {
       api.post(`/clients/${c.id}/tags`, { tag: 'rappeler' }).catch(() => {});
     }
 
     this._cs.results.push({ name: c.name, type, note: notes });
     this._cs.idx++;
+    this._cs.pickedOutcome = null;
     this._csRender();
   },
 
   _csSkip() {
     this._cs.results.push({ name: this._cs.clients[this._cs.idx]?.name, type: 'skip', note: '' });
     this._cs.idx++;
+    this._cs.pickedOutcome = null;
     this._csRender();
   },
 
   _csShowSummary() {
-    const overlay = document.getElementById('call-session-overlay');
-    if (!overlay) return;
+    const panel = document.getElementById('call-panel');
+    if (panel) { this._cs.state = 'summary'; this._csPanelRenderSummary(panel); }
+  },
+
+  _csPanelRenderSummary(panel) {
     const { clients, results } = this._cs;
     const ok   = results.filter(r => r.type === 'appel_ok').length;
     const nr   = results.filter(r => r.type === 'pas_reponse').length;
     const cb   = results.filter(r => r.type === 'rappeler').length;
     const skip = results.filter(r => r.type === 'skip').length;
 
-    overlay.innerHTML = `
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px">
-        <div style="max-width:400px;width:100%;text-align:center">
-          <div style="font-size:48px;margin-bottom:16px">🎉</div>
-          <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">Session terminée !</h2>
-          <p style="color:var(--text-2);margin-bottom:24px">${clients.length} client${clients.length > 1 ? 's' : ''} traités</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
-            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
-              <div style="font-size:28px;font-weight:700;color:#1D9E75">${ok}</div>
-              <div style="font-size:12px;color:var(--text-2)">Appelés ✅</div>
-            </div>
-            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
-              <div style="font-size:28px;font-weight:700;color:#3B82F6">${nr}</div>
-              <div style="font-size:12px;color:var(--text-2)">Pas de réponse 📵</div>
-            </div>
-            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
-              <div style="font-size:28px;font-weight:700;color:#EF9F27">${cb}</div>
-              <div style="font-size:12px;color:var(--text-2)">À rappeler 🔄</div>
-            </div>
-            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
-              <div style="font-size:28px;font-weight:700;color:var(--text-3)">${skip}</div>
-              <div style="font-size:12px;color:var(--text-2)">Skippés ⏭</div>
-            </div>
-          </div>
-          <button onclick="Clients._csClose()"
-            style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
-            Terminer & retour aux clients
-          </button>
+    const rows = results.map(r => `
+      <div class="cp-summ-row">
+        <span class="cp-summ-icon">${r.type==='appel_ok'?'✅':r.type==='pas_reponse'?'📵':r.type==='rappeler'?'🔄':'⏭'}</span>
+        <span class="cp-summ-name">${r.name}</span>
+        ${r.note ? `<span class="cp-summ-note">${r.note}</span>` : ''}
+      </div>`).join('');
+
+    panel.innerHTML = `
+      <div class="cp-header">
+        <span class="cp-title">📞 Session terminée</span>
+        <button class="cp-close" onclick="Clients._csClose()">✕</button>
+      </div>
+      <div class="cp-summ-body">
+        <div class="cp-summ-emoji">🎉</div>
+        <div class="cp-summ-h">Session terminée !</div>
+        <div class="cp-summ-sub">${clients.length} client${clients.length !== 1 ? 's' : ''} traités</div>
+        <div class="cp-summ-stats">
+          <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#1D9E75">${ok}</span><span class="cp-ss-l">Appelés ✅</span></div>
+          <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#3B82F6">${nr}</span><span class="cp-ss-l">Pas de réponse</span></div>
+          <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#d97706">${cb}</span><span class="cp-ss-l">À rappeler</span></div>
+          <div class="cp-summ-stat"><span class="cp-ss-n" style="color:var(--text-3)">${skip}</span><span class="cp-ss-l">Skippés</span></div>
         </div>
+        <div class="cp-summ-list">${rows}</div>
+      </div>
+      <div style="padding:0 16px 16px;flex-shrink:0">
+        <button class="cp-start-btn" onclick="Clients._csClose()">✓ Fermer</button>
       </div>`;
   },
 
@@ -1272,7 +1374,7 @@ const Clients = {
 
             <!-- Top : nom + score -->
             <div class="card-top" style="margin-bottom:4px">
-              <div class="client-name" style="margin-bottom:0">${c.name}${(c.source === 'Formulaire HSC' || c.source === 'Formulaire') && c.created_at && (Date.now() - new Date(c.created_at).getTime() < 3 * 86400000) ? ' <span style="font-size:9px;background:#6366F1;color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle;font-weight:600">📥 HSC</span>' : ''}</div>
+              <div class="client-name" style="margin-bottom:0">${c.name}</div>
               <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
                 ${scoreBadge(c)}
                 <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
@@ -1281,21 +1383,6 @@ const Clients = {
                 </button>
               </div>
             </div>
-
-            <!-- Activity progress bar -->
-            ${(() => {
-              const n = this.actCounts?.[c.id] || 0;
-              const pct = Math.min(Math.round(n / 8 * 100), 100);
-              const col = n === 0 ? 'var(--border)' : n < 3 ? '#3B82F6' : n < 6 ? '#EF9F27' : '#1D9E75';
-              const st = this.SUIVI_STATUSES.find(s => s.key === (c.suivi_status || 'nouveau'));
-              return `<div style="display:flex;align-items:center;gap:6px;margin:5px 0 2px">
-                <div style="flex:1;height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden">
-                  <div style="height:3px;width:${pct}%;background:${col};border-radius:2px;transition:width .3s"></div>
-                </div>
-                <span style="font-size:9px;color:var(--text-3);flex-shrink:0;font-variant-numeric:tabular-nums">${n > 0 ? n + ' act.' : ''}</span>
-                <span style="font-size:9px;font-weight:600;color:${st?.color||'var(--text-3)'};flex-shrink:0;white-space:nowrap">${st?.label||''}</span>
-              </div>`;
-            })()}
 
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}

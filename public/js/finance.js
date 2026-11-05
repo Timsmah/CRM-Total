@@ -230,73 +230,87 @@ const Finance = {
       <div class="section-header">
         <h2>Finance</h2>
         <div class="header-actions">
-          <button class="btn btn-ghost" onclick="Finance.editRate()" title="Exchange rate — updated daily">
-            1€ = ${this.eurRate} ฿ ✏️
+          <button class="btn btn-ghost" onclick="Finance.editRate()" title="Taux de change">
+            1€ = ${this.eurRate} ฿
           </button>
-          <button class="btn btn-ghost" onclick="Finance.toggleDisplay()" title="Changer la devise d'affichage">
+          <button class="btn btn-ghost" onclick="Finance.toggleDisplay()">
             ${this.displayCur === 'THB' ? '฿ → €' : '€ → ฿'}
           </button>
+          <select class="fin-month-sel" onchange="Finance.changeMonth(this.value)">
+            ${months.map(m =>
+              `<option value="${m}" ${m === this.selectedMonth ? 'selected' : ''}>${this.monthLabel(m)}</option>`
+            ).join('')}
+          </select>
           <button class="btn btn-primary" onclick="Finance.openAddModal()">+ Transaction</button>
         </div>
       </div>
 
-      <div class="month-selector">
-        <label style="color:var(--text-2);font-size:13px">Month:</label>
-        <select onchange="Finance.changeMonth(this.value)">
-          ${months.map(m =>
-            `<option value="${m}" ${m === this.selectedMonth ? 'selected' : ''}>${this.monthLabel(m)}</option>`
-          ).join('')}
-        </select>
-        <span style="color:var(--text-2);font-size:13px">
-          Total: <strong style="color:var(--accent)">${this.fmtAs(grandTotal, 'THB')}</strong>
-          <span class="eur-inline">${this.fmtAsSub(grandTotal, 'THB')}</span>
-        </span>
-
+      <!-- KPI bar -->
+      <div class="fin-kpi-bar">
+        <div class="fin-kpi-item">
+          <span class="fin-kpi-lbl">Total ${this.monthLabel(this.selectedMonth)}</span>
+          <span class="fin-kpi-val">${this.fmtAs(grandTotal, 'THB')}</span>
+          ${grandTotal ? `<span class="fin-kpi-sub">${this.fmtAsSub(grandTotal, 'THB')}</span>` : ''}
+        </div>
+        <div class="fin-kpi-item">
+          <span class="fin-kpi-lbl">Transactions</span>
+          <span class="fin-kpi-val">${txMonth.length}</span>
+        </div>
+        ${(() => {
+          const commissions = txMonth.filter(t => t.type === 'commission');
+          const total = commissions.reduce((s, t) => s + this.toTHB(t), 0);
+          return total ? `<div class="fin-kpi-item">
+            <span class="fin-kpi-lbl">Commissions</span>
+            <span class="fin-kpi-val" style="color:#1D9E75">${this.fmtAs(total, 'THB')}</span>
+            <span class="fin-kpi-sub">${commissions.length} deal${commissions.length > 1 ? 's' : ''}</span>
+          </div>` : '';
+        })()}
       </div>
 
       <!-- By account -->
-      <div class="fin-section-label">By account</div>
-      <div class="summary-row">
+      <div class="fin-section-label">Comptes</div>
+      <div class="fin-acct-grid">
         ${summary.map(r => `
-          <div class="summary-card">
-            <div class="acct">${r.acct}</div>
-            <div class="total">${this.fmtAs(r.total, 'THB')}</div>
-            ${r.total ? `<div class="eur-sub">${this.fmtAsSub(r.total, 'THB')}</div>` : ''}
-            <div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>
+          <div class="fin-acct-tile">
+            <div class="fin-acct-name">${r.acct}</div>
+            <div class="fin-acct-total">${this.fmtAs(r.total, 'THB')}</div>
+            ${r.total ? `<div class="fin-acct-sub">${this.fmtAsSub(r.total, 'THB')}</div>` : ''}
+            <div class="fin-acct-count">${r.count} tx</div>
           </div>`).join('')}
-        <div class="summary-card" style="border-color:rgba(212,168,83,.3)">
-          <div class="acct">Total</div>
-          <div class="total" style="color:var(--accent)">${this.fmtAs(grandTotal, 'THB')}</div>
-          ${grandTotal ? `<div class="eur-sub" style="color:var(--accent);opacity:.7">${this.fmtAsSub(grandTotal, 'THB')}</div>` : ''}
-          <div class="sub">${txMonth.length} transaction${txMonth.length !== 1 ? 's' : ''}</div>
+        <div class="fin-acct-tile fin-acct-tile-total">
+          <div class="fin-acct-name">Total</div>
+          <div class="fin-acct-total" style="color:var(--accent)">${this.fmtAs(grandTotal, 'THB')}</div>
+          ${grandTotal ? `<div class="fin-acct-sub">${this.fmtAsSub(grandTotal, 'THB')}</div>` : ''}
+          <div class="fin-acct-count">${txMonth.length} tx</div>
         </div>
       </div>
 
       <!-- By category + goals -->
-      <div class="fin-section-label">By category</div>
-      <div class="summary-row">
+      <div class="fin-section-label">Catégories</div>
+      <div class="fin-cat-grid">
         ${byType.map(r => {
           const isCount      = r.goal?.type === 'count';
           const displayTotal = isCount
-            ? `<span style="font-size:22px;font-weight:700">${r.count}</span><span style="font-size:13px;color:var(--text-2);margin-left:4px">/ ${r.goal.count} ${r.goal.label}</span>`
+            ? `<span class="fin-cat-big">${r.count}</span><span class="fin-cat-goal-denom"> / ${r.goal.count} ${r.goal.label}</span>`
             : (r.total ? this.fmtAs(r.total, r.goalCur) : '—');
           const displaySub   = isCount
             ? (r.total ? `≈ ${this.fmtAs(r.total, r.goalCur)}` : '')
             : (r.total ? this.fmtAsSub(r.total, r.goalCur) : '');
           return `
-          <div class="summary-card">
-            <div class="acct">${r.icon} ${r.label}</div>
-            <div class="total" style="color:${r.color}">${displayTotal}</div>
-            ${displaySub ? `<div class="eur-sub" style="color:${r.color};opacity:.7">${displaySub}</div>` : ''}
-            ${!isCount ? `<div class="sub">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>` : ''}
+          <div class="fin-cat-tile">
+            <div class="fin-cat-head">
+              <span class="fin-cat-icon">${r.icon}</span>
+              <span class="fin-cat-lbl">${r.label}</span>
+            </div>
+            <div class="fin-cat-total" style="color:${r.color}">${displayTotal}</div>
+            ${displaySub ? `<div class="fin-cat-sub">${displaySub}</div>` : ''}
+            ${!isCount ? `<div class="fin-cat-count">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>` : ''}
             ${r.goal ? `
-              <div class="type-bar-track">
-                <div class="type-bar-fill" style="width:${r.pct}%;background:${r.color}20;border:none">
-                  <div style="height:100%;width:100%;background:${r.color};border-radius:4px"></div>
-                </div>
+              <div class="fin-cat-bar-track">
+                <div class="fin-cat-bar-fill" style="width:${Math.min(r.pct,100)}%;background:${r.color}"></div>
               </div>
-              <div class="goal-row">
-                <span class="type-pct" style="color:${r.color}">${r.pct}%</span>
+              <div class="fin-cat-goal-row">
+                <span style="font-size:11px;font-weight:700;color:${r.color}">${r.pct}%</span>
                 <span class="goal-label">${this.goalLabel(r.key)}</span>
               </div>` : ''}
           </div>`;
@@ -306,47 +320,48 @@ const Finance = {
       <!-- Insights -->
       ${this.insightsHTML()}
 
-      <!-- Charts: donut mois + tendance 6 mois -->
+      <!-- Charts -->
       <div class="fin-section-label">Répartition & tendance</div>
-      <div class="dash-card" style="margin-bottom:24px;padding:18px 22px">
-        <div style="display:flex;gap:28px;align-items:center;height:220px">
-          <div style="position:relative;width:220px;flex-shrink:0;height:100%">
-            <canvas id="chart-fin-donut"></canvas>
-          </div>
-          <div style="flex:1;height:100%;position:relative">
-            <canvas id="chart-fin-trend"></canvas>
-          </div>
+      <div class="fin-charts-wrap">
+        <div class="fin-chart-donut">
+          <canvas id="chart-fin-donut"></canvas>
+        </div>
+        <div class="fin-chart-trend">
+          <canvas id="chart-fin-trend"></canvas>
         </div>
       </div>
 
       <!-- Transactions table -->
-      <table class="tx-table">
-        <thead>
-          <tr>
-            <th>Date</th><th>Type</th><th>Account</th><th>Notes</th><th>Amount</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${txMonth.length ? txMonth.map(t => `
+      <div class="fin-section-label">Transactions — ${this.monthLabel(this.selectedMonth)}</div>
+      <div class="fin-tx-wrap">
+        <table class="tx-table">
+          <thead>
             <tr>
-              <td>${fmtDate(t.date)}</td>
-              <td><span class="tx-type-badge tx-type-${t.type}">${t.type}</span></td>
-              <td>${t.account}</td>
-              <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
-              <td>
-                <div class="tx-amount">${this.fmtAs(Number(t.amount), t.currency || 'THB')}</div>
-                <div class="eur-sub">${this.fmtSub(t)}</div>
-              </td>
-              <td>
-                <div class="tx-actions">
-                  <button class="btn btn-ghost btn-sm" onclick="Finance.openEditModal(${t.id})">✏️</button>
-                  <button class="btn btn-ghost btn-sm" onclick="Finance.remove(${t.id})" style="color:var(--red)">✕</button>
-                </div>
-              </td>
-            </tr>`).join('')
-            : `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-2)">No transactions this month</td></tr>`}
-        </tbody>
-      </table>`;
+              <th>Date</th><th>Type</th><th>Compte</th><th>Notes</th><th style="text-align:right">Montant</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${txMonth.length ? txMonth.map(t => `
+              <tr>
+                <td style="white-space:nowrap;color:var(--text-3)">${fmtDate(t.date)}</td>
+                <td><span class="tx-type-badge tx-type-${t.type}">${t.type}</span></td>
+                <td style="font-weight:500;color:var(--text)">${t.account}</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
+                <td style="text-align:right">
+                  <div class="tx-amount">${this.fmtAs(Number(t.amount), t.currency || 'THB')}</div>
+                  <div class="eur-sub">${this.fmtSub(t)}</div>
+                </td>
+                <td>
+                  <div class="tx-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="Finance.openEditModal(${t.id})">✏️</button>
+                    <button class="btn btn-ghost btn-sm" onclick="Finance.remove(${t.id})" style="color:var(--red)">✕</button>
+                  </div>
+                </td>
+              </tr>`).join('')
+              : `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-2)">Aucune transaction ce mois</td></tr>`}
+          </tbody>
+        </table>
+      </div>`;
   },
 
   // ── Analytics helpers ─────────────────────────────────────────────────────
