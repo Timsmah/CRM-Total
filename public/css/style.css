@@ -269,6 +269,32 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 }
 .fees-btn.paid { color: var(--green); }
 
+/* ── PIPELINE PROGRESS BAR (card front) ─────────── */
+.card-pipeline-bar {
+  display: flex;
+  align-items: center;
+  margin: 7px 0 5px;
+  gap: 0;
+}
+.cpb-step {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+.cpb-step.active {
+  width: 9px; height: 9px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.08);
+  transform: scale(1.1);
+}
+.cpb-line {
+  flex: 1; height: 2px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.cpb-line.done { opacity: 0.5; }
+
 /* ── DAYS AGO BADGE ──────────────────────────────── */
 .days-ago-badge {
   font-size: 10px;

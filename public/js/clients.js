@@ -205,7 +205,7 @@ const Clients = {
 
   SUIVI_STATUSES: [
     { key: 'nouveau',          label: 'Nouveau',          color: '#378ADD', bg: '#E6F1FB' },
-    { key: 'a_contacter',      label: 'À contacter',      color: '#EF9F27', bg: '#FAEEDA' },
+    { key: 'en_closing',       label: 'En closing',       color: '#EF9F27', bg: '#FAEEDA' },
     { key: 'en_attente',       label: 'En attente',       color: '#9B59B6', bg: '#F3E8FF' },
     { key: 'recherche_lancee', label: 'Recherche lancée', color: '#1D9E75', bg: '#E1F5EE' },
     { key: 'signe',            label: 'Signé',             color: '#888780', bg: '#F1EFE8' },
@@ -393,9 +393,10 @@ const Clients = {
       const group = grouped[key] || [];
       if (!group.length) return '';
       const rows = group.map(c => {
-        const budget  = c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : '';
-        const arrival = c.arrival_date ? new Date(c.arrival_date).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : '';
-        const score   = c.score ? `⭐ ${c.score}` : '';
+        const budget  = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : (c.budget_eur ? Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : '');
+        const arrival = c.move_in_date ? new Date(c.move_in_date + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : '';
+        const scoreVal = clientScore(c);
+        const score   = scoreVal ? `⭐ ${scoreVal}` : '';
         const sub1    = [budget, c.nationality].filter(Boolean).join(' · ');
         const sub2    = [arrival ? '📅 ' + arrival : '', score].filter(Boolean).join('  ');
         return `<div class="mobile-client-row" onclick="Clients.openDetailModal(${c.id})" data-id="${c.id}">
@@ -632,7 +633,7 @@ const Clients = {
 
   effectiveContactStatus(c) {
     const s = c.contact_status;
-    if (!s) return (c.suivi_status === 'nouveau' || !c.suivi_status) ? 'Nouveau' : 'À contacter';
+    if (!s) return (c.suivi_status === 'nouveau' || !c.suivi_status) ? 'Nouveau' : 'En closing';
     return CONTACT_STATUS_LEGACY_MAP[s] || s;
   },
 
@@ -1154,6 +1155,22 @@ const Clients = {
                 </button>
               </div>
             </div>
+
+            <!-- Pipeline progress bar -->
+            ${(() => {
+              const idx = this.SUIVI_STATUSES.findIndex(s => s.key === (c.suivi_status || 'nouveau'));
+              const steps = this.SUIVI_STATUSES.map((s, i) => {
+                const isDone   = i < idx;
+                const isActive = i === idx;
+                const style    = isActive ? `background:${s.color}` : isDone ? `background:${s.color};opacity:0.45` : '';
+                const dot = `<div class="cpb-step${isActive?' active':''}" style="${style}" title="${s.label}"></div>`;
+                const line = i < this.SUIVI_STATUSES.length - 1
+                  ? `<div class="cpb-line${isDone?' done':''}" style="${isDone ? `background:${s.color}` : ''}"></div>`
+                  : '';
+                return dot + line;
+              }).join('');
+              return `<div class="card-pipeline-bar">${steps}</div>`;
+            })()}
 
             <div class="client-details">
               ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
@@ -2173,6 +2190,18 @@ const Clients = {
       // Invalidate card back cache so next flip shows fresh activity
       const cardSlot = document.getElementById(`card-act-${clientId}`);
       if (cardSlot) delete cardSlot.dataset.loaded;
+
+      // Auto-advance suivi_status: nouveau → en_closing on first action
+      {
+        const c = this.data.find(x => x.id === clientId);
+        if (c && (!c.suivi_status || c.suivi_status === 'nouveau')) {
+          c.suivi_status = 'en_closing';
+          api.patch(`/clients/${clientId}/suivi`, { suivi_status: 'en_closing' }).catch(() => {});
+          Toast.show('✓ Activity logged · → En closing');
+          this.render();
+          return;
+        }
+      }
 
       // Auto-advance kanban column on WhatsApp activity (skip ghost col)
       if (type === 'whatsapp') {
