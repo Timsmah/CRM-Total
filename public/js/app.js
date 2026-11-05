@@ -242,6 +242,23 @@ const Router = {
     this.current = section;
     if (window.location.hash.slice(1) !== section)
       history.replaceState(null, '', '#' + section);
+    Nav.refreshCounts();
+  }
+};
+
+const Nav = {
+  refreshCounts() {
+    const pairs = [
+      ['count-clients',    () => typeof Clients    !== 'undefined' && Clients.data?.length],
+      ['count-recherches', () => typeof Recherches !== 'undefined' && Recherches.data?.length],
+      ['count-properties', () => typeof Properties !== 'undefined' && Properties.data?.length],
+    ];
+    pairs.forEach(([id, fn]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const n = fn();
+      el.textContent = (n != null && n !== false) ? n : '';
+    });
   }
 };
 

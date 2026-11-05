@@ -46,30 +46,41 @@
 
       <nav>
         <a href="#dashboard" class="nav-item" data-section="dashboard">
-          <span class="nav-icon">📊</span><span data-i18n="nav_dashboard">Dashboard</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="15" rx="1"/><rect x="17" y="2" width="4" height="19" rx="1"/></svg>
+          <span data-i18n="nav_dashboard">Dashboard</span>
         </a>
-        <span class="nav-section-label" data-i18n="nav_pipeline">Pipeline</span>
+        <span class="nav-section-label">Pipeline</span>
         <a href="#clients" class="nav-item" data-section="clients">
-          <span class="nav-icon">👥</span><span data-i18n="nav_clients">Clients</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span data-i18n="nav_clients">Clients</span>
+          <span class="nav-count" id="count-clients"></span>
         </a>
         <a href="#recherches" class="nav-item" data-section="recherches">
-          <span class="nav-icon">🔍</span><span data-i18n="nav_recherches">Recherches</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span data-i18n="nav_recherches">Recherches</span>
+          <span class="nav-count" id="count-recherches"></span>
         </a>
         <a href="#properties" class="nav-item" data-section="properties">
-          <span class="nav-icon">🏠</span><span data-i18n="nav_properties">Properties</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span data-i18n="nav_properties">Properties</span>
+          <span class="nav-count" id="count-properties"></span>
         </a>
         <a href="#contracts" class="nav-item" data-section="contracts">
-          <span class="nav-icon">📋</span><span data-i18n="nav_contracts">Contracts</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span data-i18n="nav_contracts">Contracts</span>
         </a>
-        <span class="nav-section-label" data-i18n="nav_tools">Outils</span>
+        <span class="nav-section-label">Finance & Admin</span>
         <a href="#finance" class="nav-item" data-section="finance">
-          <span class="nav-icon">💰</span><span data-i18n="nav_finance">Finance</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span data-i18n="nav_finance">Finance</span>
         </a>
         <a href="#visas" class="nav-item" data-section="visas">
-          <span class="nav-icon">🛂</span><span data-i18n="nav_visas">Visas</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+          <span data-i18n="nav_visas">Visas</span>
         </a>
         <a href="#scraping" class="nav-item" data-section="scraping" id="nav-scraping" style="display:none">
-          <span class="nav-icon">🕵️</span><span>Scraping</span>
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Scraping</span>
         </a>
       </nav>
       <!-- User profile block -->
@@ -184,7 +195,7 @@
   <!-- TOASTS -->
   <div id="toast-container"></div>
 
-  <script src="/js/app.js?v=5"></script>
+  <script src="/js/app.js?v=6"></script>
   <script src="/js/dashboard.js?v=5"></script>
   <script src="/js/clients.js?v=5"></script>
   <script src="/js/properties.js?v=4"></script>
