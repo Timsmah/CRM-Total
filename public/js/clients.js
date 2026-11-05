@@ -2404,37 +2404,24 @@ const Clients = {
       const cardSlot = document.getElementById(`card-act-${clientId}`);
       if (cardSlot) delete cardSlot.dataset.loaded;
 
-      // Auto-advance suivi_status: nouveau → en_closing on first action
+      // Any action on Nouveau or À contacter → move to Closing
       {
         const c = this.data.find(x => x.id === clientId);
-        if (c && (!c.suivi_status || c.suivi_status === 'nouveau')) {
-          c.suivi_status = 'en_closing';
-          api.patch(`/clients/${clientId}/suivi`, { suivi_status: 'en_closing' }).catch(() => {});
-          Toast.show('✓ Activity logged · → En closing');
-          this.render();
-          return;
-        }
-      }
-
-      // Auto-advance kanban column on WhatsApp activity (skip ghost col)
-      if (type === 'whatsapp') {
-        const COLS = getContactCols().filter(col => !col.ghost);
-        const c = this.data.find(x => x.id === clientId);
         if (c) {
-          const cur = this.effectiveContactStatus(c);
-          const idx = COLS.findIndex(col => col.key === cur);
-          if (idx !== -1 && idx < COLS.length - 1) {
-            const next = COLS[idx + 1].key;
-            c.contact_status = next;
-            api.patch(`/clients/${clientId}/contact-status`, { contact_status: next }).catch(() => {});
-            Toast.show(`💬 WhatsApp logué · → ${next}`);
+          const curCol = this.effectiveContactStatus(c);
+          if (curCol === 'Nouveau' || curCol === 'À contacter') {
+            c.contact_status = 'Closing';
+            if (!c.suivi_status || c.suivi_status === 'nouveau') c.suivi_status = 'en_closing';
+            api.patch(`/clients/${clientId}/contact-status`, { contact_status: 'Closing' }).catch(() => {});
+            api.patch(`/clients/${clientId}/suivi`, { suivi_status: 'en_closing' }).catch(() => {});
+            Toast.show('✓ Activité · → En closing');
             this.render();
             return;
           }
         }
       }
 
-      Toast.show('✓ Activity logged');
+      Toast.show('✓ Activité loguée');
     } catch (err) { Toast.show(err.message, 'error'); }
   },
 
