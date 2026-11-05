@@ -55,14 +55,49 @@ html, body {
   gap: 9px;
   padding: 4px 8px 20px;
 }
+.logo-mark {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; letter-spacing: 0;
+}
 .logo-icon { font-size: 18px; }
 .logo-text {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: -0.3px;
+  line-height: 1.2;
 }
 .logo-text span { color: var(--accent); }
+.logo-scope { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+/* ── Dashboard 2×2 grid ──────────────────────────── */
+.db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.db-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.db-panel-title { font-size: 10.5px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
+.db-rev-main { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); line-height: 1; }
+.db-rev-target { font-size: 11.5px; color: var(--text-2); margin-top: 3px; margin-bottom: 10px; }
+.db-rev-bar-track { height: 5px; background: var(--surface-2); border-radius: 3px; margin-bottom: 4px; }
+.db-rev-bar-fill { height: 5px; background: var(--accent); border-radius: 3px; transition: width .6s; }
+.db-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.db-kpi { background: var(--surface-2); border-radius: 6px; padding: 9px 11px; }
+.db-kpi-lbl { font-size: 10.5px; color: var(--text-2); margin-bottom: 3px; }
+.db-kpi-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.db-call-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.db-call-item:last-child { border-bottom: none; }
+.db-call-urg { width: 4px; min-height: 36px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
+.db-call-name { font-size: 13px; font-weight: 500; }
+.db-call-meta { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+.db-call-action { margin-left: auto; height: 24px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-2); font-family: inherit; font-size: 11px; color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.db-call-action:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.db-tx-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.db-tx-item:last-child { border-bottom: none; }
+.db-tx-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; flex-shrink: 0; }
+.db-tx-name { font-size: 12px; flex: 1; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-tx-amt { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--green); flex-shrink: 0; }
 
 .nav-section-label {
   font-size: 11px;
@@ -130,8 +165,11 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 #content {
   flex: 1;
   overflow: auto;
-  padding: 28px 32px;
-  background: var(--bg);
+  padding: 24px 24px;
+  background: var(--surface);
+  margin: 8px 8px 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
 }
 
 /* ── SECTION HEADER ──────────────────────────────── */

@@ -325,140 +325,124 @@ const Dashboard = {
 
   // ── Render ────────────────────────────────────────────────────────────────
   render() {
-    const kpis     = this.kpis();
-    const pipeline = this.pipelineData();
-    const urgent   = this.urgentClients();
-    const now      = new Date();
-    const eurRate  = kpis.eurRate;
+    const kpis    = this.kpis();
+    const urgent  = this.urgentClients();
+    const now     = new Date();
+    const eurRate = kpis.eurRate;
 
-    // Revenus mois en cours — sans conversion croisée
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const txMonth   = this.finance.filter(tr => tr.date?.startsWith(currentMonth));
-    const monthTHB  = txMonth.filter(tr => tr.currency !== 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
-    const monthEUR  = txMonth.filter(tr => tr.currency === 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
-    const onbCount  = txMonth.filter(tr => tr.type === 'onboarding').length;
-    const visaCount = txMonth.filter(tr => tr.type === 'visa').length;
+    const txMonth  = this.finance.filter(tr => tr.date?.startsWith(currentMonth));
+    const monthTHB = txMonth.filter(tr => tr.currency !== 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
+    const monthEUR = txMonth.filter(tr => tr.currency === 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
+    const onbCount = txMonth.filter(tr => tr.type === 'onboarding').length;
+    const visaCount= txMonth.filter(tr => tr.type === 'visa').length;
+    const totalTHB = monthTHB + monthEUR * eurRate;
+    const target   = 170000;
+    const pct      = Math.min(Math.round(totalTHB / target * 100), 100);
 
-    // Trend vs mois précédent
     const prevMonth = (() => { const d = new Date(now.getFullYear(), now.getMonth()-1, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
-    const prevTHB   = this.finance.filter(tr => tr.date?.startsWith(prevMonth) && tr.currency !== 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
-    const prevEUR   = this.finance.filter(tr => tr.date?.startsWith(prevMonth) && tr.currency === 'EUR').reduce((s,tr) => s + Number(tr.amount), 0);
-    const trendPct  = (prevTHB + prevEUR) > 0 ? Math.round(((monthTHB + monthEUR * eurRate) - (prevTHB + prevEUR * eurRate)) / (prevTHB + prevEUR * eurRate) * 100) : null;
+    const prevTotal = this.finance.filter(tr => tr.date?.startsWith(prevMonth)).reduce((s,tr) => s + (tr.currency === 'EUR' ? Number(tr.amount)*eurRate : Number(tr.amount)), 0);
+    const trendPct  = prevTotal > 0 ? Math.round((totalTHB - prevTotal) / prevTotal * 100) : null;
     const trendUp   = trendPct !== null && trendPct >= 0;
 
     const monthName = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
     const dateStr   = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
-    const activeClients = this.clients.filter(c => ['Onboarding','Recherche active'].includes(c.status)).length;
 
-    // ── Diff since last login ──────────────────────────────────────────────
+    // Diff since last login
     let diffBanner = '';
     if (this._lastSeen) {
       const ls = new Date(this._lastSeen);
-      const newClients  = this.clients.filter(c => c.created_at && new Date(c.created_at) > ls);
-      const newFinance  = this.finance.filter(t => t.created_at && new Date(t.created_at) > ls);
+      const newC = this.clients.filter(c => c.created_at && new Date(c.created_at) > ls);
+      const newF = this.finance.filter(t => t.created_at && new Date(t.created_at) > ls);
       const parts = [];
-      if (newClients.length)  parts.push(`<strong>${newClients.length}</strong> nouvelle${newClients.length > 1 ? 's' : ''} demande${newClients.length > 1 ? 's' : ''}`);
-      if (newFinance.length)  parts.push(`<strong>${newFinance.length}</strong> transaction${newFinance.length > 1 ? 's' : ''}`);
+      if (newC.length) parts.push(`<strong>${newC.length}</strong> nouvelle${newC.length>1?'s':''} demande${newC.length>1?'s':''}`);
+      if (newF.length) parts.push(`<strong>${newF.length}</strong> transaction${newF.length>1?'s':''}`);
       if (parts.length) {
         const sinceLabel = ls.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
-        diffBanner = `
-          <div style="background:var(--accent-light,#FEF3C7);border:0.5px solid var(--accent,#C9922A);border-radius:10px;padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px">🔔</span>
-            <div style="font-size:13px;color:var(--text)">Depuis ta dernière connexion : ${parts.join(' et ')}. Dernière visite : <span style="color:var(--text-2)">${sinceLabel}</span></div>
-          </div>`;
+        diffBanner = `<div style="background:#FEF3C7;border:0.5px solid var(--accent);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px"><span>🔔</span><div style="font-size:13px">Depuis ta dernière connexion : ${parts.join(' et ')}. <span style="color:var(--text-2)">${sinceLabel}</span></div></div>`;
       }
     }
-    // Mise à jour de last_seen maintenant (après avoir calculé le diff)
     localStorage.setItem('crm_last_seen', new Date().toISOString());
 
+    // Urgent clients (move-in within 60 days)
+    const urgColors = ['#ef4444','#ef4444','#f97316','#f97316','#eab308'];
+    const urgentList = [...urgent].slice(0, 5);
+
+    // Recent transactions
+    const recent = [...this.finance].filter(tr => tr.date).sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
+    const typePill = { commission:'#dcfce7|#166534', onboarding:'#dbeafe|#1e40af', visa:'#f3e8ff|#6b21a8', autre:'#f1f0eb|#7a7670' };
+
     document.getElementById('content').innerHTML = `
+      <!-- Greeting -->
+      <div style="margin-bottom:20px">
+        <p style="font-size:12px;color:var(--text-2);text-transform:capitalize">${dateStr}</p>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.4px;margin-top:2px">${this.greeting()}, Timéo 👋</h2>
+      </div>
+
       ${diffBanner}
 
-      <!-- ── Greeting ── -->
-      <div class="dash-top" style="margin-bottom:16px">
-        <div>
-          <p class="dash-tagline" style="text-transform:capitalize">${dateStr}</p>
-          <h2 class="dash-hello">${this.greeting()}, Timéo 👋</h2>
-        </div>
-      </div>
+      <!-- 2×2 grid -->
+      <div class="db-grid">
 
-      <!-- ── Hero sombre — revenus du mois ── -->
-      <div style="background:#1C2B3A;border-radius:14px;padding:18px 22px;margin-bottom:14px;color:#fff;display:flex;justify-content:space-between;align-items:flex-end">
-        <div>
-          <div style="font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Revenus — ${monthName}</div>
-          ${monthEUR > 0 ? `<div style="font-size:28px;font-weight:700;letter-spacing:-.6px;line-height:1">${monthEUR.toLocaleString('fr-FR')} €</div>` : ''}
-          ${monthTHB > 0 ? `<div style="font-size:${monthEUR > 0 ? '16' : '28'}px;font-weight:700;letter-spacing:-.6px;line-height:1.3;${monthEUR > 0 ? 'color:rgba(255,255,255,.6)' : ''}">${monthTHB.toLocaleString('fr-FR')} ฿</div>` : ''}
-          ${monthEUR === 0 && monthTHB === 0 ? `<div style="font-size:28px;font-weight:700">0 €</div>` : ''}
+        <!-- Panel 1 — Revenu mensuel -->
+        <div class="db-panel">
+          <div class="db-panel-title">Revenu ${monthName}</div>
+          <div class="db-rev-main">${monthEUR > 0 ? monthEUR.toLocaleString('fr-FR') + ' €' : monthTHB.toLocaleString('fr-FR') + ' ฿'}</div>
+          ${monthEUR > 0 && monthTHB > 0 ? `<div style="font-size:13px;color:var(--text-2);margin-top:2px">${monthTHB.toLocaleString('fr-FR')} ฿</div>` : ''}
+          <div class="db-rev-target">Objectif : ${target.toLocaleString('fr-FR')} ฿ · ${pct}%${trendPct !== null ? ` <span style="color:${trendUp?'#2a9d5c':'#dc2626'};font-weight:600">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs mois préc.</span>` : ''}</div>
+          <div class="db-rev-bar-track"><div class="db-rev-bar-fill" style="width:${pct}%"></div></div>
+          <div class="db-kpi-row">
+            <div class="db-kpi"><div class="db-kpi-lbl">Clients</div><div class="db-kpi-val">${this.clients.length}</div></div>
+            <div class="db-kpi"><div class="db-kpi-lbl">Move-in 30j</div><div class="db-kpi-val" style="color:${kpis.urgentMoveIns>0?'#dc2626':'inherit'}">${kpis.urgentMoveIns}</div></div>
+            <div class="db-kpi"><div class="db-kpi-lbl">Onboardings</div><div class="db-kpi-val">${onbCount}</div></div>
+            <div class="db-kpi"><div class="db-kpi-lbl">Visas</div><div class="db-kpi-val">${visaCount}</div></div>
+          </div>
         </div>
-        <div style="text-align:right">
-          ${trendPct !== null ? `<div style="font-size:13px;font-weight:600;color:${trendUp ? '#4ADE80' : '#F87171'}">${trendUp ? '▲' : '▼'} ${Math.abs(trendPct)}%</div><div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">vs mois précédent</div>` : ''}
-        </div>
-      </div>
 
-      <!-- ── 4 KPI cards ── -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-        <div class="dash-card" style="padding:12px 14px">
-          <div style="font-size:20px;margin-bottom:4px">🚀</div>
-          <div style="font-size:18px;font-weight:700;color:#0F766E">${onbCount}<span style="font-size:12px;font-weight:400;color:var(--text-2)"> / 10</span></div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Onboardings</div>
-        </div>
-        <div class="dash-card" style="padding:12px 14px">
-          <div style="font-size:20px;margin-bottom:4px">🛂</div>
-          <div style="font-size:18px;font-weight:700;color:#B45309">${visaCount}<span style="font-size:12px;font-weight:400;color:var(--text-2)"> / 4</span></div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Visas</div>
-        </div>
-        <div class="dash-card" style="padding:12px 14px">
-          <div style="font-size:20px;margin-bottom:4px">👥</div>
-          <div style="font-size:18px;font-weight:700;color:var(--text)">${activeClients}</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Clients actifs</div>
-        </div>
-        <div class="dash-card" style="padding:12px 14px">
-          <div style="font-size:20px;margin-bottom:4px">📅</div>
-          <div style="font-size:18px;font-weight:700;color:${kpis.urgentMoveIns > 0 ? '#DC2626' : 'var(--text)'}">${kpis.urgentMoveIns}</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">Move-ins 7 jours</div>
-        </div>
-      </div>
-
-      <!-- ── Activité récente ── -->
-      <div class="dash-card" style="margin-bottom:14px">
-        <div class="dash-card-title">Activité récente</div>
-        ${(() => {
-          const recent = [...this.finance]
-            .sort((a,b) => b.date.localeCompare(a.date))
-            .slice(0, 5);
-          if (!recent.length) return '<p style="font-size:13px;color:var(--text-3);padding:8px 0">Aucune transaction</p>';
-          const typeColor = { commission:'#334155', onboarding:'#0F766E', visa:'#B45309', autre:'#9CA3AF' };
-          const typeDot   = { commission:'🤝', onboarding:'🚀', visa:'🛂', autre:'💼' };
-          return recent.map(tr => {
-            const dot   = typeDot[tr.type] || '💼';
-            const color = typeColor[tr.type] || '#9CA3AF';
-            const amt   = tr.currency === 'EUR'
-              ? `${Number(tr.amount).toLocaleString('fr-FR')} €`
-              : `${Number(tr.amount).toLocaleString('fr-FR')} ฿`;
-            const d = new Date(tr.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">
-              <div style="width:28px;height:28px;border-radius:7px;background:${color}18;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${dot}</div>
+        <!-- Panel 2 — À appeler -->
+        <div class="db-panel">
+          <div class="db-panel-title">⚡ À appeler</div>
+          ${urgentList.length ? urgentList.map((c,i) => {
+            const daysLeft = Math.ceil((new Date(c.move_in_date) - now) / 86400000);
+            const color = urgColors[i] || '#888';
+            return `<div class="db-call-item">
+              <div class="db-call-urg" style="background:${color}"></div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tr.notes || tr.type}</div>
-                <div style="font-size:11px;color:var(--text-2)">${tr.account} · ${d}</div>
+                <div class="db-call-name">${c.name}</div>
+                <div class="db-call-meta">${c.suivi_status||'nouveau'} · arrive dans <span style="color:${color};font-weight:600">${daysLeft}j</span></div>
               </div>
-              <div style="font-size:13px;font-weight:600;color:${color};flex-shrink:0">${amt}</div>
+              <button class="db-call-action" onclick="Router.navigate('clients')">→</button>
             </div>`;
-          }).join('');
-        })()}
+          }).join('') : '<p style="font-size:13px;color:var(--text-3);padding:8px 0">Aucun move-in imminent</p>'}
+        </div>
+
+        <!-- Panel 3 — Transactions récentes -->
+        <div class="db-panel">
+          <div class="db-panel-title">Transactions récentes</div>
+          ${recent.length ? recent.map(tr => {
+            const [bg,fg] = (typePill[tr.type]||'#f1f0eb|#7a7670').split('|');
+            const amt = tr.currency==='EUR'
+              ? `+${Number(tr.amount).toLocaleString('fr-FR')} €`
+              : `+${Number(tr.amount).toLocaleString('fr-FR')} ฿`;
+            return `<div class="db-tx-item">
+              <span class="db-tx-pill" style="background:${bg};color:${fg}">${(tr.type||'TXN').toUpperCase().slice(0,3)}</span>
+              <span class="db-tx-name">${tr.notes||tr.account}</span>
+              <span class="db-tx-amt">${amt}</span>
+            </div>`;
+          }).join('') : '<p style="font-size:13px;color:var(--text-3);padding:8px 0">Aucune transaction</p>'}
+        </div>
+
+        <!-- Panel 4 — Sur le feu (notes/tasks) -->
+        <div class="db-panel">
+          <div class="db-panel-title">🔥 Sur le feu</div>
+          <div id="dash-notes-block">${this._notesHTML()}</div>
+        </div>
+
       </div>
 
-      <!-- ── Sur le feu ── -->
-      <div class="dash-card" style="margin-bottom:24px">
-        <div class="dash-card-title" style="margin-bottom:12px">🔥 Sur le feu</div>
-        <div id="dash-notes-block">${this._notesHTML()}</div>
-      </div>
-
-      <!-- Context menu clic droit tâches passées -->
-      <div id="task-ctx-menu" style="position:fixed;display:none;background:var(--surface,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;min-width:200px;padding:4px;overflow:hidden">
-        <button onclick="Dashboard.carryForward()"
-          style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;font-size:13px;color:var(--text);background:none;border:none;cursor:pointer;border-radius:7px;text-align:left"
-          onmouseover="this.style.background='var(--bg-2)'" onmouseout="this.style.background='none'">
+      <!-- Context menu -->
+      <div id="task-ctx-menu" style="position:fixed;display:none;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;min-width:200px;padding:4px">
+        <button onclick="Dashboard.carryForward()" style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;font-size:13px;color:var(--text);background:none;border:none;cursor:pointer;border-radius:7px;text-align:left" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='none'">
           <span>→</span> Envoyer à aujourd'hui
         </button>
       </div>`;
