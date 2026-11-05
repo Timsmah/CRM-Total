@@ -199,7 +199,7 @@ const Clients = {
   selectionMode: false,
   selectedClients: new Set(),
   clientFilters: { name: '', urgency: '', scoreMin: '', agent: '' },
-  viewMode: localStorage.getItem('crm_clients_view') || 'suivi',
+  viewMode: 'kanban',
   suiviSelectedId: null,
   _suiviUsers: null, // cached team members
 
@@ -329,54 +329,40 @@ const Clients = {
   render() {
     if (isMobile()) { this.renderMobileKanban(); return; }
     const total = this.data.length;
-    const isSuivi = this.viewMode === 'suivi';
     document.getElementById('content').innerHTML = `
       <div class="section-header">
         <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
         <div class="header-actions">
-          ${isMobile() ? `<button class="btn btn-ghost btn-sm" onclick="Clients._setMobileView('list')" style="padding:6px 10px;font-size:13px">← Retour</button>` : ''}
-          <div class="view-toggle">
-            <button class="view-toggle-btn ${isSuivi ? 'active' : ''}" onclick="Clients._setView('suivi')">📋 Suivi</button>
-            <button class="view-toggle-btn ${!isSuivi ? 'active' : ''}" onclick="Clients._setView('kanban')">⠿ Kanban</button>
-          </div>
-          <button class="btn btn-primary${isMobile() ? ' btn-sm' : ''}" onclick="Clients.openAddModal()">+${isMobile() ? '' : ' Ajouter'}</button>
-          ${!isSuivi && !isMobile() ? `<button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
+          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
+          <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
             ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
-          </button>` : ''}
+          </button>
           <div style="position:relative">
             <button class="btn btn-ghost" onclick="Clients._toggleMoreMenu(event)" title="Plus d'options">···</button>
             <div id="clients-more-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:200;min-width:170px;padding:4px">
               <button class="more-menu-item" onclick="Clients.syncSheets();Clients._closeMoreMenu()">🔄 Sync Sheets</button>
               <button class="more-menu-item" onclick="Clients.openCallHistory();Clients._closeMoreMenu()">📋 Listes d'appels</button>
-              ${!isSuivi ? `<button class="more-menu-item" onclick="Clients.toggleFocusMode();Clients._closeMoreMenu()">${this.focusMode ? '⊞ Vue complète' : '◉ Vue focus'}</button>` : ''}
+              <button class="more-menu-item" onclick="Clients.toggleFocusMode();Clients._closeMoreMenu()">${this.focusMode ? '⊞ Vue complète' : '◉ Vue focus'}</button>
               <div style="height:0.5px;background:var(--border);margin:4px 0"></div>
               <button class="more-menu-item" onclick="Clients.toggleArchived();Clients._closeMoreMenu()">${this.showArchived ? '👥 Clients actifs' : '🗄 Voir archivés'}</button>
             </div>
           </div>
         </div>
       </div>
-      ${isSuivi ? this._renderSuiviHTML() : `
-        ${this.filterBarHTML()}
-        <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
-          ${getContactCols().map(col => this.columnHTML(col)).join('')}
-        </div>
-        ${this.selectionMode ? `
-        <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
-          <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
-          <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
-          <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
-          <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
-          <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
-          <div class="sel-divider"></div>
-          <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
-        </div>` : ''}
-      `}`;
-
-    if (isSuivi && this.suiviSelectedId) {
-      const stillExists = this.data.find(c => c.id === this.suiviSelectedId);
-      if (stillExists) this._suiviLoadRight(this.suiviSelectedId);
-    }
-
+      ${this.filterBarHTML()}
+      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
+        ${getContactCols().map(col => this.columnHTML(col)).join('')}
+      </div>
+      ${this.selectionMode ? `
+      <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
+        <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
+        <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
+        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
+        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
+        <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
+        <div class="sel-divider"></div>
+        <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
+      </div>` : ''}`;
   },
 
   _mobileFilter: 'all',
@@ -481,10 +467,11 @@ const Clients = {
     }).join('');
 
     const cardsHTML = cards.length ? cards.map(c => {
-      const budget  = c.budget ? Number(c.budget).toLocaleString('fr-FR') + ' ฿' : '';
-      const arrival = c.arrival_date ? new Date(c.arrival_date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-      const score   = c.score ? `⭐ ${c.score}` : '';
-      const phone   = (c.whatsapp || c.phone || '').replace(/\D/g,'');
+      const budget  = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : (c.budget_eur ? Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : '');
+      const arrival = c.move_in_date ? new Date(c.move_in_date + 'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+      const scoreVal = clientScore(c);
+      const score   = scoreVal ? `⭐ ${scoreVal.total.toFixed(1)}` : '';
+      const phone   = (c.whatsapp || '').replace(/\D/g,'');
       const leadDate = (c.form_submitted_at || c.created_at)
         ? new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})
         : '';
