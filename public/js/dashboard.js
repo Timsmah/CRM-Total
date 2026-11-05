@@ -3,12 +3,14 @@ const Dashboard = {
   _notes: { tasks: [], notes: '' },
   _viewDate: new Date().toISOString().slice(0, 10),
   _ctxIdx: null,
+  _lastSeen: null,
 
   _today() { return new Date().toISOString().slice(0, 10); },
   isToday() { return this._viewDate === this._today(); },
 
   async init() {
     this._viewDate = this._today();
+    this._lastSeen = localStorage.getItem('crm_last_seen') || null;
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     try {
       const [clients, properties, finance, notes] = await Promise.all([
@@ -348,7 +350,29 @@ const Dashboard = {
     const dateStr   = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
     const activeClients = this.clients.filter(c => ['Onboarding','Recherche active'].includes(c.status)).length;
 
+    // ── Diff since last login ──────────────────────────────────────────────
+    let diffBanner = '';
+    if (this._lastSeen) {
+      const ls = new Date(this._lastSeen);
+      const newClients  = this.clients.filter(c => c.created_at && new Date(c.created_at) > ls);
+      const newFinance  = this.finance.filter(t => t.created_at && new Date(t.created_at) > ls);
+      const parts = [];
+      if (newClients.length)  parts.push(`<strong>${newClients.length}</strong> nouvelle${newClients.length > 1 ? 's' : ''} demande${newClients.length > 1 ? 's' : ''}`);
+      if (newFinance.length)  parts.push(`<strong>${newFinance.length}</strong> transaction${newFinance.length > 1 ? 's' : ''}`);
+      if (parts.length) {
+        const sinceLabel = ls.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
+        diffBanner = `
+          <div style="background:var(--accent-light,#FEF3C7);border:0.5px solid var(--accent,#C9922A);border-radius:10px;padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🔔</span>
+            <div style="font-size:13px;color:var(--text)">Depuis ta dernière connexion : ${parts.join(' et ')}. Dernière visite : <span style="color:var(--text-2)">${sinceLabel}</span></div>
+          </div>`;
+      }
+    }
+    // Mise à jour de last_seen maintenant (après avoir calculé le diff)
+    localStorage.setItem('crm_last_seen', new Date().toISOString());
+
     document.getElementById('content').innerHTML = `
+      ${diffBanner}
 
       <!-- ── Greeting ── -->
       <div class="dash-top" style="margin-bottom:16px">

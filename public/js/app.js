@@ -404,7 +404,8 @@ const App = {
         <div style="font-size:11px;color:var(--text-3)">${this.user.role === 'admin' ? '⚙️ Admin' : '👤 Membre'}</div>
       </div>
     `;
-    sidebar.insertBefore(div, logoutBtn);
+    const ref = document.getElementById('sidebar-footer-btns') || logoutBtn;
+    sidebar.insertBefore(div, ref);
   },
 
   openProfileModal() {

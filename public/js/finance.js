@@ -182,7 +182,7 @@ const Finance = {
 
   // ── Summaries ──────────────────────────────────────────────────────────────
   summary() {
-    const accounts = ['KBank', 'Crypto', 'Revolut'];
+    const accounts = ['KBank', 'KBank HSC', 'Mercury', 'Wise', 'Crypto', 'Revolut'];
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
     return accounts.map(acct => ({
       acct,
@@ -636,7 +636,7 @@ const Finance = {
           <div class="form-row">
             <label>Account *</label>
             <select name="account" required>
-              ${['KBank','Crypto','Revolut'].map(s =>
+              ${['KBank','KBank HSC','Mercury','Wise','Crypto','Revolut'].map(s =>
                 `<option ${t?.account === s ? 'selected' : ''}>${s}</option>`
               ).join('')}
             </select>
