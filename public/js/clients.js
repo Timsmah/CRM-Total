@@ -213,10 +213,16 @@ const Clients = {
 
   suiviCollapsed: JSON.parse(localStorage.getItem('crm_suivi_collapsed') || '{}'),
 
+  actCounts: {},
+
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
     api.post('/clients/sync/sheets', {}).catch(() => {}); // fire & forget, ne bloque pas
-    await Promise.all([this.load(), this._suiviGetUsers()]); // précharge users pour avatars
+    await Promise.all([
+      this.load(),
+      this._suiviGetUsers(),
+      api.get('/activities/counts').then(c => { this.actCounts = c || {}; }).catch(() => {}),
+    ]);
     this.render();
     this._checkReminders();
     this._checkNewAssignments();
@@ -356,7 +362,7 @@ const Clients = {
       ${this.selectionMode ? `
       <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
         <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
-        <button class="btn btn-primary btn-sm" onclick="Clients.openCallList()">📋 Liste d'appels</button>
+        <button class="btn btn-primary btn-sm" onclick="Clients.startCallSession()">📞 Session d'appel</button>
         <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
         <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
         <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
@@ -755,70 +761,190 @@ const Clients = {
     if (counter) counter.textContent = `${count} sélectionné${count > 1 ? 's' : ''}`;
   },
 
-  openCallList() {
+  // ── Session d'appel ───────────────────────────────────────────────────────
+  _cs: { clients: [], idx: 0, results: [] },
+
+  startCallSession() {
     const clients = [...this.selectedClients]
       .map(id => this.data.find(c => c.id === id)).filter(Boolean);
-    const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    if (!clients.length) return;
 
-    const listHTML = clients.map((c, i) => {
-      const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
-      const urgency = this.urgencyClass(c.move_in_date);
-      const daysNum = this.urgencyDays(c.move_in_date);
-      const dateBadge = c.move_in_date
-        ? (daysNum < 0
-          ? `<span class="cl-date urgent-overdue">⚠️ En retard · ${Math.abs(daysNum)}j</span>`
-          : `<span class="cl-date ${urgency}">📅 ${formatDate(c.move_in_date)}</span>`)
-        : '';
-      return `
-        <div class="cl-item" id="cl-item-${c.id}">
-          <div class="cl-num">${i + 1}</div>
-          <div class="cl-body">
-            <div class="cl-name">${c.name}</div>
-            <div class="cl-meta">
-              ${c.whatsapp
-                ? `<button class="cl-phone" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📱 ${_phn(c.whatsapp)}</button>`
-                : `<span class="cl-no-phone">Pas de numéro</span>`}
-              ${budget ? `<span>💰 ${budget}</span>` : ''}
-              ${c.zones ? `<span>📍 ${c.zones}</span>` : ''}
-              ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
-              ${dateBadge}
+    this._cs = { clients, idx: 0, results: [] };
+    this.toggleSelectionMode(); // quitte le mode sélection
+
+    // Overlay plein écran
+    let overlay = document.getElementById('call-session-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'call-session-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg);display:flex;flex-direction:column;overflow:hidden';
+      document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+    this._csRender();
+  },
+
+  _csClose() {
+    const overlay = document.getElementById('call-session-overlay');
+    if (overlay) overlay.style.display = 'none';
+    // Refresh activity counts
+    api.get('/activities/counts').then(c => { this.actCounts = c || {}; this.render(); }).catch(() => {});
+  },
+
+  _csRender() {
+    const overlay = document.getElementById('call-session-overlay');
+    if (!overlay) return;
+    const { clients, idx } = this._cs;
+    const c = clients[idx];
+    if (!c) { this._csShowSummary(); return; }
+
+    const total  = clients.length;
+    const pct    = Math.round(idx / total * 100);
+    const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
+    const daysNum = this.urgencyDays(c.move_in_date);
+    const dateLine = c.move_in_date
+      ? (daysNum < 0 ? `⚠️ En retard · ${Math.abs(daysNum)}j` : `📅 Arrivée ${formatDate(c.move_in_date)}`)
+      : null;
+    const prevResults = this._cs.results.slice(-3).reverse();
+
+    overlay.innerHTML = `
+      <!-- Header -->
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">📞 Session d'appel</div>
+        <div style="flex:1;height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden">
+          <div style="height:4px;width:${pct}%;background:var(--accent);border-radius:2px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:13px;color:var(--text-2);flex-shrink:0;font-variant-numeric:tabular-nums">${idx + 1} / ${total}</div>
+        <button onclick="Clients._csClose()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-3);padding:0 4px;line-height:1" title="Fermer">✕</button>
+      </div>
+
+      <!-- Corps -->
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:20px">
+
+        <!-- Fiche client -->
+        <div style="width:100%;max-width:480px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+          <div style="font-size:20px;font-weight:700;margin-bottom:12px">${c.name}</div>
+          ${c.whatsapp ? `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="font-size:22px">📱</span>
+              <span style="font-size:16px;font-weight:600;letter-spacing:.5px">${_phn(c.whatsapp)}</span>
+              <button onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Numéro copié ✓','success'))"
+                style="margin-left:auto;padding:5px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text-2)">Copier</button>
+            </div>` : '<p style="color:var(--text-3);margin-bottom:8px">Pas de numéro WhatsApp</p>'}
+          ${budget ? `<div style="font-size:13px;color:var(--text-2);margin-bottom:4px">💰 ${budget}</div>` : ''}
+          ${dateLine ? `<div style="font-size:13px;color:${daysNum < 0 ? '#dc2626' : daysNum < 14 ? '#ef9f27' : 'var(--text-2)'};margin-bottom:4px">${dateLine}</div>` : ''}
+          ${c.zones ? `<div style="font-size:13px;color:var(--text-2);margin-bottom:4px">📍 ${c.zones}</div>` : ''}
+          ${c.duration ? `<div style="font-size:13px;color:var(--text-2)">⏱ ${tr(c.duration)}</div>` : ''}
+        </div>
+
+        <!-- Notes -->
+        <div style="width:100%;max-width:480px">
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2);display:block;margin-bottom:6px">Notes de l'appel</label>
+          <textarea id="cs-notes" rows="3" placeholder="Résumé de l'appel, suite à donner…"
+            style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);resize:none;line-height:1.5;box-sizing:border-box"></textarea>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div style="width:100%;max-width:480px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button onclick="Clients._csLog('appel_ok')"
+            style="padding:14px;background:#1D9E75;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
+            ✅ Appelé
+          </button>
+          <button onclick="Clients._csLog('pas_reponse')"
+            style="padding:14px;background:#3B82F6;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
+            📵 Pas de réponse
+          </button>
+          <button onclick="Clients._csLog('rappeler')"
+            style="padding:14px;background:#EF9F27;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
+            🔄 À rappeler
+          </button>
+          <button onclick="Clients._csSkip()"
+            style="padding:14px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
+            ⏭ Skip
+          </button>
+        </div>
+
+        <!-- Log récent -->
+        ${prevResults.length ? `
+          <div style="width:100%;max-width:480px">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin-bottom:6px">Derniers appels logués</div>
+            ${prevResults.map(r => `
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2)">
+                <span>${r.type === 'appel_ok' ? '✅' : r.type === 'pas_reponse' ? '📵' : '🔄'}</span>
+                <span style="font-weight:500">${r.name}</span>
+                ${r.note ? `<span style="color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${r.note}</span>` : ''}
+              </div>`).join('')}
+          </div>` : ''}
+      </div>`;
+  },
+
+  async _csLog(type) {
+    const { clients, idx } = this._cs;
+    const c = clients[idx];
+    if (!c) return;
+    const notes = document.getElementById('cs-notes')?.value.trim() || '';
+    const typeLabel = { appel_ok: 'Appel passé ✅', pas_reponse: 'Pas de réponse 📵', rappeler: 'À rappeler 🔄' }[type] || type;
+    const content = [typeLabel, notes].filter(Boolean).join(' — ');
+    const author  = (typeof App !== 'undefined' && App.user?.name) || 'Tim';
+
+    await api.post('/activities', { client_id: c.id, type: 'appel', content, author }).catch(() => {});
+    this.actCounts[c.id] = (this.actCounts[c.id] || 0) + 1;
+
+    // Si rappeler : ajouter tag rappeler
+    if (type === 'rappeler') {
+      api.post(`/clients/${c.id}/tags`, { tag: 'rappeler' }).catch(() => {});
+    }
+
+    this._cs.results.push({ name: c.name, type, note: notes });
+    this._cs.idx++;
+    this._csRender();
+  },
+
+  _csSkip() {
+    this._cs.results.push({ name: this._cs.clients[this._cs.idx]?.name, type: 'skip', note: '' });
+    this._cs.idx++;
+    this._csRender();
+  },
+
+  _csShowSummary() {
+    const overlay = document.getElementById('call-session-overlay');
+    if (!overlay) return;
+    const { clients, results } = this._cs;
+    const ok   = results.filter(r => r.type === 'appel_ok').length;
+    const nr   = results.filter(r => r.type === 'pas_reponse').length;
+    const cb   = results.filter(r => r.type === 'rappeler').length;
+    const skip = results.filter(r => r.type === 'skip').length;
+
+    overlay.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px">
+        <div style="max-width:400px;width:100%;text-align:center">
+          <div style="font-size:48px;margin-bottom:16px">🎉</div>
+          <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">Session terminée !</h2>
+          <p style="color:var(--text-2);margin-bottom:24px">${clients.length} client${clients.length > 1 ? 's' : ''} traités</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+              <div style="font-size:28px;font-weight:700;color:#1D9E75">${ok}</div>
+              <div style="font-size:12px;color:var(--text-2)">Appelés ✅</div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+              <div style="font-size:28px;font-weight:700;color:#3B82F6">${nr}</div>
+              <div style="font-size:12px;color:var(--text-2)">Pas de réponse 📵</div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+              <div style="font-size:28px;font-weight:700;color:#EF9F27">${cb}</div>
+              <div style="font-size:12px;color:var(--text-2)">À rappeler 🔄</div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+              <div style="font-size:28px;font-weight:700;color:var(--text-3)">${skip}</div>
+              <div style="font-size:12px;color:var(--text-2)">Skippés ⏭</div>
             </div>
           </div>
-          <label class="cl-check-wrap" title="Marquer comme appelé">
-            <input type="checkbox" class="cl-check" onchange="this.closest('.cl-item').classList.toggle('cl-done',this.checked)">
-            <span class="cl-check-box"></span>
-          </label>
-        </div>`;
-    }).join('');
-
-    const snapshot = clients.map(c => ({
-      id: c.id, name: c.name, whatsapp: c.whatsapp || null,
-      budget_max: c.budget_max || null, budget_eur: c.budget_eur || null,
-      zones: c.zones || null, move_in_date: c.move_in_date || null, duration: c.duration || null,
-    }));
-    const author = (typeof App !== 'undefined' && App.user?.name) ? App.user.name : 'Tim';
-    api.post('/call-lists', { label: today, clients: snapshot, created_by: author }).catch(() => {});
-
-    Clients._callListText = `📋 Liste d'appels — ${today}\n\n` + clients.map((c, i) => {
-      const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : null;
-      const date = c.move_in_date ? formatDate(c.move_in_date) : null;
-      const parts = [c.name];
-      if (c.whatsapp) parts.push(c.whatsapp);
-      if (budget) parts.push(budget);
-      if (c.zones) parts.push(c.zones);
-      if (date) parts.push(`Arrivée ${date}`);
-      return `${i + 1}. ${parts.join(' · ')}`;
-    }).join('\n');
-
-    Modal.open(`📋 Liste d'appels — ${clients.length} client${clients.length > 1 ? 's' : ''}`, `
-      <div class="cl-header">
-        <span class="cl-date-label">${today}</span>
-        <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(Clients._callListText).then(()=>Toast.show('Copié ✓','success'))">📋 Copier tout</button>
-      </div>
-      <div class="cl-list">${listHTML}</div>
-      <div class="form-actions">
-        <button class="btn btn-ghost" onclick="Modal.close()">Fermer</button>
-      </div>`);
+          <button onclick="Clients._csClose()"
+            style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600">
+            Terminer & retour aux clients
+          </button>
+        </div>
+      </div>`;
   },
 
   async bulkArchive() {
@@ -1156,20 +1282,19 @@ const Clients = {
               </div>
             </div>
 
-            <!-- Pipeline progress bar -->
+            <!-- Activity progress bar -->
             ${(() => {
-              const idx = this.SUIVI_STATUSES.findIndex(s => s.key === (c.suivi_status || 'nouveau'));
-              const steps = this.SUIVI_STATUSES.map((s, i) => {
-                const isDone   = i < idx;
-                const isActive = i === idx;
-                const style    = isActive ? `background:${s.color}` : isDone ? `background:${s.color};opacity:0.45` : '';
-                const dot = `<div class="cpb-step${isActive?' active':''}" style="${style}" title="${s.label}"></div>`;
-                const line = i < this.SUIVI_STATUSES.length - 1
-                  ? `<div class="cpb-line${isDone?' done':''}" style="${isDone ? `background:${s.color}` : ''}"></div>`
-                  : '';
-                return dot + line;
-              }).join('');
-              return `<div class="card-pipeline-bar">${steps}</div>`;
+              const n = this.actCounts?.[c.id] || 0;
+              const pct = Math.min(Math.round(n / 8 * 100), 100);
+              const col = n === 0 ? 'var(--border)' : n < 3 ? '#3B82F6' : n < 6 ? '#EF9F27' : '#1D9E75';
+              const st = this.SUIVI_STATUSES.find(s => s.key === (c.suivi_status || 'nouveau'));
+              return `<div style="display:flex;align-items:center;gap:6px;margin:5px 0 2px">
+                <div style="flex:1;height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden">
+                  <div style="height:3px;width:${pct}%;background:${col};border-radius:2px;transition:width .3s"></div>
+                </div>
+                <span style="font-size:9px;color:var(--text-3);flex-shrink:0;font-variant-numeric:tabular-nums">${n > 0 ? n + ' act.' : ''}</span>
+                <span style="font-size:9px;font-weight:600;color:${st?.color||'var(--text-3)'};flex-shrink:0;white-space:nowrap">${st?.label||''}</span>
+              </div>`;
             })()}
 
             <div class="client-details">

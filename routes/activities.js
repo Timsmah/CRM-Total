@@ -2,6 +2,14 @@ const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
 
+router.get('/counts', async (req, res) => {
+  const { data, error } = await db.from('activities').select('client_id');
+  if (error) return res.status(500).json({ error: error.message });
+  const counts = {};
+  (data || []).forEach(a => { counts[a.client_id] = (counts[a.client_id] || 0) + 1; });
+  res.json(counts);
+});
+
 router.get('/', async (req, res) => {
   const { client_id } = req.query;
   if (!client_id) return res.status(400).json({ error: 'client_id required' });
