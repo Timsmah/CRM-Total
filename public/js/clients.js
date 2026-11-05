@@ -168,7 +168,6 @@ const _phn = n => n ? (String(n)[0] === '+' ? String(n) : '+' + String(n)) : '';
 function getContactCols() {
   return [
     { key: 'Nouveau',        label: t('col_nouveau'),      cls: 'col-nouveau',    ghost: false },
-    { key: 'À contacter',    label: t('col_a_contacter'),  cls: 'col-to-contact', ghost: false },
     { key: 'Closing',              label: t('col_closing'),   cls: 'col-closing',  ghost: false },
     { key: 'En attente signature', label: t('col_attente'),  cls: 'col-attente',  ghost: false },
     { key: 'en_recherche',         label: t('col_recherche'), cls: 'col-recherche', ghost: true },
@@ -179,10 +178,11 @@ function getContactCols() {
 
 // Mapping des anciennes valeurs contact_status vers les nouvelles colonnes
 const CONTACT_STATUS_LEGACY_MAP = {
-  'Contacté':         'À contacter',
-  'Rappeler':         'À contacter',
-  'Property to Find': 'À contacter',
-  'Urgent Sending':   'À contacter',
+  'Contacté':         'Closing',
+  'Rappeler':         'Closing',
+  'Property to Find': 'Closing',
+  'Urgent Sending':   'Closing',
+  'À contacter':      'Closing',
   'Closed':           'Signé',
 };
 const CONTACT_COLS = getContactCols(); // kept for compatibility, refreshed in render()
