@@ -29,16 +29,21 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { name, whatsapp, budget_min, budget_max, zones, criteria, source, status, research_fees_paid, archived, duration, move_in_date, has_visa, needs_visa_help } = req.body;
+  const update = {
+    name, whatsapp,
+    budget_min: budget_min || null,
+    budget_max: budget_max || null,
+    zones, criteria, source, status,
+    duration: duration || null,
+    move_in_date: move_in_date || null,
+    has_visa: has_visa || null,
+    needs_visa_help: needs_visa_help || null,
+  };
+  // Ne mettre à jour ces champs que si explicitement envoyés — évite de remettre à 0
+  if (research_fees_paid !== undefined) update.research_fees_paid = research_fees_paid ? 1 : 0;
+  if (archived !== undefined) update.archived = archived ? 1 : 0;
   const { data, error } = await db.from('clients')
-    .update({ name, whatsapp, budget_min: budget_min || null, budget_max: budget_max || null,
-              zones, criteria, source, status,
-              duration: duration || null,
-              move_in_date: move_in_date || null,
-              research_fees_paid: research_fees_paid ? 1 : 0,
-              archived: archived ? 1 : 0,
-              has_visa: has_visa || null,
-              needs_visa_help: needs_visa_help || null })
-    .eq('id', req.params.id).select().single();
+    .update(update).eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -53,7 +58,8 @@ router.patch('/:id/archive', async (req, res) => {
   const { data: client, error: fetchErr } = await db.from('clients').select('archived').eq('id', req.params.id).single();
   if (fetchErr) return res.status(404).json({ error: 'Client non trouvé' });
   const newVal = client.archived ? 0 : 1;
-  await db.from('clients').update({ archived: newVal }).eq('id', req.params.id);
+  const { error: updateErr } = await db.from('clients').update({ archived: newVal }).eq('id', req.params.id);
+  if (updateErr) return res.status(500).json({ error: updateErr.message });
   res.json({ archived: !!newVal });
 });
 
@@ -131,9 +137,10 @@ router.patch('/:id/suivi', async (req, res) => {
 
   // Sync automatique suivi_status → status (kanban)
   if (suivi_status !== undefined) {
-    if (suivi_status === 'signe')            update.status = 'Signé';
-    else if (suivi_status === 'recherche_lancee') update.status = 'Recherche active';
-    else                                      update.status = 'Prospect';
+    if (suivi_status === 'signe')                                       update.status = 'Signé';
+    else if (suivi_status === 'recherche_lancee')                       update.status = 'Recherche active';
+    else if (suivi_status === 'nouveau' || suivi_status === 'a_contacter') update.status = 'Prospect';
+    // en_attente → on ne touche pas au status kanban
   }
 
   const { error } = await db.from('clients').update(update).eq('id', req.params.id);

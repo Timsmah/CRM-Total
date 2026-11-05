@@ -61,8 +61,10 @@ router.post('/calendly', async (req, res) => {
     let clientId = null;
 
     if (email) {
-      // On cherche dans les activités ou dans un champ email si tu l'ajoutes plus tard
-      // Pour l'instant on matche sur le nom (Calendly donne le nom complet)
+      // Match par email stocké dans les activités (champ content contenant l'email)
+      const { data: rows } = await db.from('activities')
+        .select('client_id').ilike('content', `%${email}%`).limit(1);
+      if (rows?.length) clientId = rows[0].client_id;
     }
 
     if (!clientId && phone) {
@@ -178,7 +180,12 @@ router.post('/hsc', async (req, res) => {
     let clientId = null;
     if (phone) {
       const { data } = await db.from('clients').select('id').eq('whatsapp', phone).maybeSingle();
-      if (data) { await db.from('clients').update(payload).eq('id', data.id); clientId = data.id; }
+      if (data) {
+        // Ne pas écraser contact_status/status — le client est peut-être déjà en Closing
+        const { contact_status: _cs, status: _st, ...safePayload } = payload;
+        await db.from('clients').update(safePayload).eq('id', data.id);
+        clientId = data.id;
+      }
     }
 
     if (!clientId) {

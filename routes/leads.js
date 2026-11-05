@@ -53,8 +53,9 @@ router.post('/', async (req, res) => {
       const { data: existing } = await db.from('clients')
         .select('id').eq('whatsapp', phone).maybeSingle();
       if (existing) {
-        // Mise à jour du client existant (sans écraser les champs déjà remplis)
-        await db.from('clients').update(payload).eq('id', existing.id);
+        // Ne pas écraser contact_status/status — le client est peut-être déjà en Closing
+        const { contact_status: _cs, status: _st, ...safePayload } = payload;
+        await db.from('clients').update(safePayload).eq('id', existing.id);
         clientId = existing.id;
       }
     }

@@ -11,6 +11,9 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const { amount, date, type, account, notes, currency } = req.body;
+  if (!amount || !date || !type || !account) {
+    return res.status(400).json({ error: 'Champs requis : amount, date, type, account' });
+  }
   const { data, error } = await db.from('finance')
     .insert({ amount, date, type, account, notes: notes || '', currency: currency || 'THB' })
     .select().single();

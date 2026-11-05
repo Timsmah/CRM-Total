@@ -121,11 +121,22 @@ router.post('/sync/sheets', async (req, res) => {
 
     // Libère les sheet_row des archivées pour éviter la contrainte unique
     await db.from('properties').update({ sheet_row: null }).not('sheet_row', 'is', null).eq('archived', 1);
-    // Remplace les propriétés issues du Sheets (non archivées) par le nouveau listing
-    await db.from('properties').delete().not('sheet_row', 'is', null).eq('archived', 0);
+
     if (payload.length) {
-      const { error } = await db.from('properties').insert(payload);
+      // Upsert d'abord — les données existent avant toute suppression (évite la perte si insert échoue)
+      const { error } = await db.from('properties')
+        .upsert(payload, { onConflict: 'sheet_row', ignoreDuplicates: false });
       if (error) throw new Error(error.message);
+
+      // Supprime uniquement les biens non-archivés absents du nouveau listing
+      const newSheetRows = payload.map(r => r.sheet_row);
+      await db.from('properties')
+        .delete()
+        .not('sheet_row', 'is', null)
+        .eq('archived', 0)
+        .not('sheet_row', 'in', `(${newSheetRows.join(',')})`);
+    } else {
+      await db.from('properties').delete().not('sheet_row', 'is', null).eq('archived', 0);
     }
 
     res.json({ imported: payload.length, total: payload.length });
