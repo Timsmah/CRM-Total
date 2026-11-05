@@ -299,7 +299,8 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 
 /* ── CLIENT CARD ─────────────────────────────────── */
 .client-name { font-size: 13.5px; font-weight: 600; margin-bottom: 6px; color: var(--text); letter-spacing: -0.1px; }
-.client-details p { color: var(--text-2); font-size: 12px; margin-bottom: 2px; }
+.client-details p { color: var(--text-2); font-size: 12px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
+.cd-icon { width: 10px; height: 10px; flex-shrink: 0; opacity: .6; }
 .source-tag {
   display: inline-block;
   padding: 2px 7px;
@@ -1121,9 +1122,11 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 12px 14px;
 }
-.fin-acct-tile-total { border-color: rgba(201,146,42,.3); background: rgba(201,146,42,.03); }
-.fin-acct-name { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; margin-bottom: 4px; }
-.fin-acct-total { font-size: 18px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
+.fin-acct-tile-total { border-color: var(--border); background: var(--surface-2); }
+.fin-acct-logo { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; margin-bottom: 8px; flex-shrink: 0; }
+.fin-acct-logo svg { width: 26px; height: 26px; display: block; }
+.fin-acct-name { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; margin-bottom: 3px; }
+.fin-acct-total { font-size: 17px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
 .fin-acct-sub { font-size: 10.5px; color: var(--text-3); margin-top: 1px; }
 .fin-acct-count { font-size: 10.5px; color: var(--text-3); margin-top: 3px; }
 

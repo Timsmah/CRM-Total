@@ -1,3 +1,23 @@
+// Bank logo SVGs — keyed by account name fragment (lowercase)
+const BANK_LOGOS = {
+  mercury:  `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1A1A2E"/><text x="16" y="21" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="#6C8EFF">M</text></svg>`,
+  revolut:  `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#191C1F"/><path d="M11 8h7c2.5 0 4 1.5 4 3.5 0 1.6-.9 2.8-2.3 3.3L23 24h-3.5l-2.8-8.5H14V24H11V8zm3 5.5h3.5c1 0 1.5-.5 1.5-1.5S18.5 11 17.5 11H14v2.5z" fill="white"/></svg>`,
+  wise:     `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#9FE870"/><path d="M9 12l4 8 3-6 3 6 4-8" stroke="#163300" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  kbank:    `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#138F2E"/><text x="16" y="21" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="800" fill="white">K</text></svg>`,
+  crypto:   `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path d="M20.5 14.3c.3-1.8-1.1-2.8-3-3.4l.6-2.5-1.5-.4-.6 2.4-1.2-.3.6-2.4-1.5-.4-.6 2.5-2.4-.6-.4 1.6s1.1.3 1.1.3c.6.2.7.6.7.9l-1.7 6.8c-.1.3-.4.6-.9.5l-1.1-.3-.8 1.7 2.3.6-.6 2.5 1.5.4.6-2.5 1.2.3-.6 2.4 1.5.4.6-2.5c3 .6 5.2-.2 6.1-2.5.7-2-.1-3.2-1.5-3.9 1-.2 1.8-1 2-2.4zm-3.6 5c-.5 2-3.9 1-5 .7l.9-3.5c1.1.3 4.6.9 4.1 2.8zm.5-5c-.5 1.8-3.3 1-4.3.7l.8-3.1c1 .3 3.9.7 3.5 2.4z" fill="white"/></svg>`,
+  total:    `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a1a1a"/><path d="M9 16h14M16 9l7 7-7 7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+function bankLogo(name) {
+  const key = Object.keys(BANK_LOGOS).find(k => name.toLowerCase().includes(k));
+  if (!key) {
+    // Generic: first letter in a circle
+    const letter = (name[0] || '?').toUpperCase();
+    return `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="var(--surface-3)"/><text x="16" y="21" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="var(--text-2)">${letter}</text></svg>`;
+  }
+  return BANK_LOGOS[key];
+}
+
 const Finance = {
   data: [],
   selectedMonth: '',
@@ -272,14 +292,16 @@ const Finance = {
       <div class="fin-acct-grid">
         ${summary.map(r => `
           <div class="fin-acct-tile">
+            <div class="fin-acct-logo">${bankLogo(r.acct)}</div>
             <div class="fin-acct-name">${r.acct}</div>
             <div class="fin-acct-total">${this.fmtAs(r.total, 'THB')}</div>
             ${r.total ? `<div class="fin-acct-sub">${this.fmtAsSub(r.total, 'THB')}</div>` : ''}
             <div class="fin-acct-count">${r.count} tx</div>
           </div>`).join('')}
         <div class="fin-acct-tile fin-acct-tile-total">
+          <div class="fin-acct-logo">${bankLogo('total')}</div>
           <div class="fin-acct-name">Total</div>
-          <div class="fin-acct-total" style="color:var(--accent)">${this.fmtAs(grandTotal, 'THB')}</div>
+          <div class="fin-acct-total">${this.fmtAs(grandTotal, 'THB')}</div>
           ${grandTotal ? `<div class="fin-acct-sub">${this.fmtAsSub(grandTotal, 'THB')}</div>` : ''}
           <div class="fin-acct-count">${txMonth.length} tx</div>
         </div>

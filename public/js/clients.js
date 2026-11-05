@@ -137,7 +137,7 @@ function scoreBadge(c) {
   const r = clientScore(c);
   if (!r) return '';
   const col = scoreColor(r.total);
-  return `<span style="font-size:10px;font-weight:700;color:${col};background:${col}18;border:0.5px solid ${col}50;border-radius:5px;padding:1px 6px;letter-spacing:.3px">⭐ ${r.total.toFixed(1)}</span>`;
+  return `<span style="font-size:10px;font-weight:700;color:${col};background:${col}18;border:0.5px solid ${col}50;border-radius:5px;padding:1px 6px;letter-spacing:.3px">${r.total.toFixed(1)}</span>`;
 }
 
 function scoreBreakdownHTML(c) {
@@ -494,9 +494,9 @@ const Clients = {
           <span class="mkc-meta-right">${score}${tags}</span>
         </div>
         ${budget || arrival ? `<div class="mkc-pills">
-          ${budget ? `<span class="mkc-pill mkc-pill-budget">💰 ${budget}</span>` : ''}
-          ${arrival ? `<span class="mkc-pill mkc-pill-date">📅 ${arrival}</span>` : ''}
-          ${c.nationality ? `<span class="mkc-pill">🌍 ${c.nationality}</span>` : ''}
+          ${budget ? `<span class="mkc-pill mkc-pill-budget">${budget}</span>` : ''}
+          ${arrival ? `<span class="mkc-pill mkc-pill-date">${arrival}</span>` : ''}
+          ${c.nationality ? `<span class="mkc-pill">${c.nationality}</span>` : ''}
         </div>` : ''}
         ${leadDate ? `<div class="mkc-lead-date">Lead · ${leadDate}</div>` : ''}
         <div class="mkc-actions">
@@ -574,17 +574,17 @@ const Clients = {
           value="${f.name || ''}"
           oninput="Clients.setClientFilter('name', this.value)">
         <select class="filter-select" onchange="Clients.setClientFilter('urgency',this.value)">
-          <option value="">📅 Toutes urgences</option>
+          <option value="">Toutes urgences</option>
           <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>🔴 Arrive &lt; 14j</option>
           <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>🟠 Arrive &lt; 30j</option>
           <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>🟡 Arrive &lt; 60j</option>
           <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>🔵 Arrive &gt; 60j</option>
         </select>
         <select class="filter-select" onchange="Clients.setClientFilter('scoreMin',this.value)">
-          <option value="">⭐ Tous scores</option>
-          <option value="6" ${f.scoreMin==='6'?'selected':''}>⭐ Score ≥ 6</option>
-          <option value="7" ${f.scoreMin==='7'?'selected':''}>⭐ Score ≥ 7</option>
-          <option value="8" ${f.scoreMin==='8'?'selected':''}>⭐ Score ≥ 8</option>
+          <option value="">Tous scores</option>
+          <option value="6" ${f.scoreMin==='6'?'selected':''}>Score ≥ 6</option>
+          <option value="7" ${f.scoreMin==='7'?'selected':''}>Score ≥ 7</option>
+          <option value="8" ${f.scoreMin==='8'?'selected':''}>Score ≥ 8</option>
         </select>
         <select class="filter-select" onchange="Clients.setClientFilter('agent',this.value)">
           <option value="">👤 Tous agents</option>
@@ -1302,9 +1302,9 @@ const Clients = {
               ${scoreBadge(c)}
             </div>
             <div class="focus-meta">
-              ${budgetLine ? `<span>💰 ${budgetLine}</span>` : ''}
+              ${budgetLine ? `<span>${budgetLine}</span>` : ''}
               ${budgetLine && c.duration ? `<span class="focus-sep">·</span>` : ''}
-              ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
+              ${c.duration ? `<span>${tr(c.duration)}</span>` : ''}
             </div>
             ${dateBadge ? `<div class="focus-date-row">${dateBadge}</div>` : ''}
           </div>
@@ -1315,9 +1315,9 @@ const Clients = {
             </div>
             ${c.whatsapp
               ? `<div class="card-contact-row" onclick="event.stopPropagation()">
-                  <span>📱</span>
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="8" height="12" rx="2"/><circle cx="7" cy="11" r=".75" fill="currentColor" stroke="none"/></svg>
                   <span class="card-contact-link">${_phn(c.whatsapp)}</span>
-                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
+                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier"><svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M2 10V3a1 1 0 0 1 1-1h7"/></svg></button>
                 </div>`
               : `<p class="card-no-contact">Pas de numéro</p>`}
             <div class="card-act-log" id="card-act-${c.id}">
@@ -1338,10 +1338,11 @@ const Clients = {
     const daysNum = this.urgencyDays(c.move_in_date);
     const daysAgo = this.daysAgo(c);
     const urgencyDot = urgency ? `<span class="legend-dot ${urgency.replace('urgent-', 'dot-')}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0"></span>` : '';
+    const _calIcon = `<svg class="cd-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="11" height="10" rx="1.5"/><path d="M5 1v3M9 1v3M1.5 6h11"/></svg>`;
     const moveinLine = c.move_in_date
       ? (daysNum < 0
-          ? `<p class="urgent-overdue" style="display:flex;align-items:center;gap:4px">⚠️ En retard · ${Math.abs(daysNum)}j</p>`
-          : `<p class="${urgency}" style="display:flex;align-items:center;gap:0">📅 ${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>`)
+          ? `<p class="urgent-overdue" style="display:flex;align-items:center;gap:4px"><svg class="cd-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1L1 13h12L7 1z"/><path d="M7 6v3M7 11h.01"/></svg>En retard · ${Math.abs(daysNum)}j</p>`
+          : `<p class="${urgency}" style="display:flex;align-items:center;gap:0">${_calIcon}${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>`)
       : '';
 
     // Bordure gauche = couleur suivi
@@ -1385,9 +1386,9 @@ const Clients = {
             </div>
 
             <div class="client-details">
-              ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
+              ${budgetLine ? `<p><svg class="cd-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="12" height="8" rx="1.5"/><path d="M4 4V3a2 2 0 0 1 4 0v1"/><circle cx="7" cy="8" r="1" fill="currentColor" stroke="none"/></svg>${budgetLine}</p>` : ''}
               ${moveinLine}
-              ${c.duration ? `<p>⏱ ${tr(c.duration)}</p>` : ''}
+              ${c.duration ? `<p><svg class="cd-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3l2 1.5"/></svg>${tr(c.duration)}</p>` : ''}
             </div>
 
             <div class="action-tags-row" onclick="event.stopPropagation()">
@@ -1412,7 +1413,7 @@ const Clients = {
                 ${daysAgo ? `<span style="font-size:9.5px;color:var(--text-3)">${daysAgo}</span>` : ''}
               </div>
               <div style="display:flex;align-items:center;gap:3px">
-                ${c.whatsapp ? `<button class="card-quick-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('📱 Copié','success'))" title="Copier WA">📱</button>` : ''}
+                ${c.whatsapp ? `<button class="card-quick-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié','success'))" title="Copier WA"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="8" height="12" rx="2"/><circle cx="7" cy="11" r=".75" fill="currentColor" stroke="none"/></svg></button>` : ''}
                 <button class="card-quick-btn" onclick="Clients.openDetailModal(${c.id})" title="Voir la fiche">↗</button>
               </div>
             </div>
@@ -1428,9 +1429,9 @@ const Clients = {
 
             ${c.whatsapp
               ? `<div class="card-contact-row" onclick="event.stopPropagation()">
-                  <span>📱</span>
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="8" height="12" rx="2"/><circle cx="7" cy="11" r=".75" fill="currentColor" stroke="none"/></svg>
                   <span class="card-contact-link">${_phn(c.whatsapp)}</span>
-                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier">📋</button>
+                  <button class="card-copy-btn" onclick="event.stopPropagation();navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))" title="Copier"><svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M2 10V3a1 1 0 0 1 1-1h7"/></svg></button>
                 </div>`
               : `<p class="card-no-contact">Pas de numéro</p>`}
 
