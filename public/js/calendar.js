@@ -2,6 +2,7 @@
 const CalendarView = {
   _clients: [],       // cache complet pour lookup rapide
   _pins: {},          // { clientId: "YYYY-MM-DD" }  — persiste en localStorage
+  _phantoms: [],      // [{ id: "ph_xxx", name: "...", date: "YYYY-MM-DD" }]
   year:  new Date().getFullYear(),
   month: new Date().getMonth(),
 
@@ -9,9 +10,15 @@ const CalendarView = {
   _loadPins() {
     try { this._pins = JSON.parse(localStorage.getItem('crm_cal_pins') || '{}'); }
     catch { this._pins = {}; }
+    try { this._phantoms = JSON.parse(localStorage.getItem('crm_cal_phantoms') || '[]'); }
+    catch { this._phantoms = []; }
   },
   _savePins() {
     try { localStorage.setItem('crm_cal_pins', JSON.stringify(this._pins)); }
+    catch {}
+  },
+  _savePhantoms() {
+    try { localStorage.setItem('crm_cal_phantoms', JSON.stringify(this._phantoms)); }
     catch {}
   },
 
@@ -23,14 +30,19 @@ const CalendarView = {
     this.render();
   },
 
-  // ── Clients épinglés ───────────────────────────────────────────────────────
+  // ── Clients épinglés (réels + fantômes) ───────────────────────────────────
   _pinnedClients() {
-    return Object.entries(this._pins)
+    const real = Object.entries(this._pins)
       .map(([idStr, date]) => {
         const c = this._clients.find(x => x.id === parseInt(idStr));
-        return c ? { ...c, _calDate: date } : null;
+        return c ? { ...c, _calDate: date, _isPhantom: false } : null;
       })
       .filter(Boolean);
+    const phantoms = this._phantoms.map(p => ({
+      id: p.id, name: p.name, _calDate: p.date, _isPhantom: true,
+      suivi_status: null, budget_max: null, commission_earned: null,
+    }));
+    return [...real, ...phantoms];
   },
 
   _forDay(day) {
@@ -170,10 +182,10 @@ const CalendarView = {
           <div class="cal-day-num ${isToday ? 'cal-today-num' : ''}">${day}</div>
           <div class="cal-day-chips">
             ${dayClients.map(c => `
-              <div class="cal-chip ${this._urgencyClass(c._calDate)}"
-                onclick="Clients.openDetailModal(${c.id})"
-                oncontextmenu="event.preventDefault();CalendarView._chipMenu(event,${c.id})"
-                title="${c.name}">
+              <div class="cal-chip ${this._urgencyClass(c._calDate)} ${c._isPhantom ? 'cal-chip-phantom' : ''}"
+                onclick="${c._isPhantom ? '' : `Clients.openDetailModal(${c.id})`}"
+                oncontextmenu="event.preventDefault();CalendarView._chipMenu(event,'${c.id}')"
+                title="${c.name}${c._isPhantom ? ' (hors CRM)' : ''}">
                 <span class="cal-chip-name">${c.name.split(' ')[0]}</span>
               </div>`).join('')}
           </div>
@@ -225,20 +237,24 @@ const CalendarView = {
                   const days = Math.round((d - now) / 86400000);
                   const label = days === 0 ? "Aujourd'hui" : days === 1 ? 'Demain' : days < 0 ? `Il y a ${-days}j` : `Dans ${days}j`;
                   const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                  const idStr = JSON.stringify(String(c.id));
                   return `
-                    <div class="cal-sb-row" onclick="Clients.openDetailModal(${c.id})">
+                    <div class="cal-sb-row" onclick="${c._isPhantom ? '' : `Clients.openDetailModal(${c.id})`}">
                       <div class="cal-sb-dot ${this._urgencyClass(c._calDate)}"></div>
                       <div class="cal-sb-info">
-                        <div class="cal-sb-name">${c.name}</div>
+                        <div class="cal-sb-name">
+                          ${c.name}
+                          ${c._isPhantom ? '<span style="font-size:9px;color:var(--text-3);margin-left:4px;background:var(--surface-3);border-radius:3px;padding:1px 4px">hors CRM</span>' : ''}
+                        </div>
                         <div class="cal-sb-meta">${dateStr} · <span class="cal-sb-countdown">${label}</span></div>
-                        <div class="cal-sb-status">${this._statusLabel(c)}</div>
+                        <div class="cal-sb-status">${c._isPhantom ? 'Non créé' : this._statusLabel(c)}</div>
                       </div>
                       <button class="cal-sb-edit" title="Modifier la date"
-                        onclick="event.stopPropagation();CalendarView._editPin(${c.id})">
+                        onclick="event.stopPropagation();CalendarView._editPin(${idStr})">
                         <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2l2 2-7 7H3v-2l7-7z"/></svg>
                       </button>
                       <button class="cal-sb-edit" title="Retirer du calendrier"
-                        onclick="event.stopPropagation();CalendarView._removePin(${c.id})"
+                        onclick="event.stopPropagation();CalendarView._removePin(${idStr})"
                         style="color:var(--text-3)">
                         <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/></svg>
                       </button>
@@ -263,9 +279,8 @@ const CalendarView = {
     this.render();
   },
 
-  // ── Ajout (depuis bouton ou clic droit sidebar) ────────────────────────────
-  _openAddModal(preselectedId, preselectedDate) {
-    if (!this._clients.length) return;
+  // ── Ajout (depuis bouton + Ajouter) ───────────────────────────────────────
+  _openAddModal() {
     const available = this._clients
       .filter(c => !c.archived)
       .sort((a,b) => a.name.localeCompare(b.name));
@@ -274,13 +289,12 @@ const CalendarView = {
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="form-group">
           <label class="form-label">Client</label>
-          <input type="text" id="cal-search" class="form-input" placeholder="Rechercher…" autocomplete="off"
-            oninput="CalendarView._filterList(this.value)" value="${preselectedId ? '' : ''}">
+          <input type="text" id="cal-search" class="form-input" placeholder="Rechercher ou saisir un nom…"
+            autocomplete="off" oninput="CalendarView._filterList(this.value)">
           <div id="cal-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;margin-top:4px">
             ${available.map(c => `
-              <div class="cal-pick-row ${c.id === preselectedId ? 'cal-pick-selected' : ''}"
-                data-id="${c.id}" data-name="${c.name}"
-                onclick="CalendarView._selectClient(this,${c.id})">
+              <div class="cal-pick-row" data-id="${c.id}" data-name="${c.name}"
+                onclick="CalendarView._selectClient(this,${c.id},false)">
                 <span>${c.name}</span>
                 ${this._pins[c.id] ? `<span style="font-size:10px;color:var(--text-3)">${this._pins[c.id]}</span>` : ''}
               </div>`).join('')}
@@ -288,7 +302,7 @@ const CalendarView = {
         </div>
         <div class="form-group">
           <label class="form-label">Date d'arrivée</label>
-          <input type="date" id="cal-date-input" class="form-input" value="${preselectedDate || ''}">
+          <input type="date" id="cal-date-input" class="form-input">
         </div>
         <div class="form-actions">
           <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
@@ -296,30 +310,60 @@ const CalendarView = {
             onclick="CalendarView._confirmAdd()">Ajouter</button>
         </div>
       </div>`);
-
-    if (preselectedId) {
-      const row = document.querySelector(`.cal-pick-row[data-id="${preselectedId}"]`);
-      if (row) this._selectClient(row, preselectedId);
-    }
   },
 
   _selectedClientId: null,
-  _selectClient(el, id) {
+  _selectedIsPhantom: false,
+
+  _selectClient(el, id, isPhantom) {
     document.querySelectorAll('.cal-pick-row').forEach(r => r.classList.remove('cal-pick-selected'));
     el.classList.add('cal-pick-selected');
     this._selectedClientId = id;
-    if (this._pins[id]) {
+    this._selectedIsPhantom = !!isPhantom;
+    if (!isPhantom && this._pins[id]) {
       const di = document.getElementById('cal-date-input');
       if (di && !di.value) di.value = this._pins[id];
     }
-    const btn = document.getElementById('cal-save-btn');
-    if (btn) btn.disabled = false;
+    document.getElementById('cal-save-btn').disabled = false;
   },
 
   _filterList(q) {
-    document.querySelectorAll('.cal-pick-row').forEach(row => {
-      row.style.display = row.dataset.name.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    const rows = document.querySelectorAll('.cal-pick-row:not(#cal-create-row)');
+    let visible = 0;
+    rows.forEach(row => {
+      const match = !q || row.dataset.name.toLowerCase().includes(q.toLowerCase());
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
     });
+    // Ligne "Créer « q »" si aucun résultat et q non vide
+    let createRow = document.getElementById('cal-create-row');
+    if (q && visible === 0) {
+      if (!createRow) {
+        createRow = document.createElement('div');
+        createRow.id = 'cal-create-row';
+        createRow.className = 'cal-pick-row';
+        createRow.style.color = 'var(--accent)';
+        createRow.style.fontWeight = '600';
+        document.getElementById('cal-list').appendChild(createRow);
+      }
+      createRow.textContent = `+ Créer "${q}" (hors CRM)`;
+      createRow.onclick = () => CalendarView._selectPhantom(q);
+      createRow.style.display = '';
+    } else if (createRow) {
+      createRow.style.display = 'none';
+    }
+    // Reset sélection si le texte change
+    this._selectedClientId = null;
+    this._selectedIsPhantom = false;
+    document.getElementById('cal-save-btn').disabled = true;
+  },
+
+  _selectPhantom(name) {
+    document.querySelectorAll('.cal-pick-row').forEach(r => r.classList.remove('cal-pick-selected'));
+    document.getElementById('cal-create-row').classList.add('cal-pick-selected');
+    this._selectedClientId = name; // On stocke le nom temporairement
+    this._selectedIsPhantom = true;
+    document.getElementById('cal-save-btn').disabled = false;
   },
 
   async _confirmAdd() {
@@ -327,28 +371,39 @@ const CalendarView = {
     const date = document.getElementById('cal-date-input')?.value;
     if (!id || !date) return;
     Modal.close();
-    this._pins[id] = date;
-    this._savePins();
-    // Mise à jour move_in_date sur le serveur pour cohérence
-    api.patch(`/clients/${id}`, { move_in_date: date }).catch(() => {});
-    const c = this._clients.find(x => x.id === id);
-    Toast.show(`📅 ${c?.name || 'Client'} ajouté au calendrier`);
+
+    if (this._selectedIsPhantom) {
+      const phantomId = 'ph_' + Date.now();
+      this._phantoms.push({ id: phantomId, name: id, date });
+      this._savePhantoms();
+      Toast.show(`📅 ${id} ajouté au calendrier`);
+    } else {
+      this._pins[id] = date;
+      this._savePins();
+      api.patch(`/clients/${id}`, { move_in_date: date }).catch(() => {});
+      const c = this._clients.find(x => x.id === id);
+      Toast.show(`📅 ${c?.name || 'Client'} ajouté au calendrier`);
+    }
     this.render();
   },
 
   // ── Édition / suppression ──────────────────────────────────────────────────
   _editPin(clientId) {
-    const c = this._clients.find(x => x.id === clientId);
+    const idStr = String(clientId);
+    const isPhantom = idStr.startsWith('ph_');
+    const phantom = isPhantom ? this._phantoms.find(p => p.id === idStr) : null;
+    const c = isPhantom ? phantom : this._clients.find(x => x.id === parseInt(idStr));
     if (!c) return;
+    const currentDate = isPhantom ? phantom.date : (this._pins[parseInt(idStr)] || '');
     Modal.open(`Modifier — ${c.name}`, `
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="form-group">
           <label class="form-label">Date d'arrivée</label>
-          <input type="date" id="cal-edit-date" class="form-input" value="${this._pins[clientId] || ''}">
+          <input type="date" id="cal-edit-date" class="form-input" value="${currentDate}">
         </div>
         <div class="form-actions">
           <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
-          <button class="btn btn-primary" onclick="CalendarView._saveEdit(${clientId})">Enregistrer</button>
+          <button class="btn btn-primary" onclick="CalendarView._saveEdit('${idStr}')">Enregistrer</button>
         </div>
       </div>`);
   },
@@ -357,18 +412,35 @@ const CalendarView = {
     const date = document.getElementById('cal-edit-date')?.value;
     if (!date) return;
     Modal.close();
-    this._pins[clientId] = date;
-    this._savePins();
-    api.patch(`/clients/${clientId}`, { move_in_date: date }).catch(() => {});
+    const idStr = String(clientId);
+    if (idStr.startsWith('ph_')) {
+      const p = this._phantoms.find(x => x.id === idStr);
+      if (p) { p.date = date; this._savePhantoms(); }
+    } else {
+      const numId = parseInt(idStr);
+      this._pins[numId] = date;
+      this._savePins();
+      api.patch(`/clients/${numId}`, { move_in_date: date }).catch(() => {});
+    }
     Toast.show('📅 Date mise à jour');
     this.render();
   },
 
   _removePin(clientId) {
-    const c = this._clients.find(x => x.id === clientId);
-    delete this._pins[clientId];
-    this._savePins();
-    Toast.show(`${c?.name || 'Client'} retiré du calendrier`);
+    const idStr = String(clientId);
+    let name = idStr;
+    if (idStr.startsWith('ph_')) {
+      const idx = this._phantoms.findIndex(p => p.id === idStr);
+      if (idx !== -1) { name = this._phantoms[idx].name; this._phantoms.splice(idx, 1); }
+      this._savePhantoms();
+    } else {
+      const numId = parseInt(idStr);
+      const c = this._clients.find(x => x.id === numId);
+      name = c?.name || idStr;
+      delete this._pins[numId];
+      this._savePins();
+    }
+    Toast.show(`${name} retiré du calendrier`);
     this.render();
   },
 

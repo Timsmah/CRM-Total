@@ -2869,6 +2869,7 @@ nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .cal-chip-urgent  { background: #FEF3C7; color: var(--amber); }
 .cal-chip-soon    { background: #D1FAE5; color: var(--green); }
 .cal-chip-future  { background: var(--surface-3); color: var(--text-2); }
+.cal-chip-phantom { border: 1px dashed var(--border); background: transparent; color: var(--text-3); }
 .cal-chip-name    { display: block; overflow: hidden; text-overflow: ellipsis; }
 
 .cal-sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
