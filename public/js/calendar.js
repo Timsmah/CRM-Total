@@ -64,6 +64,78 @@ const CalendarView = {
     return map[c.suivi_status] || (c.suivi_status || 'Nouveau');
   },
 
+  // ── Stats bar ──────────────────────────────────────────────────────────────
+  _statsBar(pinned, upcoming, today) {
+    // Prochain client (tous, pas seulement 60j)
+    const allFuture = pinned
+      .filter(c => c._calDate)
+      .map(c => ({ c, d: new Date(c._calDate + 'T12:00:00') }))
+      .filter(({ d }) => d >= today)
+      .sort((a, b) => a.d - b.d);
+
+    const nextClient = allFuture[0];
+    const nextDays   = nextClient ? Math.round((nextClient.d - today) / 86400000) : null;
+    const nextLabel  = nextDays === null ? '—'
+      : nextDays === 0 ? "Aujourd'hui !"
+      : nextDays === 1 ? 'Demain'
+      : `Dans ${nextDays}j`;
+    const nextName   = nextClient ? nextClient.c.name.split(' ')[0] : '—';
+    const nextUrgent = nextDays !== null && nextDays <= 7;
+
+    // En retard (date passée)
+    const overdue = pinned.filter(c => {
+      if (!c._calDate) return false;
+      return new Date(c._calDate + 'T12:00:00') < today;
+    });
+
+    // Revenus potentiels (commission_earned ou budget_max comme proxy)
+    const totalBudget = pinned.reduce((sum, c) => {
+      const v = parseFloat(c.commission_earned || c.budget_eur || 0);
+      return sum + (isNaN(v) ? 0 : v);
+    }, 0);
+
+    // Tiles
+    const tiles = [
+      {
+        n: pinned.length,
+        l: `suivi${pinned.length !== 1 ? 's' : ''}`,
+        sub: pinned.length === 0 ? 'Aucun client' : `${upcoming.length} dans 60j`,
+        warn: false,
+      },
+      {
+        n: nextLabel,
+        l: 'prochain',
+        sub: nextClient ? nextClient.c.name : 'Aucune date à venir',
+        warn: nextUrgent,
+        accent: nextDays === 0,
+      },
+      {
+        n: overdue.length || '—',
+        l: overdue.length ? `en retard` : 'en retard',
+        sub: overdue.length ? overdue.map(c => c.name.split(' ')[0]).join(', ') : 'Nickel',
+        warn: overdue.length > 0,
+        danger: overdue.length > 0,
+      },
+      ...(totalBudget > 0 ? [{
+        n: totalBudget.toLocaleString('fr-FR') + ' €',
+        l: 'commissions',
+        sub: `sur ${pinned.length} client${pinned.length !== 1 ? 's' : ''}`,
+        warn: false,
+      }] : []),
+    ];
+
+    return `<div class="cal-stats-bar">
+      ${tiles.map(t => `
+        <div class="cal-stat ${t.danger ? 'cal-stat-danger' : t.warn ? 'cal-stat-warn' : ''} ${t.accent ? 'cal-stat-accent' : ''}">
+          <div class="cal-stat-top">
+            <span class="cal-stat-n">${t.n}</span>
+            <span class="cal-stat-l">${t.l}</span>
+          </div>
+          <div class="cal-stat-sub">${t.sub}</div>
+        </div>`).join('')}
+    </div>`;
+  },
+
   // ── Render principal ───────────────────────────────────────────────────────
   render() {
     const today = new Date(); today.setHours(0,0,0,0);
@@ -127,16 +199,7 @@ const CalendarView = {
           </div>
 
           <!-- Stats bar -->
-          <div class="cal-stats-bar">
-            <div class="cal-stat">
-              <span class="cal-stat-n">${pinned.length}</span>
-              <span class="cal-stat-l">client${pinned.length>1?'s':''} suivi${pinned.length>1?'s':''}</span>
-            </div>
-            <div class="cal-stat">
-              <span class="cal-stat-n">${upcoming.length}</span>
-              <span class="cal-stat-l">arrivées dans 60j</span>
-            </div>
-          </div>
+          ${this._statsBar(pinned, upcoming, today)}
 
           <!-- Grille -->
           <div class="cal-grid">
