@@ -327,13 +327,37 @@ const CalendarView = {
   // ── Appelé depuis clients.js (clic droit → Ajouter au calendrier) ──────────
   openAddToCalendar(clientId) {
     this._loadPins();
-    if (!this._clients.length) {
-      api.get('/clients').then(list => {
-        this._clients = list;
-        this._openAddModal(clientId);
-      });
-    } else {
-      this._openAddModal(clientId);
-    }
+    const finish = (clients) => {
+      this._clients = clients;
+      const c = clients.find(x => x.id === clientId);
+      const name = c?.name || 'Client';
+      const existing = this._pins[clientId] || '';
+      Modal.open(`Calendrier — ${name}`, `
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="form-group">
+            <label class="form-label">Date d'arrivée</label>
+            <input type="date" id="cal-date-input" class="form-input" value="${existing}">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-ghost" onclick="Modal.close()">Annuler</button>
+            <button class="btn btn-primary" onclick="CalendarView._confirmDirect(${clientId})">
+              ${existing ? 'Mettre à jour' : 'Ajouter'}
+            </button>
+          </div>
+        </div>`);
+    };
+    if (this._clients.length) finish(this._clients);
+    else api.get('/clients').then(finish);
+  },
+
+  async _confirmDirect(clientId) {
+    const date = document.getElementById('cal-date-input')?.value;
+    if (!date) return;
+    Modal.close();
+    this._pins[clientId] = date;
+    this._savePins();
+    api.patch(`/clients/${clientId}`, { move_in_date: date }).catch(() => {});
+    const c = this._clients.find(x => x.id === clientId);
+    Toast.show(`📅 ${c?.name || 'Client'} ajouté au calendrier`);
   },
 };
