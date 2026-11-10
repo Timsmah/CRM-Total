@@ -352,10 +352,10 @@ const CalendarView = {
     } else if (createRow) {
       createRow.style.display = 'none';
     }
-    // Reset sélection si le texte change
+    // Reset sélection si le texte change — mais activer le bouton si du texte est présent
     this._selectedClientId = null;
     this._selectedIsPhantom = false;
-    document.getElementById('cal-save-btn').disabled = true;
+    document.getElementById('cal-save-btn').disabled = !q;
   },
 
   _selectPhantom(name) {
@@ -367,8 +367,13 @@ const CalendarView = {
   },
 
   async _confirmAdd() {
-    const id   = this._selectedClientId;
+    let id   = this._selectedClientId;
     const date = document.getElementById('cal-date-input')?.value;
+    // Fallback : si rien de sélectionné mais du texte dans le champ → phantom
+    if (!id) {
+      const q = document.getElementById('cal-search')?.value?.trim();
+      if (q) { id = q; this._selectedIsPhantom = true; }
+    }
     if (!id || !date) return;
     Modal.close();
 
