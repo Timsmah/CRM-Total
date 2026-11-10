@@ -100,11 +100,27 @@ const CalendarView = {
       return new Date(c._calDate + 'T12:00:00') < today;
     });
 
-    // Revenus potentiels (commission_earned ou budget_max comme proxy)
-    const totalBudget = pinned.reduce((sum, c) => {
-      const v = parseFloat(c.commission_earned || c.budget_eur || 0);
-      return sum + (isNaN(v) ? 0 : v);
-    }, 0);
+    // Potentiel commission : loyer × (mois/12) × 50% (co-agent)
+    const _durationMonths = dur => {
+      if (!dur) return null;
+      const d = dur.toLowerCase();
+      if (/\b(1 an|2 ans|3 ans|12 mois)\b/.test(d)) return 12;
+      const m = d.match(/(\d+)\s*mois/);
+      return m ? parseInt(m[1]) : null;
+    };
+    let totalPotentiel = 0;
+    let clientsAvecPotentiel = 0;
+    pinned.forEach(c => {
+      if (c._isPhantom) return;
+      const loyer = parseFloat(c.budget_eur) || 0;
+      if (!loyer) return;
+      const mois = _durationMonths(c.duration);
+      if (!mois) return;
+      // 1 an → 1 mois de loyer ; prorata sinon ; puis ÷2 co-agent
+      const commission = loyer * (Math.min(mois, 12) / 12) * 0.5;
+      totalPotentiel += commission;
+      clientsAvecPotentiel++;
+    });
 
     // Tiles
     const tiles = [
@@ -128,11 +144,12 @@ const CalendarView = {
         warn: overdue.length > 0,
         danger: overdue.length > 0,
       },
-      ...(totalBudget > 0 ? [{
-        n: totalBudget.toLocaleString('fr-FR') + ' €',
-        l: 'commissions',
-        sub: `sur ${pinned.length} client${pinned.length !== 1 ? 's' : ''}`,
+      ...(totalPotentiel > 0 ? [{
+        n: Math.round(totalPotentiel).toLocaleString('fr-FR') + ' €',
+        l: 'potentiel',
+        sub: `${clientsAvecPotentiel} client${clientsAvecPotentiel !== 1 ? 's' : ''} · co-agent 50%`,
         warn: false,
+        accent: true,
       }] : []),
     ];
 
