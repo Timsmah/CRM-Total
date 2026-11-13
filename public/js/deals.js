@@ -52,7 +52,7 @@ const Deals = {
             <div class="mobile-deal-footer">
               <span class="mobile-deal-price">${price}</span>
               <div class="mobile-deal-btns">
-                ${d.client_whatsapp ? `<button class="mobile-deal-btn" onclick="event.stopPropagation();Deals.sendToClient(${d.id})">📤</button>` : ''}
+                ${d.client_whatsapp ? `<button class="mobile-deal-btn" onclick="event.stopPropagation();Deals.sendToClient(${d.id})"><i class=ico-send></i></button>` : ''}
                 ${advBtn}
               </div>
             </div>
@@ -106,7 +106,7 @@ const Deals = {
         <div style="flex-shrink:0">${badge(d.status)}</div>
         <div class="deal-actions">
           <button class="btn btn-secondary btn-sm" onclick="Deals.openEditModal(${d.id})">Modifier</button>
-          <button class="btn btn-wa btn-sm" onclick="Deals.sendToClient(${d.id})">📤 Envoyer</button>
+          <button class="btn btn-wa btn-sm" onclick="Deals.sendToClient(${d.id})"><i class=ico-send></i> Envoyer</button>
           <button class="btn btn-ghost btn-sm" onclick="Deals.remove(${d.id})" title="Supprimer">✕</button>
         </div>
       </div>`;

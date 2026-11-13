@@ -398,13 +398,13 @@ const CalendarView = {
       const phantomId = 'ph_' + Date.now();
       this._phantoms.push({ id: phantomId, name: id, date });
       this._savePhantoms();
-      Toast.show(`📅 ${id} ajouté au calendrier`);
+      Toast.show(`${id} ajouté au calendrier`);
     } else {
       this._pins[id] = date;
       this._savePins();
       api.patch(`/clients/${id}`, { move_in_date: date }).catch(() => {});
       const c = this._clients.find(x => x.id === id);
-      Toast.show(`📅 ${c?.name || 'Client'} ajouté au calendrier`);
+      Toast.show(`${c?.name || 'Client'} ajouté au calendrier`);
     }
     this.render();
   },
@@ -444,7 +444,7 @@ const CalendarView = {
       this._savePins();
       api.patch(`/clients/${numId}`, { move_in_date: date }).catch(() => {});
     }
-    Toast.show('📅 Date mise à jour');
+    Toast.show('Date mise à jour');
     this.render();
   },
 
@@ -515,6 +515,6 @@ const CalendarView = {
     this._savePins();
     api.patch(`/clients/${clientId}`, { move_in_date: date }).catch(() => {});
     const c = this._clients.find(x => x.id === clientId);
-    Toast.show(`📅 ${c?.name || 'Client'} ajouté au calendrier`);
+    Toast.show(`${c?.name || 'Client'} ajouté au calendrier`);
   },
 };

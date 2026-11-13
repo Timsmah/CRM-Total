@@ -215,7 +215,7 @@ const Search = {
 const Router = {
   current: null,
   async navigate(section) {
-    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches, visas: Visas, scraping: Scraping, calendar: CalendarView };
+    const sections = { dashboard: Dashboard, clients: Clients, properties: Properties, contracts: Contracts, deals: Deals, finance: Finance, recherches: Recherches, visas: Visas, calendar: CalendarView };
     if (!sections[section]) section = 'dashboard';
 
     document.querySelectorAll('.nav-item').forEach(el =>
@@ -238,6 +238,11 @@ const Router = {
       console.error(err);
       Toast.show('Loading error', 'error');
     }
+
+    const content = document.getElementById('content');
+    content.classList.remove('page-in');
+    void content.offsetWidth;
+    content.classList.add('page-in');
 
     this.current = section;
     if (window.location.hash.slice(1) !== section)
@@ -365,8 +370,6 @@ const App = {
     // Bouton admin visible seulement pour les admins
     const adminBtn = document.getElementById('admin-users-btn');
     if (adminBtn && this.user.role === 'admin') adminBtn.style.display = 'block';
-    const scrapingNav = document.getElementById('nav-scraping');
-    if (scrapingNav && this.user.role === 'admin') scrapingNav.style.display = '';
 
     // Logout
     document.getElementById('logout-btn').onclick = async () => {
@@ -390,7 +393,7 @@ const App = {
     });
 
     const langBtn = document.getElementById('lang-toggle');
-    if (langBtn) langBtn.textContent = getLang() === 'en' ? '🇫🇷 Français' : '🇬🇧 English';
+    if (langBtn) langBtn.textContent = getLang() === 'en' ? 'Français' : 'English';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
     const hash = window.location.hash.slice(1);
@@ -418,7 +421,7 @@ const App = {
       ${avatarHTML(this.user, 34)}
       <div style="min-width:0;flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.user.name}</div>
-        <div style="font-size:11px;color:var(--text-3)">${this.user.role === 'admin' ? '⚙️ Admin' : '👤 Membre'}</div>
+        <div style="font-size:11px;color:var(--text-3)">${this.user.role === 'admin' ? '<i class=ico-settings></i> Admin' : '<i class=ico-user></i> Membre'}</div>
       </div>
     `;
     const ref = document.getElementById('sidebar-footer-btns') || logoutBtn;
@@ -439,7 +442,7 @@ const App = {
         <div id="profile-avatar-preview">${avatarHTML(this.user, 60)}</div>
         <div>
           <div style="font-size:16px;font-weight:600">${this.user.name}</div>
-          <div style="font-size:12px;color:var(--text-3);margin-top:2px">${this.user.role === 'admin' ? '⚙️ Admin' : '👤 Membre'}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:2px">${this.user.role === 'admin' ? '<i class=ico-settings></i> Admin' : '<i class=ico-user></i> Membre'}</div>
         </div>
       </div>
 
@@ -453,14 +456,14 @@ const App = {
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${presetsHTML}</div>
         ${isNewUser ? `
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text-2);border:1px dashed var(--border);border-radius:8px;padding:6px 12px">
-          📷 Importer une photo
+          <i class=ico-camera></i> Importer une photo
           <input type="file" accept="image/*" style="display:none" onchange="App._uploadAvatar(this)">
         </label>` : ''}
       </div>
 
       ${isNewUser ? `
       <details style="margin-bottom:16px">
-        <summary style="cursor:pointer;font-size:13px;color:var(--text-2);list-style:none;padding:8px 0">🔒 Changer mon mot de passe</summary>
+        <summary style="cursor:pointer;font-size:13px;color:var(--text-2);list-style:none;padding:8px 0"><i class=ico-lock></i> Changer mon mot de passe</summary>
         <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
           <div class="form-row"><label>Mot de passe actuel</label><input type="password" id="prof-pw-cur"></div>
           <div class="form-row"><label>Nouveau mot de passe</label><input type="password" id="prof-pw-new"></div>
@@ -559,12 +562,12 @@ const App = {
 
   _sectionsPickerHTML(selectedSections, pickerId = 'nu') {
     const ALL_SECTIONS = [
-      { key: 'dashboard',  label: '📊 Dashboard'  },
-      { key: 'clients',    label: '👥 Clients'     },
-      { key: 'recherches', label: '🔍 Recherches'  },
-      { key: 'properties', label: '🏠 Biens'       },
-      { key: 'contracts',  label: '📋 Contracts'   },
-      { key: 'visas',      label: '🛂 Visas'       },
+      { key: 'dashboard',  label: '<i class=ico-chart></i> Dashboard'  },
+      { key: 'clients',    label: '<i class=ico-users></i> Clients'     },
+      { key: 'recherches', label: '<i class=ico-search></i> Recherches'  },
+      { key: 'properties', label: '<i class=ico-home></i> Biens'       },
+      { key: 'contracts',  label: '<i class=ico-clipboard></i> Contracts'   },
+      { key: 'visas',      label: '<i class=ico-passport></i> Visas'       },
     ];
     const selected = selectedSections || ['clients', 'properties', 'recherches', 'visas'];
     return `
@@ -596,7 +599,7 @@ const App = {
   async openAdminUsers() {
     let users = [];
     try { users = await api.get('/users'); } catch {}
-    Modal.open('👥 Utilisateurs', `
+    Modal.open('Utilisateurs', `
       <div id="users-list" style="margin-bottom:16px">${this._usersListHTML(users)}</div>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <h4 style="font-size:13px;font-weight:600;margin-bottom:12px">+ Nouveau compte</h4>
@@ -608,7 +611,7 @@ const App = {
           <select id="nu-role"><option value="member">Membre</option><option value="admin">Admin</option></select>
         </div>
         <div class="form-row" style="flex:1"><label>Langue</label>
-          <select id="nu-lang"><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option></select>
+          <select id="nu-lang"><option value="fr">Français</option><option value="en">English</option></select>
         </div>
       </div>
       <div class="form-row"><label>Sections accessibles</label>${this._sectionsPickerHTML(null, 'nu')}</div>
@@ -625,7 +628,7 @@ const App = {
           <div style="font-size:13px;font-weight:500">${u.name}</div>
           <div style="font-size:11px;color:var(--text-3)">${u.email} · ${u.role} · ${u.lang}</div>
         </div>
-        <button onclick="App._editUser('${u.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-2)">✏️ Modifier</button>
+        <button onclick="App._editUser('${u.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-2)"><i class=ico-pencil></i> Modifier</button>
         <button onclick="App._resetPw('${u.id}','${u.name}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-2)">Reset mdp</button>
         ${u.id !== this.user.id ? `<button onclick="App._deleteUser('${u.id}','${u.name}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#DC2626;padding:2px 6px">✕</button>` : ''}
       </div>
@@ -639,7 +642,7 @@ const App = {
     if (!u) return Toast.show('Utilisateur introuvable', 'error');
 
     const currentSections = u.sections || ['clients', 'properties', 'recherches', 'visas'];
-    Modal.open(`✏️ Modifier — ${u.name}`, `
+    Modal.open(`Modifier — ${u.name}`, `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
         ${avatarHTML(u, 40)}
         <div>
@@ -657,8 +660,8 @@ const App = {
         </div>
         <div class="form-row" style="flex:1"><label>Langue</label>
           <select id="eu-lang">
-            <option value="fr" ${u.lang==='fr'?'selected':''}>🇫🇷 Français</option>
-            <option value="en" ${u.lang==='en'?'selected':''}>🇬🇧 English</option>
+            <option value="fr" ${u.lang==='fr'?'selected':''}>Français</option>
+            <option value="en" ${u.lang==='en'?'selected':''}>English</option>
           </select>
         </div>
       </div>
@@ -717,6 +720,34 @@ const App = {
       await api.post(`/users/${id}/reset-password`, { new_password: nw });
       Toast.show(`✓ Mot de passe de ${name} réinitialisé`);
     } catch (err) { Toast.show(err.message, 'error'); }
+  },
+};
+
+const Theme = {
+  current() {
+    return document.documentElement.dataset.theme
+      || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  },
+  toggle() {
+    const next = this.current() === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('crm_theme', next); } catch {}
+  },
+};
+
+// Mode discret : floute les montants (stream, partage d'écran). Mémorisé entre les sessions.
+const Privacy = {
+  on() { return document.documentElement.dataset.private === '1'; },
+  toggle() {
+    const next = !this.on();
+    if (next) document.documentElement.dataset.private = '1';
+    else delete document.documentElement.dataset.private;
+    try { localStorage.setItem('crm_private', next ? '1' : '0'); } catch {}
+    document.querySelectorAll('.priv-btn').forEach(b => { b.title = this.label(); b.setAttribute('aria-pressed', next); });
+  },
+  label() { return this.on() ? 'Afficher les montants' : 'Masquer les montants'; },
+  btn() {
+    return `<button class="fin-ctl priv-btn" onclick="Privacy.toggle()" title="${this.label()}" aria-pressed="${this.on()}"><i class=ico-eye></i><i class=ico-eye-off></i></button>`;
   },
 };
 

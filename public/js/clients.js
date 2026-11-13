@@ -66,21 +66,21 @@ const CARD_COLORS = [
 ];
 
 const ACTION_TAGS = [
-  { key: 'appeler',  emoji: '📞', label: 'À appeler',          desc: 'Premier contact à passer' },
-  { key: 'rappeler', emoji: '🔄', label: 'À rappeler',          desc: 'Relance planifiée' },
-  { key: 'rep',      emoji: '💬', label: 'En attente réponse',  desc: 'Message envoyé, on attend leur réponse' },
-  { key: 'payer',    emoji: '💳', label: 'À faire payer',       desc: 'Frais de recherche non réglés' },
-  { key: 'visite',   emoji: '🏠', label: 'Visite à planifier',  desc: 'Des propriétés à faire visiter' },
-  { key: 'contrat',  emoji: '📝', label: 'Contrat à signer',    desc: 'Prêt à signer, en attente de signature' },
-  { key: 'nego',     emoji: '🤝', label: 'En négociation',      desc: 'Propriété trouvée, on négocie les termes' },
-  { key: 'client',   emoji: '⏳', label: 'En attente client',   desc: 'Action requise de leur côté' },
-  { key: 'stop',     emoji: '🚫', label: 'Ne pas contacter',    desc: 'Pause ou indisponible temporairement' },
-  { key: 'hot',      emoji: '🔥', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
-  { key: 'animals',  emoji: '🐕', label: 'Animaux',             desc: 'Client avec animaux, vérifie la politique' },
-  { key: 'pool',     emoji: '🏊', label: 'Piscine requise',     desc: 'Piscine obligatoire dans les critères' },
-  { key: 'nono_app', emoji: '📲', label: 'Nono à appeler',      desc: 'À transmettre à Nono pour qu\'il appelle' },
-  { key: 'nono',     emoji: '👤', label: 'Nono',                desc: 'À traiter par Nono' },
-  { key: 'tim',      emoji: '👤', label: 'Tim',                 desc: 'À traiter par Tim' },
+  { key: 'appeler',  emoji: '<i class=ico-phone></i>', label: 'À appeler',          desc: 'Premier contact à passer' },
+  { key: 'rappeler', emoji: '<i class=ico-refresh></i>', label: 'À rappeler',          desc: 'Relance planifiée' },
+  { key: 'rep',      emoji: '<i class=ico-message></i>', label: 'En attente réponse',  desc: 'Message envoyé, on attend leur réponse' },
+  { key: 'payer',    emoji: '<i class=ico-card></i>', label: 'À faire payer',       desc: 'Frais de recherche non réglés' },
+  { key: 'visite',   emoji: '<i class=ico-home></i>', label: 'Visite à planifier',  desc: 'Des propriétés à faire visiter' },
+  { key: 'contrat',  emoji: '<i class=ico-note></i>', label: 'Contrat à signer',    desc: 'Prêt à signer, en attente de signature' },
+  { key: 'nego',     emoji: '<i class=ico-handshake></i>', label: 'En négociation',      desc: 'Propriété trouvée, on négocie les termes' },
+  { key: 'client',   emoji: '<i class=ico-hourglass></i>', label: 'En attente client',   desc: 'Action requise de leur côté' },
+  { key: 'stop',     emoji: '<i class=ico-ban></i>', label: 'Ne pas contacter',    desc: 'Pause ou indisponible temporairement' },
+  { key: 'hot',      emoji: '<i class=ico-flame></i>', label: 'Prioritaire',         desc: 'Client chaud, à traiter en urgence' },
+  { key: 'animals',  emoji: '<i class=ico-paw></i>', label: 'Animaux',             desc: 'Client avec animaux, vérifie la politique' },
+  { key: 'pool',     emoji: '<i class=ico-waves></i>', label: 'Piscine requise',     desc: 'Piscine obligatoire dans les critères' },
+  { key: 'nono_app', emoji: '<i class=ico-smartphone></i>', label: 'Nono à appeler',      desc: 'À transmettre à Nono pour qu\'il appelle' },
+  { key: 'nono',     emoji: '<i class=ico-user></i>', label: 'Nono',                desc: 'À traiter par Nono' },
+  { key: 'tim',      emoji: '<i class=ico-user></i>', label: 'Tim',                 desc: 'À traiter par Tim' },
 ];
 
 // ── Scoring client ────────────────────────────────────────────────────────────
@@ -156,10 +156,10 @@ function scoreBreakdownHTML(c) {
       <span style="font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px">Score client</span>
       <span style="font-size:22px;font-weight:800;color:${col}">${r.total.toFixed(1)}<span style="font-size:12px;font-weight:400;color:var(--text-3)">/10</span></span>
     </div>
-    ${row('💰 Budget',  r.budget, '50%')}
-    ${row('📋 Durée',   r.duree,  '35%')}
-    ${row('🗓️ Move-in', r.movein, '10%')}
-    ${row('🎯 Critères',r.clarte,  '5%')}
+    ${row('<i class=ico-wallet></i> Budget',  r.budget, '50%')}
+    ${row('<i class=ico-clipboard></i> Durée',   r.duree,  '35%')}
+    ${row('<i class=ico-calendar></i> Move-in', r.movein, '10%')}
+    ${row('<i class=ico-target></i> Critères',r.clarte,  '5%')}
   </div>`;
 }
 
@@ -167,12 +167,12 @@ const _phn = n => n ? (String(n)[0] === '+' ? String(n) : '+' + String(n)) : '';
 
 function getContactCols() {
   return [
-    { key: 'Nouveau',        label: t('col_nouveau'),      cls: 'col-nouveau',    ghost: false },
-    { key: 'Closing',              label: t('col_closing'),   cls: 'col-closing',  ghost: false },
-    { key: 'En attente signature', label: t('col_attente'),  cls: 'col-attente',  ghost: false },
-    { key: 'en_recherche',         label: t('col_recherche'), cls: 'col-recherche', ghost: true },
-    { key: 'Visite / Offre', label: t('col_visite'),       cls: 'col-visite',     ghost: false },
-    { key: 'Signé',          label: t('col_signe'),         cls: 'col-signed',    ghost: false },
+    { key: 'Nouveau',              label: t('col_nouveau'),   icon: 'sparkle-new',  cls: 'col-nouveau',   ghost: false, color: '#4F6BED' },
+    { key: 'Closing',              label: t('col_closing'),   icon: 'handshake',    cls: 'col-closing',   ghost: false, color: '#C9922A' },
+    { key: 'En attente signature', label: t('col_attente'),   icon: 'hourglass',    cls: 'col-attente',   ghost: false, color: '#9B59B6' },
+    { key: 'en_recherche',         label: t('col_recherche'), icon: 'search',       cls: 'col-recherche', ghost: true,  color: '#0F9F8A' },
+    { key: 'Visite / Offre',       label: t('col_visite'),    icon: 'home',         cls: 'col-visite',    ghost: false, color: '#D9730D' },
+    { key: 'Signé',                label: t('col_signe'),     icon: 'check-circle', cls: 'col-signed',    ghost: false, color: '#00A35A' },
   ];
 }
 
@@ -217,10 +217,13 @@ const Clients = {
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
+    this._animNext = true;
+    if (localStorage.getItem('crm_clients_view') === 'liste') this.viewMode = 'liste';
     api.post('/clients/sync/sheets', {}).catch(() => {}); // fire & forget, ne bloque pas
     await Promise.all([
       this.load(),
       this._suiviGetUsers(),
+      this._loadFeeAvg(),
       api.get('/activities/counts').then(c => { this.actCounts = c || {}; }).catch(() => {}),
     ]);
     this.render();
@@ -261,7 +264,7 @@ const Clients = {
       // Toast discret
       const names = this._newAssignClients.slice(0, 2).map(c => c.name.split(' ')[0]).join(', ');
       const more  = newIds.length > 2 ? ` +${newIds.length - 2}` : '';
-      Toast.show(`👤 ${newIds.length} nouvelle${newIds.length > 1 ? 's' : ''} assignation${newIds.length > 1 ? 's' : ''} : ${names}${more}`, 'info', 5000);
+      Toast.show(`${newIds.length} nouvelle${newIds.length > 1 ? 's' : ''} assignation${newIds.length > 1 ? 's' : ''} : ${names}${more}`, 'info', 5000);
     } else {
       this._newAssignCount = 0;
     }
@@ -306,7 +309,7 @@ const Clients = {
     const send = () => {
       due.forEach(c => {
         const isPast = c.reminder_date < today;
-        const title = isPast ? `⏰ Rappel en retard — ${c.name}` : `🔔 Rappel aujourd'hui — ${c.name}`;
+        const title = isPast ? `Rappel en retard — ${c.name}` : `Rappel aujourd'hui — ${c.name}`;
         const body  = c.reminder_note || 'Pas de note';
         new Notification(title, { body, icon: '/favicon.svg' });
       });
@@ -320,8 +323,8 @@ const Clients = {
 
     // Toast récap dans l'app
     const label = due.length === 1
-      ? `🔔 1 rappel aujourd'hui : ${due[0].name}`
-      : `🔔 ${due.length} rappels en attente`;
+      ? `1 rappel aujourd'hui : ${due[0].name}`
+      : `${due.length} rappels en attente`;
     Toast.show(label, 'info');
   },
 
@@ -334,42 +337,285 @@ const Clients = {
 
   render() {
     if (isMobile()) { this.renderMobileKanban(); return; }
-    const total = this.data.length;
+    const anim = this._animNext; this._animNext = false;
+    const liste = this.viewMode === 'liste';
     document.getElementById('content').innerHTML = `
-      <div class="section-header">
-        <h2>Clients <span style="font-size:14px;font-weight:400;color:var(--text-3);margin-left:4px">${total}</span></h2>
-        <div class="header-actions">
-          <button class="btn btn-ghost" onclick="Clients.openCallPanel()" title="Session d'appel">📞 Session</button>
-          <button class="btn btn-primary" onclick="Clients.openAddModal()">+ Ajouter</button>
-          <button class="btn ${this.selectionMode ? 'btn-secondary' : 'btn-ghost'}" onclick="Clients.toggleSelectionMode()">
-            ${this.selectionMode ? '✕ Annuler' : '☑ Sélectionner'}
+      <div class="cl-root${anim ? '' : ' cl-static'}">
+      <div class="db-head fin-in">
+        <div>
+          <div class="fin-caption db-date">${this.showArchived ? 'Archives' : 'Pipeline'}</div>
+          <h2 class="db-hello">Clients</h2>
+        </div>
+        <div class="header-actions fin-actions">
+          ${Privacy.btn()}
+          <div class="fin-seg-toggle">
+            <button class="${liste ? '' : 'on'}" onclick="Clients._setView('kanban')">Kanban</button>
+            <button class="${liste ? 'on' : ''}" onclick="Clients._setView('liste')">Liste</button>
+          </div>
+          <button class="fin-ctl" onclick="Clients.openCallPanel()" title="Session d'appel"><i class=ico-phone></i>Session</button>
+          <button class="fin-ctl" onclick="Clients.toggleSelectionMode()">
+            ${this.selectionMode ? '✕ Annuler' : '<i class=ico-check-square></i>Sélectionner'}
           </button>
           <div style="position:relative">
-            <button class="btn btn-ghost" onclick="Clients._toggleMoreMenu(event)" title="Plus d'options">···</button>
-            <div id="clients-more-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface,#fff);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:200;min-width:170px;padding:4px">
-              <button class="more-menu-item" onclick="Clients.syncSheets();Clients._closeMoreMenu()">🔄 Sync Sheets</button>
-              <button class="more-menu-item" onclick="Clients.openCallHistory();Clients._closeMoreMenu()">📋 Listes d'appels</button>
+            <button class="fin-ctl cl-more" onclick="Clients._toggleMoreMenu(event)" title="Plus d'options">···</button>
+            <div id="clients-more-menu" class="cl-menu" style="display:none">
+              <button class="more-menu-item" onclick="Clients.syncSheets();Clients._closeMoreMenu()"><i class=ico-refresh></i> Sync Sheets</button>
+              <button class="more-menu-item" onclick="Clients.openCallHistory();Clients._closeMoreMenu()"><i class=ico-clipboard></i> Listes d'appels</button>
               <button class="more-menu-item" onclick="Clients.toggleFocusMode();Clients._closeMoreMenu()">${this.focusMode ? '⊞ Vue complète' : '◉ Vue focus'}</button>
               <div style="height:0.5px;background:var(--border);margin:4px 0"></div>
-              <button class="more-menu-item" onclick="Clients.toggleArchived();Clients._closeMoreMenu()">${this.showArchived ? '👥 Clients actifs' : '🗄 Voir archivés'}</button>
+              <button class="more-menu-item" onclick="Clients.toggleArchived();Clients._closeMoreMenu()">${this.showArchived ? '<i class=ico-users></i> Clients actifs' : '<i class=ico-archive></i> Voir archivés'}</button>
             </div>
           </div>
+          <button class="fin-ctl fin-ctl-primary" onclick="Clients.openAddModal()">${typeof FIN_ICONS !== 'undefined' ? FIN_ICONS.plus : '+ '}Ajouter</button>
         </div>
       </div>
+      ${this._kpisHTML()}
       ${this.filterBarHTML()}
-      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
-        ${getContactCols().map(col => this.columnHTML(col)).join('')}
+      <div id="cl-body">${this._bodyHTML()}</div>
       </div>
       ${this.selectionMode ? `
       <div class="call-sel-bar" id="call-sel-bar" style="${this.selectedClients.size ? '' : 'opacity:0;pointer-events:none'}">
         <span class="call-sel-count" id="call-sel-count">${this.selectedClients.size} sélectionné${this.selectedClients.size > 1 ? 's' : ''}</span>
-        <button class="btn btn-primary btn-sm" onclick="Clients.startCallSession()">📞 Session d'appel</button>
+        <button class="btn btn-primary btn-sm" onclick="Clients.startCallSession()"><i class=ico-phone></i> Session d'appel</button>
         <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'move')">→ Colonne</button>
-        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')">🏷 Tag</button>
-        <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()">🗄 Archiver</button>
+        <button class="btn btn-ghost btn-sm btn-sel-action" onclick="Clients._toggleBulkPopover(this,'tag')"><i class=ico-tag></i> Tag</button>
+        <button class="btn btn-ghost btn-sm" onclick="Clients.bulkArchive()"><i class=ico-archive></i> Archiver</button>
         <div class="sel-divider"></div>
         <button class="btn btn-ghost btn-sm" onclick="Clients.toggleSelectionMode()" title="Annuler (S)">✕</button>
       </div>` : ''}`;
+    if (anim && typeof Finance !== 'undefined') Finance.afterRender();
+  },
+
+  // ── DA Cockpit : helpers ────────────────────────────────────────────────────
+  _colOf(c) {
+    const ecs = this.effectiveContactStatus(c);
+    if (c.status === 'Recherche active' && ecs !== 'Visite / Offre' && ecs !== 'Signé') return 'en_recherche';
+    return ecs;
+  },
+  // Potentiel d'un client = commission + frais de recherche encore à encaisser
+  //  · commission : loyer mensuel × durée/12 (1 an = 1 mois, 6 mois = ½ mois, prorata) × 50 % (co-agent)
+  //  · frais : moyenne réelle des transactions « onboarding » d'au moins 250 € (tarif mini de Tim ;
+  //    les lignes plus petites sont des paiements partiels), 290 € à défaut ; 0 si déjà réglés
+  FEE_DEFAULT: 290,
+  FEE_MIN: 250,
+  _feeAvg: null,
+  async _loadFeeAvg() {
+    try {
+      const tx = await api.get('/finance');
+      const rate = parseFloat(localStorage.getItem('eur_rate') || '37');
+      const eur = tx.filter(t => t.type === 'onboarding')
+        .map(t => Math.round(t.currency === 'EUR' ? Number(t.amount) : Number(t.amount) / rate))
+        .filter(v => v >= this.FEE_MIN);
+      this._feeAvg = eur.length >= 5 ? Math.round(eur.reduce((a, b) => a + b, 0) / eur.length) : null;
+    } catch { this._feeAvg = null; }
+  },
+  _potential(c) {
+    const comm = typeof Dashboard !== 'undefined' ? Dashboard._commission(c) : 0;
+    const fee = c.research_fees_paid ? 0 : (this._feeAvg || this.FEE_DEFAULT);
+    return { comm, fee, total: comm + fee };
+  },
+  _comm(c) { return this._potential(c).total; },
+  _potTitle(c) {
+    const p = this._potential(c);
+    const e = v => `${Math.round(v).toLocaleString('fr-FR')} €`;
+    return `Commission ${p.comm ? e(p.comm) : 'inconnue (budget ou durée manquant)'} + frais de recherche ${p.fee ? e(p.fee) : 'déjà réglés'}`;
+  },
+  _leadDays(c) {
+    const d = c.form_submitted_at || c.created_at;
+    return d ? Math.floor((Date.now() - new Date(d)) / 86400000) : null;
+  },
+  _ago(c) {
+    const n = this._leadDays(c);
+    if (n === null) return '';
+    if (n <= 0) return "aujourd'hui";
+    if (n < 60) return `il y a ${n} j`;
+    return `il y a ${Math.round(n / 30)} mois`;
+  },
+  _segs(pct, n, color, delay) {
+    const filled = Math.round(Math.min(100, Math.max(0, pct || 0)) / 100 * n);
+    let h = '';
+    for (let i = 0; i < n; i++) {
+      h += i < filled
+        ? `<span class="fin-seg${delay != null ? ' on' : ''}" style="background:${color}${delay != null ? `;--d:${delay + i * 16}ms` : ''}"></span>`
+        : '<span class="fin-seg"></span>';
+    }
+    return `<span class="fin-segbar">${h}</span>`;
+  },
+  _urg(c) {
+    const days = this.urgencyDays(c.move_in_date);
+    if (days === null || isNaN(days)) return null;
+    const done = days < 0 && this._colOf(c) === 'Signé';   // client signé et installé : plus d'urgence
+    const color = done ? 'var(--text-3)' : days <= 14 ? 'var(--red)' : days <= 30 ? '#D97706' : days <= 60 ? '#CA8A04' : 'var(--text-3)';
+    const d = new Date(c.move_in_date);
+    const opts = { day: 'numeric', month: 'short' };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = '2-digit';
+    return {
+      days, color,
+      pct: done ? 0 : days < 0 ? 100 : Math.max(8, 100 - days / 90 * 100),
+      label: done ? 'Installé' : days < 0 ? `Retard ${-days} j` : days === 0 ? "Aujourd'hui" : `J-${days}`,
+      date: d.toLocaleDateString('fr-FR', opts).replace('.', ''),
+    };
+  },
+  _agentAv(c, size = 18) {
+    const name = c.suivi_assigned_to;
+    if (!name) return '';
+    const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || (this._suiviUsers || []).find(u => u.name === name) || null;
+    if (user && typeof avatarHTML === 'function') {
+      return `<div title="${name}" style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(user, size)}</div>`;
+    }
+    const col = this._suiviUserColor?.(name) || { bg: '#E2E8F0', color: '#64748B' };
+    return `<div title="${name}" style="width:${size}px;height:${size}px;border-radius:50%;background:${col.bg};color:${col.color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size * .45)}px;font-weight:700;flex-shrink:0">${name[0]?.toUpperCase() || '?'}</div>`;
+  },
+  _scoreHTML(c) {
+    const r = clientScore(c);
+    if (!r) return '';
+    return `<span class="cl-score" style="--c:${scoreColor(r.total)}" title="Score client">${r.total.toFixed(1).replace('.', ',')}</span>`;
+  },
+
+  _kpisHTML() {
+    const act = this.data.filter(c => !c.archived);
+    const week = n => act.filter(c => { const d = this._leadDays(c); return d !== null && d >= n * 7 && d < (n + 1) * 7; }).length;
+    const spark = Array.from({ length: 12 }, (_, i) => week(11 - i));
+    const new7 = week(0);
+    const new30 = act.filter(c => { const d = this._leadDays(c); return d !== null && d < 30; }).length;
+    const open = act.filter(c => c.suivi_status !== 'signe' && c.move_in_date);
+    const dOf = c => this.urgencyDays(c.move_in_date);
+    const soon = open.filter(c => dOf(c) >= 0 && dOf(c) <= 30);
+    const soon14 = soon.filter(c => dOf(c) <= 14).length;
+    const late = open.filter(c => dOf(c) < 0 && dOf(c) >= -30).length;
+    const scores = act.map(c => clientScore(c)).filter(Boolean).map(r => r.total);
+    const avg = scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
+    const top = scores.filter(v => v >= 8).length;
+    const paid = act.filter(c => c.research_fees_paid).length;
+    const ic = n => `<i class=ico-${n}></i>`;
+    const count = v => `<span class="fin-count" data-v="${v}">${v}</span>`;
+    const kpi = (i, icon, label, tag, value, caption, extra = '', attrs = '') => `
+      <article class="fin-kpi fin-in" style="--i:${i}" ${attrs}>
+        <div class="fin-kpi-top"><span class="fin-caption">${icon}${label}</span>${tag}</div>
+        <div class="fin-kpi-row"><span class="fin-kpi-num">${value}</span>${extra}</div>
+        <span class="fin-caption fin-subtle">${caption}</span>
+      </article>`;
+    const spk = typeof Finance !== 'undefined' ? Finance._spark(spark) : '';
+    return `<div class="fin-kpis">
+      ${kpi(1, ic('users'), this.showArchived ? 'Clients archivés' : 'Clients actifs',
+        new7 ? `<span class="fin-tag fin-tag-up">+${new7} cette semaine</span>` : '',
+        count(act.length), `${new30} nouveau${new30 > 1 ? 'x' : ''} lead${new30 > 1 ? 's' : ''} sur 30 jours`, spk)}
+      ${kpi(2, ic('calendar'), 'Arrivées sous 30 j',
+        late ? `<span class="fin-tag fin-tag-down">${late} en retard</span>` : '',
+        count(soon.length), `dont ${soon14} sous 14 jours`)}
+      ${kpi(3, ic('star'), 'Score moyen',
+        `<span class="fin-tag fin-tag-neutral">${top} à 8 et plus</span>`,
+        `${avg.toFixed(1).replace('.', ',')}<span class="fin-cur">/10</span>`,
+        `sur ${scores.length} clients avec budget`,
+        `<span class="cl-kpi-bar">${this._segs(avg * 10, 10, 'var(--fin-trend)', 300)}</span>`)}
+      ${kpi(4, ic('wallet'), 'Frais de recherche réglés',
+        `<span class="fin-tag fin-tag-neutral">${act.length ? Math.round(paid / act.length * 100) : 0} %</span>`,
+        count(paid), `sur ${act.length} clients`,
+        `<span class="cl-kpi-bar">${this._segs(act.length ? paid / act.length * 100 : 0, 10, 'var(--accent)', 360)}</span>`)}
+    </div>`;
+  },
+
+  _bodyHTML() {
+    if (this.viewMode === 'liste') return this._listHTML();
+    return `
+      <div class="kanban-board ${this.focusedCol ? 'has-focus' : ''} ${this.hiddenCols.size ? 'has-collapsed' : ''} ${this.selectionMode ? 'selection-mode' : ''}">
+        ${getContactCols().map(col => this.columnHTML(col)).join('')}
+      </div>`;
+  },
+
+  _renderBody() {
+    const body = document.getElementById('cl-body');
+    if (!body) { this.render(); return; }
+    document.querySelector('.cl-root')?.classList.add('cl-static');
+    body.innerHTML = this._bodyHTML();
+    const meta = document.getElementById('cl-filter-meta');
+    if (meta) meta.innerHTML = this._filterMetaHTML();
+  },
+
+  _filterMetaHTML() {
+    const f = this.clientFilters;
+    const active = f.name || f.urgency || f.scoreMin || f.agent;
+    return `${active ? `<button class="fin-ctl fin-ctl-ghost" onclick="Clients.clearClientFilters()">✕ Effacer</button>` : ''}
+      <span class="cl-filter-count">${active ? `<strong>${this.countFiltered()}</strong> / ` : ''}${this.data.length} clients</span>`;
+  },
+
+  setSort(v) {
+    const [k, d] = v.split(':');
+    this.sortKey = k; this.sortDir = d;
+    this._renderBody();
+  },
+
+  listSort: { key: 'arrivee', dir: 'asc' },
+  setListSort(key) {
+    const s = this.listSort;
+    this.listSort = { key, dir: s.key === key ? (s.dir === 'asc' ? 'desc' : 'asc') : (key === 'name' || key === 'arrivee' ? 'asc' : 'desc') };
+    this._renderBody();
+  },
+
+  _listHTML() {
+    const cols = getContactCols();
+    const eur = c => Number(c.budget_eur) || 0;
+    const val = {
+      name:    c => (c.name || '').toLowerCase(),
+      etape:   c => cols.findIndex(k => k.key === this._colOf(c)),
+      budget:  c => Number(c.budget_max) || 0,
+      // à venir d'abord (les plus proches en tête), puis les dates passées
+      arrivee: c => { const d = this.urgencyDays(c.move_in_date); return d === null || isNaN(d) ? null : (d >= 0 ? d : 100000 - d); },
+      score:   c => { const r = clientScore(c); return r ? r.total : null; },
+      comm:    c => this._comm(c) || null,
+      lead:    c => this._leadDays(c),
+    };
+    const { key, dir } = this.listSort;
+    const get = val[key] || val.arrivee;
+    const rows = this.data.filter(c => this._matchClientFilters(c)).sort((a, b) => {
+      const x = get(a), y = get(b);
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;           // valeurs vides toujours en bas
+      if (y === null) return -1;
+      const r = typeof x === 'string' ? x.localeCompare(y) : x - y;
+      return dir === 'asc' ? r : -r;
+    });
+    const th = (k, label, cls = '') => `<th class="${cls}${key === k ? ' sorted' : ''}" onclick="Clients.setListSort('${k}')">${label}<span class="cl-sort">${key === k ? (dir === 'asc' ? '↑' : '↓') : ''}</span></th>`;
+    const cc = c => { const k = typeof Dashboard !== 'undefined' ? Dashboard._country(c.whatsapp) : null; return k && k !== 'XX' ? `<span class="db-cc">${k}</span>` : '<span class="db-cc cl-cc-none">–</span>'; };
+
+    const body = rows.map(c => {
+      const col = cols.find(k => k.key === this._colOf(c));
+      const u = this._urg(c);
+      const r = clientScore(c);
+      const comm = this._comm(c);
+      const phone = (c.whatsapp || '').replace(/\D/g, '');
+      const sel = this.selectedClients.has(c.id);
+      return `<tr class="${sel ? 'sel' : ''}" data-cid="${c.id}"
+          onclick="Clients._rowClick(${c.id}, event)" oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
+        <td><div class="cl-td-name">${this.selectionMode ? `<span class="db-task-box"><i class=ico-check-circle></i></span>` : cc(c)}<span class="cl-name">${c.name || '—'}</span></div></td>
+        <td>${col ? `<span class="db-pill" style="--c:${col.color}">${col.label}</span>` : '<span class="fin-subtle">—</span>'}</td>
+        <td class="num">${c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : '<span class="fin-subtle">—</span>'}<span class="cl-sub">${[eur(c) ? `${eur(c).toLocaleString('fr-FR')} €` : '', c.duration ? tr(c.duration) : ''].filter(Boolean).join(' · ')}</span></td>
+        <td>${u ? `<div class="cl-arr"><span>${u.date}</span><span class="cl-arr-d" style="color:${u.color}">${u.label}</span></div>${this._segs(u.pct, 12, u.color)}` : '<span class="fin-subtle">—</span>'}</td>
+        <td>${r ? `<div class="cl-score-cell">${this._segs(r.total * 10, 10, scoreColor(r.total))}<span>${r.total.toFixed(1).replace('.', ',')}</span></div>` : '<span class="fin-subtle">—</span>'}</td>
+        <td class="num cl-td-pot" title="${this._potTitle(c)}">${comm ? `${Math.round(comm).toLocaleString('fr-FR')} €` : '<span class="fin-subtle">—</span>'}</td>
+        <td><div class="cl-agent">${this._agentAv(c, 20)}<span>${c.suivi_assigned_to || '<span class="fin-subtle">—</span>'}</span></div></td>
+        <td class="fin-subtle cl-nowrap">${this._ago(c)}</td>
+        <td class="cl-td-act" onclick="event.stopPropagation()">
+          ${phone ? `<a class="fin-icon-btn" href="https://wa.me/${phone}" target="_blank" rel="noopener" title="WhatsApp"><i class=ico-message></i></a>` : ''}
+          <button class="fin-icon-btn" onclick="Clients.showCardMenu(${c.id}, event)" title="Actions">···</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="fin-panel cl-listpanel${this.selectionMode ? ' selection-mode' : ''}">
+      <div class="cl-table-wrap"><table class="cl-table">
+        <thead><tr>
+          ${th('name', 'Client')}${th('etape', 'Étape')}${th('budget', 'Budget', 'num')}${th('arrivee', 'Arrivée')}
+${th('score', 'Score')}${th('comm', 'Potentiel', 'num')}<th>Agent</th>${th('lead', 'Lead')}<th></th>
+        </tr></thead>
+        <tbody>${body || `<tr><td colspan="9" class="db-empty">Aucun client ne correspond aux filtres</td></tr>`}</tbody>
+      </table></div>
+    </div>`;
+  },
+
+  _rowClick(id, e) {
+    if (this.selectionMode) { this.toggleClientSelection(id); return; }
+    this.openDetailModal(id);
   },
 
   _mobileFilter: 'all',
@@ -401,11 +647,11 @@ const Clients = {
       if (!group.length) return '';
       const rows = group.map(c => {
         const budget  = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : (c.budget_eur ? Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : '');
-        const arrival = c.move_in_date ? new Date(c.move_in_date + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : '';
+        const arrival = this._urg(c)?.date || '';
         const scoreVal = clientScore(c);
-        const score   = scoreVal ? `⭐ ${scoreVal}` : '';
+        const score   = scoreVal ? `<i class=ico-star></i> ${scoreVal}` : '';
         const sub1    = [budget, c.nationality].filter(Boolean).join(' · ');
-        const sub2    = [arrival ? '📅 ' + arrival : '', score].filter(Boolean).join('  ');
+        const sub2    = [arrival ? '<i class=ico-calendar></i> ' + arrival : '', score].filter(Boolean).join('  ');
         return `<div class="mobile-client-row" onclick="Clients.openDetailModal(${c.id})" data-id="${c.id}">
           ${avatarEl(c)}
           <div class="mobile-client-info">
@@ -442,9 +688,9 @@ const Clients = {
         if (!c) return;
         const phone = (c.whatsapp || c.phone || '').replace(/\D/g,'');
         ActionSheet.open(c.name, [
-          ...(phone ? [{ icon:'💬', label:'WhatsApp', fn: `()=>window.open('https://wa.me/${phone}','_blank')` }] : []),
-          { icon:'✏️', label:'Modifier', fn: `()=>Clients.openDetailModal(${id})` },
-          { icon:'🗄', label: 'Archiver', fn: `()=>Clients.archiveClient(${id})` },
+          ...(phone ? [{ icon:'<i class=ico-message></i>', label:'WhatsApp', fn: `()=>window.open('https://wa.me/${phone}','_blank')` }] : []),
+          { icon:'<i class=ico-pencil></i>', label:'Modifier', fn: `()=>Clients.openDetailModal(${id})` },
+          { icon:'<i class=ico-archive></i>', label: 'Archiver', fn: `()=>Clients.archiveClient(${id})` },
         ]);
       });
     });
@@ -476,9 +722,9 @@ const Clients = {
 
     const cardsHTML = cards.length ? cards.map(c => {
       const budget  = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : (c.budget_eur ? Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : '');
-      const arrival = c.move_in_date ? new Date(c.move_in_date + 'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+      const arrival = this._urg(c)?.date || '';
       const scoreVal = clientScore(c);
-      const score   = scoreVal ? `⭐ ${scoreVal.total.toFixed(1)}` : '';
+      const score   = scoreVal ? `<i class=ico-star></i> ${scoreVal.total.toFixed(1)}` : '';
       const phone   = (c.whatsapp || '').replace(/\D/g,'');
       const leadDate = (c.form_submitted_at || c.created_at)
         ? new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})
@@ -500,7 +746,7 @@ const Clients = {
         </div>` : ''}
         ${leadDate ? `<div class="mkc-lead-date">Lead · ${leadDate}</div>` : ''}
         <div class="mkc-actions">
-          ${phone ? `<button class="mkc-btn" onclick="event.stopPropagation();window.open('https://wa.me/${phone}','_blank')">💬 WhatsApp</button>` : ''}
+          ${phone ? `<button class="mkc-btn" onclick="event.stopPropagation();window.open('https://wa.me/${phone}','_blank')"><i class=ico-message></i> WhatsApp</button>` : ''}
           <button class="mkc-btn mkc-btn-primary" onclick="Clients.openDetailModal(${c.id})">↗ Fiche</button>
         </div>
       </div>`;
@@ -568,17 +814,24 @@ const Clients = {
     const active = f.name || f.urgency || f.scoreMin || f.agent;
     const filtered = active ? this.countFiltered() : this.data.length;
     const users = this._suiviUsers || (typeof App !== 'undefined' && App._usersCache) || [];
+    const sortV = `${this.sortKey}:${this.sortDir}`;
     return `
-      <div class="filter-bar">
-        <input class="filter-search" type="text" placeholder="🔍 Rechercher un client…"
+      <div class="filter-bar cl-filters fin-in" style="--i:5">
+        <input class="filter-search" type="text" placeholder="Rechercher un client…"
           value="${f.name || ''}"
           oninput="Clients.setClientFilter('name', this.value)">
+        ${this.viewMode === 'liste' ? '' : `<select class="filter-select" onchange="Clients.setSort(this.value)" title="Tri des colonnes">
+          <option value="date:desc"  ${sortV === 'date:desc' ? 'selected' : ''}>Plus récents</option>
+          <option value="date:asc"   ${sortV === 'date:asc' ? 'selected' : ''}>Plus anciens</option>
+          <option value="score:desc" ${sortV === 'score:desc' ? 'selected' : ''}>Meilleur score</option>
+          <option value="score:asc"  ${sortV === 'score:asc' ? 'selected' : ''}>Score le plus bas</option>
+        </select>`}
         <select class="filter-select" onchange="Clients.setClientFilter('urgency',this.value)">
           <option value="">Toutes urgences</option>
-          <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>🔴 Arrive &lt; 14j</option>
-          <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>🟠 Arrive &lt; 30j</option>
-          <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>🟡 Arrive &lt; 60j</option>
-          <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>🔵 Arrive &gt; 60j</option>
+          <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>Arrive &lt; 14j</option>
+          <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>Arrive &lt; 30j</option>
+          <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>Arrive &lt; 60j</option>
+          <option value="urgent-future" ${f.urgency==='urgent-future'?'selected':''}>Arrive &gt; 60j</option>
         </select>
         <select class="filter-select" onchange="Clients.setClientFilter('scoreMin',this.value)">
           <option value="">Tous scores</option>
@@ -587,14 +840,11 @@ const Clients = {
           <option value="8" ${f.scoreMin==='8'?'selected':''}>Score ≥ 8</option>
         </select>
         <select class="filter-select" onchange="Clients.setClientFilter('agent',this.value)">
-          <option value="">👤 Tous agents</option>
+          <option value="">Tous agents</option>
           ${users.map(u => `<option value="${u.name}" ${f.agent===u.name?'selected':''}>${u.name}</option>`).join('')}
           <option value="__none__" ${f.agent==='__none__'?'selected':''}>— Non assigné</option>
         </select>
-        ${active ? `<button class="btn btn-ghost btn-sm" onclick="Clients.clearClientFilters()" style="flex-shrink:0">✕ Effacer</button>` : ''}
-        <span style="margin-left:auto;font-size:12px;color:var(--text-3);flex-shrink:0">
-          ${active ? `<strong style="color:var(--accent)">${filtered}</strong> / ` : ''}${this.data.length} clients
-        </span>
+        <span id="cl-filter-meta" class="cl-filter-meta">${this._filterMetaHTML()}</span>
       </div>`;
   },
 
@@ -623,8 +873,16 @@ const Clients = {
     return true;
   },
 
-  setClientFilter(key, val) {
+  setClientFilter(key, val, full) {
     this.clientFilters[key] = val;
+    if (!full && document.getElementById('cl-body')) {
+      if (key === 'agent') {
+        const me = (typeof App !== 'undefined' && App.user?.name) || null;
+        if (me && val === me) this._markAssignmentsSeen();
+      }
+      this._renderBody();
+      return;
+    }
     // Quand on filtre par son propre nom → marquer les assignations comme vues
     if (key === 'agent' && val && val !== '__none__') {
       const me = (typeof App !== 'undefined' && App.user?.name) || null;
@@ -658,7 +916,7 @@ const Clients = {
   async openCallHistory() {
     const lists = await api.get('/call-lists').catch(() => []);
     if (!lists.length) {
-      Modal.open('📋 Listes d\'appels', `<p style="color:var(--text-2);padding:16px 0">Aucune liste sauvegardée.</p><div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
+      Modal.open('Listes d\'appels', `<p style="color:var(--text-2);padding:16px 0">Aucune liste sauvegardée.</p><div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
       return;
     }
     const rows = lists.map(l => {
@@ -673,7 +931,7 @@ const Clients = {
           <button class="cl-hist-del" onclick="Clients._deleteCallList(${l.id},this)" title="Supprimer">✕</button>
         </div>`;
     }).join('');
-    Modal.open(`📋 Listes d'appels (${lists.length})`, `
+    Modal.open(`Listes d'appels (${lists.length})`, `
       <div class="cl-hist-list">${rows}</div>
       <div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
     Clients._cachedLists = lists;
@@ -696,8 +954,8 @@ const Clients = {
       const daysNum = this.urgencyDays(c.move_in_date);
       const dateBadge = c.move_in_date
         ? (daysNum < 0
-          ? `<span class="cl-date urgent-overdue">⚠️ En retard · ${Math.abs(daysNum)}j</span>`
-          : `<span class="cl-date ${urgency}">📅 ${formatDate(c.move_in_date)}</span>`)
+          ? `<span class="cl-date urgent-overdue"><i class=ico-alert></i> En retard · ${Math.abs(daysNum)}j</span>`
+          : `<span class="cl-date ${urgency}"><i class=ico-calendar></i> ${formatDate(c.move_in_date)}</span>`)
         : '';
       const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
       return `
@@ -706,10 +964,10 @@ const Clients = {
           <div class="cl-body">
             <div class="cl-name">${c.name}</div>
             <div class="cl-meta">
-              ${c.whatsapp ? `<button class="cl-phone" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))">📱 ${_phn(c.whatsapp)}</button>` : '<span class="cl-no-phone">Pas de numéro</span>'}
-              ${budget ? `<span>💰 ${budget}</span>` : ''}
-              ${c.zones ? `<span>📍 ${c.zones}</span>` : ''}
-              ${c.duration ? `<span>⏱ ${tr(c.duration)}</span>` : ''}
+              ${c.whatsapp ? `<button class="cl-phone" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié ✓','success'))"><i class=ico-smartphone></i> ${_phn(c.whatsapp)}</button>` : '<span class="cl-no-phone">Pas de numéro</span>'}
+              ${budget ? `<span><i class=ico-wallet></i> ${budget}</span>` : ''}
+              ${c.zones ? `<span><i class=ico-pin></i> ${c.zones}</span>` : ''}
+              ${c.duration ? `<span><i class=ico-clock></i> ${tr(c.duration)}</span>` : ''}
               ${dateBadge}
             </div>
           </div>
@@ -720,7 +978,7 @@ const Clients = {
         </div>`;
     }).join('');
 
-    Clients._callListText = `📋 ${date}\n\n` + clients.map((c, i) => {
+    Clients._callListText = `${date}\n\n` + clients.map((c, i) => {
       const parts = [c.name];
       if (c.whatsapp) parts.push(c.whatsapp);
       if (c.budget_max) parts.push(`${Number(c.budget_max).toLocaleString('fr-FR')} ฿`);
@@ -729,10 +987,10 @@ const Clients = {
       return `${i + 1}. ${parts.join(' · ')}`;
     }).join('\n');
 
-    Modal.open(`📋 ${date} — ${clients.length} client${clients.length > 1 ? 's' : ''}`, `
+    Modal.open(`${date} — ${clients.length} client${clients.length > 1 ? 's' : ''}`, `
       <div class="cl-header">
         <span class="cl-date-label">${date}</span>
-        <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(Clients._callListText).then(()=>Toast.show('Copié ✓','success'))">📋 Copier tout</button>
+        <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(Clients._callListText).then(()=>Toast.show('Copié ✓','success'))"><i class=ico-clipboard></i> Copier tout</button>
       </div>
       <div class="cl-list">${listHTML}</div>
       <div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">Fermer</button></div>`);
@@ -752,6 +1010,8 @@ const Clients = {
     }
     const card = document.querySelector(`.kanban-card[data-cid="${id}"]`);
     if (card) card.classList.toggle('card-selected', this.selectedClients.has(id));
+    const row = document.querySelector(`.cl-table tr[data-cid="${id}"]`);
+    if (row) row.classList.toggle('sel', this.selectedClients.has(id));
     const count = this.selectedClients.size;
     const bar = document.getElementById('call-sel-bar');
     if (bar) {
@@ -809,11 +1069,11 @@ const Clients = {
 
     const rows = clients.map(c => {
       const r = clientScore(c);
-      const score  = r ? `⭐ ${r.total.toFixed(1)}` : '';
+      const score  = r ? `<i class=ico-star></i> ${r.total.toFixed(1)}` : '';
       const budget = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : '';
       const daysNum = this.urgencyDays(c.move_in_date);
       const dateStr = c.move_in_date
-        ? (daysNum < 0 ? `⚠️ J+${Math.abs(daysNum)}` : `📅 ${new Date(c.move_in_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`)
+        ? (daysNum < 0 ? `<i class=ico-alert></i> J+${Math.abs(daysNum)}` : `<i class=ico-calendar></i> ${new Date(c.move_in_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`)
         : '';
       const sel = selIds.has(c.id);
       return `<div class="cp-row${sel ? ' selected' : ''}" onclick="Clients._csPanelToggle(${c.id})" data-id="${c.id}">
@@ -831,7 +1091,7 @@ const Clients = {
 
     panel.innerHTML = `
       <div class="cp-header">
-        <span class="cp-title">📞 Session d'appel</span>
+        <span class="cp-title"><i class=ico-phone></i> Session d'appel</span>
         <button class="cp-close" onclick="Clients._csClose()">✕</button>
       </div>
       <div class="cp-body-intro">
@@ -908,7 +1168,7 @@ const Clients = {
     const budget  = c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ` · ${Number(c.budget_eur).toLocaleString('fr-FR')} €` : ''}` : null;
     const daysNum = this.urgencyDays(c.move_in_date);
     const dateLine = c.move_in_date
-      ? (daysNum < 0 ? `⚠️ En retard · ${Math.abs(daysNum)}j` : `📅 Arrivée ${formatDate(c.move_in_date)}`)
+      ? (daysNum < 0 ? `<i class=ico-alert></i> En retard · ${Math.abs(daysNum)}j` : `<i class=ico-calendar></i> Arrivée ${formatDate(c.move_in_date)}`)
       : null;
 
     // Mini-queue: show prev (done) + current + next 2
@@ -918,7 +1178,7 @@ const Clients = {
       return `<div class="cp-mq-item ${cls}">
         <div class="cp-mq-dot"></div>
         <span class="cp-mq-name">${qc.name.split(' ')[0]}</span>
-        ${absIdx < idx ? (this._cs.results[absIdx] ? `<span style="font-size:10px;margin-left:auto">${this._cs.results[absIdx].type === 'appel_ok' ? '✅' : this._cs.results[absIdx].type === 'pas_reponse' ? '📵' : this._cs.results[absIdx].type === 'rappeler' ? '🔄' : '⏭'}</span>` : '') : ''}
+        ${absIdx < idx ? (this._cs.results[absIdx] ? `<span style="font-size:10px;margin-left:auto">${this._cs.results[absIdx].type === 'appel_ok' ? '<i class=ico-check-circle></i>' : this._cs.results[absIdx].type === 'pas_reponse' ? '<i class=ico-phone-off></i>' : this._cs.results[absIdx].type === 'rappeler' ? '<i class=ico-refresh></i>' : '<i class=ico-skip></i>'}</span>` : '') : ''}
       </div>`;
     }).join('');
 
@@ -926,7 +1186,7 @@ const Clients = {
 
     panel.innerHTML = `
       <div class="cp-header">
-        <span class="cp-title">📞 Session d'appel</span>
+        <span class="cp-title"><i class=ico-phone></i> Session d'appel</span>
         <span class="cp-prog">${idx + 1} / ${total}</span>
         <button class="cp-close" onclick="Clients._csClose()">✕</button>
       </div>
@@ -937,13 +1197,13 @@ const Clients = {
       <div class="cp-call-card">
         <div class="cp-call-n">${c.name}</div>
         <div class="cp-call-meta">
-          ${budget ? `<div class="cp-call-line">💰 ${budget}</div>` : ''}
+          ${budget ? `<div class="cp-call-line"><i class=ico-wallet></i> ${budget}</div>` : ''}
           ${dateLine ? `<div class="cp-call-line" style="color:${daysNum < 0 ? '#dc2626' : daysNum < 14 ? '#d97706' : 'var(--text-2)'}">${dateLine}</div>` : ''}
-          ${c.zones ? `<div class="cp-call-line">📍 ${c.zones}</div>` : ''}
+          ${c.zones ? `<div class="cp-call-line"><i class=ico-pin></i> ${c.zones}</div>` : ''}
         </div>
         ${c.whatsapp ? `
           <div class="cp-phone-row">
-            <span class="cp-phone">📱 ${_phn(c.whatsapp)}</span>
+            <span class="cp-phone"><i class=ico-smartphone></i> ${_phn(c.whatsapp)}</span>
             <button class="cp-copy-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Numéro copié ✓','success'))">Copier</button>
             <button class="cp-wa-btn" onclick="window.open('https://wa.me/${(c.whatsapp||'').replace(/\D/g,'')}','_blank')">WA</button>
           </div>` : `<p style="font-size:12.5px;color:var(--text-3)">Pas de numéro WhatsApp</p>`}
@@ -951,9 +1211,9 @@ const Clients = {
 
       <div class="cp-outcomes">
         <div class="cp-out-lbl">Résultat</div>
-        <button class="cp-out-btn${picked==='appel_ok'?' picked-green':''}"    onclick="Clients._csPickOutcome('appel_ok')">✅ Appelé</button>
-        <button class="cp-out-btn${picked==='pas_reponse'?' picked-blue':''}" onclick="Clients._csPickOutcome('pas_reponse')">📵 Pas de réponse</button>
-        <button class="cp-out-btn${picked==='rappeler'?' picked-amber':''}"   onclick="Clients._csPickOutcome('rappeler')">🔄 À rappeler</button>
+        <button class="cp-out-btn${picked==='appel_ok'?' picked-green':''}"    onclick="Clients._csPickOutcome('appel_ok')"><i class=ico-check-circle></i> Appelé</button>
+        <button class="cp-out-btn${picked==='pas_reponse'?' picked-blue':''}" onclick="Clients._csPickOutcome('pas_reponse')"><i class=ico-phone-off></i> Pas de réponse</button>
+        <button class="cp-out-btn${picked==='rappeler'?' picked-amber':''}"   onclick="Clients._csPickOutcome('rappeler')"><i class=ico-refresh></i> À rappeler</button>
       </div>
 
       <div class="cp-body-call">
@@ -967,7 +1227,7 @@ const Clients = {
         <button class="cp-next-btn" onclick="Clients._csLogAndNext()" ${!picked ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}>
           ${idx + 1 < total ? 'Suivant →' : 'Terminer'}
         </button>
-        <button class="cp-skip-btn" onclick="Clients._csSkip()">⏭ Skip</button>
+        <button class="cp-skip-btn" onclick="Clients._csSkip()"><i class=ico-skip></i> Skip</button>
       </div>`;
   },
 
@@ -984,7 +1244,7 @@ const Clients = {
     const c = clients[idx];
     if (!c) return;
     const notes = document.getElementById('cs-notes')?.value.trim() || '';
-    const typeLabel = { appel_ok: 'Appel passé ✅', pas_reponse: 'Pas de réponse 📵', rappeler: 'À rappeler 🔄' }[type] || type;
+    const typeLabel = { appel_ok: 'Appel passé ', pas_reponse: 'Pas de réponse ', rappeler: 'À rappeler ' }[type] || type;
     const content = [typeLabel, notes].filter(Boolean).join(' — ');
     const author  = (typeof App !== 'undefined' && App.user?.name) || 'Tim';
 
@@ -1022,22 +1282,22 @@ const Clients = {
 
     const rows = results.map(r => `
       <div class="cp-summ-row">
-        <span class="cp-summ-icon">${r.type==='appel_ok'?'✅':r.type==='pas_reponse'?'📵':r.type==='rappeler'?'🔄':'⏭'}</span>
+        <span class="cp-summ-icon">${r.type==='appel_ok'?'<i class=ico-check-circle></i>':r.type==='pas_reponse'?'<i class=ico-phone-off></i>':r.type==='rappeler'?'<i class=ico-refresh></i>':'<i class=ico-skip></i>'}</span>
         <span class="cp-summ-name">${r.name}</span>
         ${r.note ? `<span class="cp-summ-note">${r.note}</span>` : ''}
       </div>`).join('');
 
     panel.innerHTML = `
       <div class="cp-header">
-        <span class="cp-title">📞 Session terminée</span>
+        <span class="cp-title"><i class=ico-phone></i> Session terminée</span>
         <button class="cp-close" onclick="Clients._csClose()">✕</button>
       </div>
       <div class="cp-summ-body">
-        <div class="cp-summ-emoji">🎉</div>
+        <div class="cp-summ-emoji"><i class=ico-sparkles></i></div>
         <div class="cp-summ-h">Session terminée !</div>
         <div class="cp-summ-sub">${clients.length} client${clients.length !== 1 ? 's' : ''} traités</div>
         <div class="cp-summ-stats">
-          <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#1D9E75">${ok}</span><span class="cp-ss-l">Appelés ✅</span></div>
+          <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#1D9E75">${ok}</span><span class="cp-ss-l">Appelés <i class=ico-check-circle></i></span></div>
           <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#3B82F6">${nr}</span><span class="cp-ss-l">Pas de réponse</span></div>
           <div class="cp-summ-stat"><span class="cp-ss-n" style="color:#d97706">${cb}</span><span class="cp-ss-l">À rappeler</span></div>
           <div class="cp-summ-stat"><span class="cp-ss-n" style="color:var(--text-3)">${skip}</span><span class="cp-ss-l">Skippés</span></div>
@@ -1056,7 +1316,7 @@ const Clients = {
     this.data = this.data.filter(c => !this.selectedClients.has(c.id));
     ids.forEach(id => { const el = document.querySelector(`.kanban-card[data-cid="${id}"]`); if (el) el.remove(); });
     const n = ids.length;
-    Toast.show(`🗄 ${n} client${n > 1 ? 's' : ''} archivé${n > 1 ? 's' : ''}`);
+    Toast.show(`${n} client${n > 1 ? 's' : ''} archivé${n > 1 ? 's' : ''}`);
     this.toggleSelectionMode();
   },
 
@@ -1086,7 +1346,7 @@ const Clients = {
         f.style.background = colorDef.bg || ''; f.style.borderColor = colorDef.border || '';
       });
     });
-    Toast.show('🎨 Couleur appliquée');
+    Toast.show('Couleur appliquée');
   },
 
   async bulkAddTag(tagKey) {
@@ -1105,7 +1365,7 @@ const Clients = {
       if (display) display.innerHTML = this.fullTagsHTML(c);
     }));
     const tag = ACTION_TAGS.find(t => t.key === tagKey);
-    Toast.show(`✓ Tag "${tag?.emoji} ${tag?.label}" ajouté`);
+    Toast.show(`✓ Tag "${tag?.label}" ajouté`);
   },
 
   _toggleBulkPopover(btn, type) {
@@ -1165,27 +1425,10 @@ const Clients = {
 
     const scoreOf = c => { const r = clientScore(c); return r ? r.total : -1; };
 
-    let cards;
-    if (col.ghost) {
-      // Colonne fantôme : même filtre que l'onglet Recherches
-      // = clients avec status = 'Recherche active', sauf ceux en Visite/Offre ou Signé
-      cards = this.data.filter(c => {
-        const ecs = this.effectiveContactStatus(c);
-        return c.status === 'Recherche active'
-          && ecs !== 'Visite / Offre'
-          && ecs !== 'Signé';
-      }).filter(c => this._matchClientFilters(c));
-    } else {
-      cards = this.data
-        .filter(c => {
-          const ecs = this.effectiveContactStatus(c);
-          if (ecs !== col.key) return false;
-          // Pour les colonnes hors Visite/Offre et Signé : exclure les clients en Recherche active
-          if (col.key !== 'Visite / Offre' && col.key !== 'Signé' && c.status === 'Recherche active') return false;
-          return true;
-        })
-        .filter(c => this._matchClientFilters(c));
-    }
+    // Colonne fantôme « En recherche » = status 'Recherche active', sauf Visite/Offre et Signé (voir _colOf)
+    let cards = this.data.filter(c => this._colOf(c) === col.key && this._matchClientFilters(c));
+    const comm = cards.reduce((s, c) => s + this._comm(c), 0);
+    const shown = this.data.filter(c => this._matchClientFilters(c)).length;
 
     cards = cards.sort((a, b) => {
         if (this.sortKey === 'score') {
@@ -1201,8 +1444,8 @@ const Clients = {
     const SORT_MODES = [
       { key: 'date',  dir: 'desc', icon: '↑', label: 'Recent first' },
       { key: 'date',  dir: 'asc',  icon: '↓', label: 'Oldest first' },
-      { key: 'score', dir: 'desc', icon: '⭐', label: 'Score ↓' },
-      { key: 'score', dir: 'asc',  icon: '⭐', label: 'Score ↑' },
+      { key: 'score', dir: 'desc', icon: '<i class=ico-star></i>', label: 'Score ↓' },
+      { key: 'score', dir: 'asc',  icon: '<i class=ico-star></i>', label: 'Score ↑' },
     ];
     const curMode = SORT_MODES.find(m => m.key === this.sortKey && m.dir === this.sortDir) || SORT_MODES[0];
     const sortIcon  = curMode.icon;
@@ -1217,7 +1460,7 @@ const Clients = {
           onclick="Clients.toggleColHide('${col.key}')" title="Afficher ${col.label}">
           <div class="col-collapsed-inner">
             <span class="kanban-count ${col.cls}">${cards.length}</span>
-            <span class="col-collapsed-title ${col.cls}">${col.label}</span>
+            <span class="col-collapsed-title ${col.cls}">${col.icon ? `<i class=ico-${col.icon}></i> ` : ''}${col.label}</span>
           </div>
         </div>`;
     }
@@ -1225,13 +1468,16 @@ const Clients = {
     return `
       <div class="kanban-col ${this.focusedCol === col.key ? 'focused' : ''} ${col.ghost ? 'col-ghost' : ''}"
         ${col.ghost ? '' : `ondragover="Clients.onDragOver(event)" ondragleave="Clients.onDragLeave(event)" ondrop="Clients.onDrop(event, '${col.key}')"`}>
-        <div class="kanban-col-header ${col.cls}" onclick="Clients.toggleFocus('${col.key}')">
-          <span>${col.label}</span>
-          <div style="display:flex;align-items:center;gap:6px">
-            ${col.ghost ? `<span style="font-size:9px;opacity:.5;font-style:italic">${t('col_ghost_hint')}</span>` : `<button class="sort-btn" onclick="Clients.toggleSort(event)" title="${sortTitle}">${sortIcon} ${sortTitle}</button>`}
-            <span class="kanban-count">${cards.length}</span>
+        <div class="kanban-col-header cl-col-head" onclick="Clients.toggleFocus('${col.key}')" title="${col.ghost ? t('col_ghost_hint') : 'Agrandir la colonne'}">
+          <span class="cl-col-title"><span class="db-dot" style="background:${col.color}"></span>${col.label}</span>
+          <div class="cl-col-right">
             <button class="col-hide-btn" onclick="event.stopPropagation();Clients.toggleColHide('${col.key}')" title="Masquer">‹</button>
+            <span class="cl-col-count">${cards.length}</span>
           </div>
+        </div>
+        <div class="cl-col-sub">
+          ${this._segs(shown ? cards.length / shown * 100 : 0, 14, col.color, 200)}
+          <span title="Potentiel de la colonne : commissions + frais de recherche à encaisser">${comm ? `${Math.round(comm).toLocaleString('fr-FR')} €` : '—'}</span>
         </div>
         <div class="kanban-cards">
           ${col.ghost
@@ -1281,9 +1527,9 @@ const Clients = {
     let dateBadge = '';
     if (c.move_in_date) {
       if (daysNum < 0) {
-        dateBadge = `<span class="focus-date urgent-overdue">⚠️ En retard · ${Math.abs(daysNum)}j</span>`;
+        dateBadge = `<span class="focus-date urgent-overdue"><i class=ico-alert></i> En retard · ${Math.abs(daysNum)}j</span>`;
       } else {
-        dateBadge = `<span class="focus-date ${urgency}">📅 ${formatDate(c.move_in_date)}</span>`;
+        dateBadge = `<span class="focus-date ${urgency}"><i class=ico-calendar></i> ${formatDate(c.move_in_date)}</span>`;
       }
     }
 
@@ -1345,20 +1591,8 @@ const Clients = {
           : `<p class="${urgency}" style="display:flex;align-items:center;gap:0">${_calIcon}${t('card_arrival')}: ${formatDate(c.move_in_date)}${urgencyDot}</p>`)
       : '';
 
-    // Bordure gauche = couleur suivi
-    const suiviColor = this._suiviBorderColor(c);
-
-    // Avatar agent assigné
-    const agentAv = (() => {
-      const name = c.suivi_assigned_to;
-      if (!name) return '';
-      const user = (typeof App !== 'undefined' && App.getUserByName?.(name)) || (Clients._suiviUsers||[]).find(u=>u.name===name) || null;
-      if (user && typeof avatarHTML === 'function') {
-        return `<div title="${name}" style="width:18px;height:18px;border-radius:50%;overflow:hidden;flex-shrink:0">${avatarHTML(user, 18)}</div>`;
-      }
-      const col = this._suiviUserColor?.(name) || { bg: '#E2E8F0', color: '#64748B' };
-      return `<div title="${name}" style="width:18px;height:18px;border-radius:50%;background:${col.bg};color:${col.color};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">${name[0]?.toUpperCase()||'?'}</div>`;
-    })();
+    const urg = this._urg(c);
+    const agentAv = this._agentAv(c, 18);
 
     return `
       <div class="kanban-card ${this.selectedClients.has(c.id) ? 'card-selected' : ''}" data-cid="${c.id}" draggable="${isMobile() || this.selectionMode ? 'false' : 'true'}"
@@ -1370,26 +1604,22 @@ const Clients = {
           oncontextmenu="event.preventDefault();Clients.showCardMenu(${c.id}, event)">
 
           <!-- ── FRONT ── -->
-          <div class="card-face card-front">
+          <div class="card-face card-front cl-card">
             ${this.selectionMode ? `<div class="sel-indicator ${this.selectedClients.has(c.id) ? 'sel-checked' : ''}"></div>` : ''}
 
-            <!-- Top : nom + score -->
-            <div class="card-top" style="margin-bottom:4px">
-              <div class="client-name" style="margin-bottom:0">${c.name}</div>
-              <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-                ${scoreBadge(c)}
-                <button class="fees-btn ${c.research_fees_paid ? 'paid' : ''}"
-                  onclick="event.stopPropagation();Clients.toggleFees(${c.id})" title="Research fees" style="font-size:9px;padding:1px 5px">
-                  ${c.research_fees_paid ? '✓' : t('clients_fees_unpaid')}
-                </button>
-              </div>
+            <div class="cl-card-top">
+              <span class="cl-card-name">${c.name}</span>
+              ${this._scoreHTML(c)}
             </div>
-
-            <div class="client-details">
-              ${budgetLine ? `<p><svg class="cd-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="12" height="8" rx="1.5"/><path d="M4 4V3a2 2 0 0 1 4 0v1"/><circle cx="7" cy="8" r="1" fill="currentColor" stroke="none"/></svg>${budgetLine}</p>` : ''}
-              ${moveinLine}
-              ${c.duration ? `<p><svg class="cd-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3l2 1.5"/></svg>${tr(c.duration)}</p>` : ''}
+            <div class="cl-card-meta">
+              <span>${[budgetLine, c.duration ? tr(c.duration) : ''].filter(Boolean).join(' · ') || 'Budget non renseigné'}</span>
+              <span class="cl-pot" title="${this._potTitle(c)}">+${Math.round(this._comm(c)).toLocaleString('fr-FR')} €</span>
             </div>
+            ${urg ? `<div class="cl-card-arr">
+              <span class="cl-arr-date">${urg.date}</span>
+              ${this._segs(urg.pct, 8, urg.color)}
+              <span class="cl-arr-d" style="color:${urg.color}">${urg.label}</span>
+            </div>` : ''}
 
             <div class="action-tags-row" onclick="event.stopPropagation()">
               <div class="action-tags-display">
@@ -1403,18 +1633,21 @@ const Clients = {
                     ${this.personTagsHTML(this.getTags(c), c)}
                   </div>` : ''}
               </div>
-              <button class="add-tag-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Add tag">＋</button>
             </div>
 
             <!-- Footer : agent + actions rapides + date -->
             <div class="card-quick-row" onclick="event.stopPropagation()">
-              <div style="display:flex;align-items:center;gap:4px">
+              <div class="cl-card-who">
                 ${agentAv}
-                ${daysAgo ? `<span style="font-size:9.5px;color:var(--text-3)">${daysAgo}</span>` : ''}
+                <span>${this._ago(c)}</span>
               </div>
-              <div style="display:flex;align-items:center;gap:3px">
-                ${c.whatsapp ? `<button class="card-quick-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié','success'))" title="Copier WA"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="8" height="12" rx="2"/><circle cx="7" cy="11" r=".75" fill="currentColor" stroke="none"/></svg></button>` : ''}
-                <button class="card-quick-btn" onclick="Clients.openDetailModal(${c.id})" title="Voir la fiche">↗</button>
+              <div class="cl-card-btns">
+                <button class="cl-fees${c.research_fees_paid ? ' paid' : ''}" onclick="Clients.toggleFees(${c.id})" title="Frais de recherche">
+                  ${c.research_fees_paid ? '✓ Frais' : t('clients_fees_unpaid')}
+                </button>
+                <button class="fin-icon-btn" onclick="Clients.toggleTagPanel(${c.id}, this)" title="Tags, note, rappel"><i class=ico-tag></i></button>
+                ${c.whatsapp ? `<button class="fin-icon-btn" onclick="navigator.clipboard.writeText(_phn('${c.whatsapp}')).then(()=>Toast.show('Copié','success'))" title="Copier le numéro"><i class=ico-smartphone></i></button>` : ''}
+                <button class="fin-icon-btn" onclick="Clients.openDetailModal(${c.id})" title="Voir la fiche">↗</button>
               </div>
             </div>
 
@@ -1473,10 +1706,10 @@ const Clients = {
             ${agentAv}
           </div>
           <div class="client-details">
-            ${budgetLine ? `<p>💰 ${budgetLine}</p>` : ''}
+            ${budgetLine ? `<p><i class=ico-wallet></i> ${budgetLine}</p>` : ''}
           </div>
           <button class="card-ghost-link" onclick="event.stopPropagation();Router.navigate('recherches').then(()=>{ if(typeof Recherches!=='undefined') Recherches.selectClient(${c.id}); })">
-            🔍 ${t('link_voir_recherches')}
+            <i class=ico-search></i> ${t('link_voir_recherches')}
           </button>
         </div>
       </div>`;
@@ -1512,7 +1745,7 @@ const Clients = {
         slot.innerHTML = '<p class="card-act-empty">Aucune activité récente</p>';
         return;
       }
-      const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
+      const ICONS = { call:'<i class=ico-phone></i>', whatsapp:'<i class=ico-message></i>', visit:'<i class=ico-home></i>', email:'<i class=ico-mail></i>', note:'<i class=ico-note></i>', proposal:'<i class=ico-send></i>', system:'<i class=ico-settings></i>' };
       slot.innerHTML = rows.slice(0, 3).map(r => {
         const authorUser = (typeof App !== 'undefined' && App.getUserByName?.(r.author)) || (Clients._suiviUsers||[]).find(u=>u.name===r.author) || null;
         const avEl = authorUser && typeof avatarHTML === 'function'
@@ -1560,21 +1793,21 @@ const Clients = {
     const c = this.data.find(x => x.id === id);
     if (!c) return;
 
-    const actTypes = [['call','📞','Appel'],['whatsapp','💬','WhatsApp'],['visit','🏠','Visite'],['email','✉️','Email'],['note','📝','Note']];
+    const actTypes = [['call','<i class=ico-phone></i>','Appel'],['whatsapp','<i class=ico-message></i>','WhatsApp'],['visit','<i class=ico-home></i>','Visite'],['email','<i class=ico-mail></i>','Email'],['note','<i class=ico-note></i>','Note']];
 
     const menu = document.createElement('div');
     menu.className = 'card-ctx-menu';
     menu.innerHTML = `
       <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.openDetailModal(${id})">
-        📋 Ouvrir la fiche
+        <i class=ico-clipboard></i> Ouvrir la fiche
       </div>
       <div class="ctx-sep"></div>
       ${c.status !== 'Recherche active' ? `
       <div class="ctx-item" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.sendToRecherches(${id})">
-        🔍 Envoyer en Recherches
+        <i class=ico-search></i> Envoyer en Recherches
       </div>` : `
       <div class="ctx-item ctx-disabled">
-        🔍 Déjà dans Recherches
+        <i class=ico-search></i> Déjà dans Recherches
       </div>`}
       <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
         → Déplacer vers <span class="ctx-arrow">›</span>
@@ -1588,18 +1821,18 @@ const Clients = {
       </div>
       <div class="ctx-sep"></div>
       <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
-        📝 Logger une activité <span class="ctx-arrow">›</span>
+        <i class=ico-note></i> Logger une activité <span class="ctx-arrow">›</span>
       </div>
       <div class="ctx-sub hidden">
         ${actTypes.map(([type, emoji, label]) => `
           <div class="ctx-item ctx-sub-item"
-            onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.quickLog(${id},'${type}','${emoji} ${label}')">
+            onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.quickLog(${id},'${type}','${label}')">
             ${emoji} ${label}
           </div>`).join('')}
       </div>
       <div class="ctx-sep"></div>
       <div class="ctx-item ctx-has-sub" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')">
-        👤 Assigner à <span class="ctx-arrow">›</span>
+        <i class=ico-user></i> Assigner à <span class="ctx-arrow">›</span>
       </div>
       <div class="ctx-sub hidden">
         ${(typeof App !== 'undefined' && App._usersCache || []).map(u => `
@@ -1620,7 +1853,7 @@ const Clients = {
       </div>
       <div class="ctx-sep"></div>
       <div class="ctx-item ctx-danger" onclick="event.stopPropagation();document.querySelectorAll('.card-ctx-menu').forEach(m=>m.remove());Clients.archive(${id})">
-        🗄 Archiver
+        <i class=ico-archive></i> Archiver
       </div>`;
 
     const x = Math.min(event.clientX, window.innerWidth - 210);
@@ -1656,7 +1889,7 @@ const Clients = {
         card.replaceWith(tmp.firstElementChild);
       }
     }
-    Toast.show(newVal ? `👤 Assigné à ${newVal}` : '✓ Assignation retirée');
+    Toast.show(newVal ? `Assigné à ${newVal}` : '✓ Assignation retirée');
   },
 
   quickLog(id, type, label) {
@@ -1711,7 +1944,7 @@ const Clients = {
     const picker = document.createElement('div');
     picker.className = 'color-picker-popover';
     picker.innerHTML = `
-      <div class="cp-title">🎨 Couleur de la carte</div>
+      <div class="cp-title"><i class=ico-palette></i> Couleur de la carte</div>
       <div class="cp-swatches">
         ${CARD_COLORS.map(col => `
           <button class="cp-swatch ${(c.card_color || null) === col.key ? 'cp-active' : ''}"
@@ -1788,7 +2021,7 @@ const Clients = {
     const panel = document.createElement('div');
     panel.className = 'color-legend-panel';
     panel.innerHTML = `
-      <div class="cp-title" style="margin-bottom:10px">🎨 Légende des couleurs</div>
+      <div class="cp-title" style="margin-bottom:10px"><i class=ico-palette></i> Légende des couleurs</div>
       ${CARD_COLORS.slice(1).map(col => `
         <div class="legend-row">
           <span class="legend-dot-color" style="background:${col.dot}"></span>
@@ -1831,7 +2064,7 @@ const Clients = {
     const c = this.data.find(x => x.id === id);
     if (c) { c.suivi_status = 'recherche_lancee'; c.status = 'Recherche active'; }
     this.render();
-    Toast.show('🔍 Client en recherche active');
+    Toast.show('Client en recherche active');
   },
 
   // ── Action Tags ──────────────────────────────────
@@ -1863,8 +2096,8 @@ const Clients = {
     // Migration : alex → nono_app pour les anciens tags
     const normalized = (tags || []).map(k => k === 'alex' ? 'nono_app' : k);
     const personTags = normalized.filter(k => this._PERSON_KEYS.includes(k)).map(k => this._tagHTML(k)).join('');
-    const notes = (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openDetailModal(${c.id})"  title="${c.note_tim}">📝 Tim</span>`  : '')
-                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_alex}">📝 Nono</span>` : '');
+    const notes = (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openDetailModal(${c.id})"  title="${c.note_tim}"><i class=ico-note></i> Tim</span>`  : '')
+                + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_alex}"><i class=ico-note></i> Nono</span>` : '');
     return personTags + notes;
   },
 
@@ -1889,8 +2122,8 @@ const Clients = {
   },
 
   noteChipsHTML(c) {
-    return (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_tim}">📝 Tim</span>`  : '')
-         + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_alex}">📝 Nono</span>` : '');
+    return (c.note_tim  ? `<span class="action-tag tag-tim"  onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_tim}"><i class=ico-note></i> Tim</span>`  : '')
+         + (c.note_alex ? `<span class="action-tag tag-nono" onclick="event.stopPropagation();Clients.openDetailModal(${c.id})" title="${c.note_alex}"><i class=ico-note></i> Nono</span>` : '');
   },
 
   reminderChipHTML(c) {
@@ -1900,7 +2133,7 @@ const Clients = {
     const isPast  = c.reminder_date < today;
     const cls     = isPast ? ' tag-hot' : isToday ? ' tag-payer' : ' tag-reminder';
     const dateStr = fmtDate(c.reminder_date);
-    return `<span class="action-tag${cls} reminder-chip" onclick="event.stopPropagation();Clients.openReminderModal(${c.id})" title="${c.reminder_note || ''}">🔔 ${dateStr}</span>`;
+    return `<span class="action-tag${cls} reminder-chip" onclick="event.stopPropagation();Clients.openReminderModal(${c.id})" title="${c.reminder_note || ''}"><i class=ico-bell></i> ${dateStr}</span>`;
   },
 
   allTagsEmpty(c) {
@@ -1933,11 +2166,11 @@ const Clients = {
       <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
       <button class="tag-option tag-option-note ${c.note_tim || c.note_alex ? 'active' : ''}"
         onclick="event.stopPropagation(); document.querySelectorAll('.tags-popover').forEach(p=>p.remove()); Clients.openDetailModal(${id})">
-        📌 ${c.note_tim || c.note_alex ? 'Voir la note' : 'Ajouter une note'}
+        <i class=ico-pin></i> ${c.note_tim || c.note_alex ? 'Voir la note' : 'Ajouter une note'}
       </button>
       <button class="tag-option tag-option-reminder ${c.reminder_date ? 'active' : ''}"
         onclick="event.stopPropagation(); Clients.openReminderModal(${id})">
-        🔔 ${t('reminder_tag')}
+        <i class=ico-bell></i> ${t('reminder_tag')}
       </button>`;
     const rect = btnEl.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -1983,7 +2216,7 @@ const Clients = {
         style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--accent);border-radius:8px;outline:none;box-sizing:border-box;margin-bottom:6px">${current}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" onclick="Clients._cancelPinnedNote(${id},'${current.replace(/'/g,"\\'")}')">Annuler</button>
-        ${current ? `<button class="btn btn-ghost btn-sm" onclick="Clients.savePinnedNote(${id},'${noteKey}','')">🗑 Supprimer</button>` : ''}
+        ${current ? `<button class="btn btn-ghost btn-sm" onclick="Clients.savePinnedNote(${id},'${noteKey}','')"><i class=ico-trash></i> Supprimer</button>` : ''}
         <button class="btn btn-primary btn-sm" onclick="Clients.savePinnedNote(${id},'${noteKey}',document.getElementById('pinned-textarea-${id}').value)">Enregistrer</button>
       </div>`;
     document.getElementById(`pinned-textarea-${id}`)?.focus();
@@ -2163,11 +2396,11 @@ const Clients = {
       const deals = await api.get('/deals');
       const existing = deals.find(d => d.client_id === clientId && d.status === 'En cours');
       if (existing) {
-        Toast.show(`📋 Contrat déjà existant pour ${c.name}`);
+        Toast.show(`Contrat déjà existant pour ${c.name}`);
         return;
       }
       await api.post('/deals', { client_id: clientId, status: 'En cours' });
-      Toast.show(`✅ Contrat créé pour ${c.name} — voir l'onglet Contracts`);
+      Toast.show(`Contrat créé pour ${c.name} — voir l'onglet Contracts`);
     } catch (err) {
       Toast.show('Erreur création contrat : ' + err.message, 'error');
     }
@@ -2185,38 +2418,38 @@ const Clients = {
     Modal.open(c.name, `
       <div class="detail-grid">
         <div class="detail-row">${badge(c.status)}${c.research_fees_paid ? `<span class="fees-btn paid">${t('detail_fees_paid')}</span>` : ''}</div>
-        ${c.whatsapp ? `<div class="detail-row"><span class="detail-label">📱 ${t('detail_phone')}</span><span>${c.whatsapp}</span></div>` : ''}
-        <div class="detail-row"><span class="detail-label">💰 ${t('detail_budget')}</span><span>${budgetLine}</span></div>
-        ${c.zones ? `<div class="detail-row"><span class="detail-label">📍 ${t('detail_zones')}</span><span>${trZone(c.zones)}</span></div>` : ''}
-        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label">📅 ${t('detail_arrival')}</span><span class="${urgency}" style="display:flex;align-items:center;gap:6px">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
-        ${c.duration ? `<div class="detail-row"><span class="detail-label">⏱ ${t('detail_duration')}</span><span>${tr(c.duration)}</span></div>` : ''}
-        ${c.property_type ? `<div class="detail-row"><span class="detail-label">🏠 ${t('detail_type')}</span><span>${c.property_type}</span></div>` : ''}
-        ${c.bedrooms ? `<div class="detail-row"><span class="detail-label">🛏 ${t('detail_bedrooms')}</span><span>${c.bedrooms}</span></div>` : ''}
-        ${c.criteria ? `<div class="detail-row"><span class="detail-label">📝 ${t('detail_criteria')}</span><span>${c.criteria}</span></div>` : ''}
-        ${c.source ? `<div class="detail-row"><span class="detail-label">🔗 ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
-        ${(c.form_submitted_at || c.created_at) ? `<div class="detail-row"><span class="detail-label">📋 Lead depuis</span><span>${new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
-        ${c.reminder_date ? `<div class="detail-row"><span class="detail-label">🔔 ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
-        <div class="detail-row"><span class="detail-label">🛂 ${t('detail_has_visa')}</span><span>${c.has_visa === 'oui' ? '✅ Oui' : c.has_visa === 'non' ? '❌ Non' : '—'}</span></div>
-        ${c.has_visa === 'non' ? `<div class="detail-row"><span class="detail-label">💼 ${t('detail_needs_visa_help')}</span><span>${c.needs_visa_help === 'oui' ? '✅ Oui' : c.needs_visa_help === 'non' ? '❌ Non' : '—'}</span></div>` : ''}
+        ${c.whatsapp ? `<div class="detail-row"><span class="detail-label"><i class=ico-smartphone></i> ${t('detail_phone')}</span><span>${c.whatsapp}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label"><i class=ico-wallet></i> ${t('detail_budget')}</span><span>${budgetLine}</span></div>
+        ${c.zones ? `<div class="detail-row"><span class="detail-label"><i class=ico-pin></i> ${t('detail_zones')}</span><span>${trZone(c.zones)}</span></div>` : ''}
+        ${c.move_in_date ? `<div class="detail-row"><span class="detail-label"><i class=ico-calendar></i> ${t('detail_arrival')}</span><span class="${urgency}" style="display:flex;align-items:center;gap:6px">${formatDate(c.move_in_date)}${urgencyDot}</span></div>` : ''}
+        ${c.duration ? `<div class="detail-row"><span class="detail-label"><i class=ico-clock></i> ${t('detail_duration')}</span><span>${tr(c.duration)}</span></div>` : ''}
+        ${c.property_type ? `<div class="detail-row"><span class="detail-label"><i class=ico-home></i> ${t('detail_type')}</span><span>${c.property_type}</span></div>` : ''}
+        ${c.bedrooms ? `<div class="detail-row"><span class="detail-label"><i class=ico-bed></i> ${t('detail_bedrooms')}</span><span>${c.bedrooms}</span></div>` : ''}
+        ${c.criteria ? `<div class="detail-row"><span class="detail-label"><i class=ico-note></i> ${t('detail_criteria')}</span><span>${c.criteria}</span></div>` : ''}
+        ${c.source ? `<div class="detail-row"><span class="detail-label"><i class=ico-link></i> ${t('detail_source')}</span><span>${tr(c.source)}</span></div>` : ''}
+        ${(c.form_submitted_at || c.created_at) ? `<div class="detail-row"><span class="detail-label"><i class=ico-clipboard></i> Lead depuis</span><span>${new Date(c.form_submitted_at || c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
+        ${c.reminder_date ? `<div class="detail-row"><span class="detail-label"><i class=ico-bell></i> ${t('reminder_title')}</span><span>${fmtDate(c.reminder_date)}${c.reminder_note ? ' — ' + c.reminder_note : ''}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label"><i class=ico-passport></i> ${t('detail_has_visa')}</span><span>${c.has_visa === 'oui' ? '<i class=ico-check-circle></i> Oui' : c.has_visa === 'non' ? '<i class=ico-x-circle></i> Non' : '—'}</span></div>
+        ${c.has_visa === 'non' ? `<div class="detail-row"><span class="detail-label"><i class=ico-briefcase></i> ${t('detail_needs_visa_help')}</span><span>${c.needs_visa_help === 'oui' ? '<i class=ico-check-circle></i> Oui' : c.needs_visa_help === 'non' ? '<i class=ico-x-circle></i> Non' : '—'}</span></div>` : ''}
       </div>
 
       <div class="modal-sep"></div>
-      <div class="modal-sub-title">⭐ Score client</div>
+      <div class="modal-sub-title"><i class=ico-star></i> Score client</div>
       ${scoreBreakdownHTML(c)}
 
       <div class="modal-sep"></div>
       <div class="modal-sub-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>🏠 ${t('match_title')}</span>
+        <span><i class=ico-home></i> ${t('match_title')}</span>
       </div>
       <div id="matching-slot-${id}" class="sub-list-slot"><span class="spinner-sm">…</span></div>
 
       <div class="modal-sep"></div>
-      <div class="modal-sub-title">📓 Activity log</div>
+      <div class="modal-sub-title"><i class=ico-book></i> Activity log</div>
 
       <!-- Boutons + timeline -->
       <div class="activity-quick-btns" style="margin-top:10px">
-        ${[['call','📞','Called'],['whatsapp','💬','WhatsApp'],['visit','🏠','Visit'],['email','✉️','Email'],['note','📝','Note']].map(([type,emoji,label]) =>
-          `<button class="activity-quick-btn" onclick="Clients.showActivityInput(${id},'${type}','${emoji} ${label}')">${emoji} ${label}</button>`
+        ${[['call','<i class=ico-phone></i>','Called'],['whatsapp','<i class=ico-message></i>','WhatsApp'],['visit','<i class=ico-home></i>','Visit'],['email','<i class=ico-mail></i>','Email'],['note','<i class=ico-note></i>','Note']].map(([type,emoji,label]) =>
+          `<button class="activity-quick-btn" onclick="Clients.showActivityInput(${id},'${type}','${label}')">${emoji} ${label}</button>`
         ).join('')}
       </div>
       <div id="activity-input-${id}" class="activity-input-wrap hidden"></div>
@@ -2274,7 +2507,7 @@ const Clients = {
             <span class="match-title">${p.title}</span>
             <span class="match-sub">${p.zone || '—'}${p.price ? ' · ' + Number(p.price).toLocaleString('fr-FR') + ' ฿' : ' · prix non renseigné'}</span>
           </div>
-          <button class="btn btn-sm btn-secondary" onclick="Clients.proposeProperty(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)">📤</button>
+          <button class="btn btn-sm btn-secondary" onclick="Clients.proposeProperty(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)"><i class=ico-send></i></button>
         </div>`).join('');
     } catch(err) { slot.innerHTML = `<p class="sub-empty">Erreur: ${err.message}</p>`; }
   },
@@ -2285,8 +2518,8 @@ const Clients = {
       await api.post('/proposals', { client_id: clientId, property_id: propertyId });
       btn.textContent = '✓'; btn.classList.add('btn-success');
       this._loadProposals(clientId);
-      Toast.show('📤 Proposition enregistrée');
-    } catch (err) { Toast.show(err.message, 'error'); btn.disabled = false; btn.textContent = '📤'; }
+      Toast.show('Proposition enregistrée');
+    } catch (err) { Toast.show(err.message, 'error'); btn.disabled = false; btn.innerHTML = '<i class=ico-send></i>'; }
   },
 
   // ── Proposals history ─────────────────────────────
@@ -2321,7 +2554,7 @@ const Clients = {
               <span class="match-title">${p.title}</span>
               <span class="match-sub">${p.zone || ''}${p.price ? ' · ' + Number(p.price).toLocaleString('fr-FR') + ' ฿' : ''}</span>
             </div>
-            <button class="btn btn-sm btn-secondary" onclick="Clients.proposeFromPick(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)">📤</button>
+            <button class="btn btn-sm btn-secondary" onclick="Clients.proposeFromPick(${clientId},${p.id},'${p.title.replace(/'/g, '&#39;')}',this)"><i class=ico-send></i></button>
           </div>`).join('') : `<p class="sub-empty">${t('match_none')}</p>`}
       </div>
       <div class="form-actions"><button class="btn btn-ghost" onclick="Modal.close()">${t('clients_close')}</button></div>`);
@@ -2332,8 +2565,8 @@ const Clients = {
     try {
       await api.post('/proposals', { client_id: clientId, property_id: propertyId });
       btn.textContent = '✓'; btn.classList.add('btn-success');
-      Toast.show('📤 Proposition enregistrée');
-    } catch (err) { Toast.show(err.message, 'error'); btn.disabled = false; btn.textContent = '📤'; }
+      Toast.show('Proposition enregistrée');
+    } catch (err) { Toast.show(err.message, 'error'); btn.disabled = false; btn.innerHTML = '<i class=ico-send></i>'; }
   },
 
   async updateProposalStatus(proposalId, status) {
@@ -2360,7 +2593,7 @@ const Clients = {
         this._getUsers().catch(() => []),
       ]);
       if (!rows.length) { slot.innerHTML = `<p class="sub-empty">No activity yet. Log your first interaction above.</p>`; return; }
-      const ICONS = { call:'📞', whatsapp:'💬', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
+      const ICONS = { call:'<i class=ico-phone></i>', whatsapp:'<i class=ico-message></i>', visit:'<i class=ico-home></i>', email:'<i class=ico-mail></i>', note:'<i class=ico-note></i>', proposal:'<i class=ico-send></i>', system:'<i class=ico-settings></i>' };
       slot.innerHTML = rows.map(r => {
         const user = users.find(u => u.name === r.author);
         const avatarEl = (typeof avatarHTML === 'function' && user)
@@ -2368,7 +2601,7 @@ const Clients = {
           : `<span style="width:24px;height:24px;border-radius:50%;background:var(--surface-2,#222);display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${(r.author||'?')[0]}</span>`;
         return `
         <div class="activity-entry">
-          <span class="activity-icon">${ICONS[r.type]||'📌'}</span>
+          <span class="activity-icon">${ICONS[r.type]||'<i class=ico-pin></i>'}</span>
           <div class="activity-content">
             <div style="display:flex;align-items:center;gap:6px">
               ${avatarEl}
@@ -2500,7 +2733,7 @@ const Clients = {
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>⏱ ${t('form_duration')}</label>
+            <label><i class=ico-clock></i> ${t('form_duration')}</label>
             <select name="duration">
               <option value="" ${!c?.duration ? 'selected' : ''}>—</option>
               ${['1 mois','2 mois','3 mois','4 mois','5 mois','6 mois','7 mois','8 mois','9 mois','10 mois','11 mois','12 mois','1 an','2 ans','3 ans','Autre'].map(d =>
@@ -2509,13 +2742,13 @@ const Clients = {
             </select>
           </div>
           <div class="form-row">
-            <label>📅 ${t('form_move_in')}</label>
+            <label><i class=ico-calendar></i> ${t('form_move_in')}</label>
             <input type="date" name="move_in_date" value="${c?.move_in_date || ''}">
           </div>
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>🛂 ${t('form_has_visa')}</label>
+            <label><i class=ico-passport></i> ${t('form_has_visa')}</label>
             <select name="has_visa" id="has-visa-select" onchange="Clients._toggleVisaHelp(this.value)">
               <option value="" ${!c?.has_visa ? 'selected' : ''}>—</option>
               <option value="oui" ${c?.has_visa === 'oui' ? 'selected' : ''}>Oui</option>
@@ -2523,7 +2756,7 @@ const Clients = {
             </select>
           </div>
           <div class="form-row" id="visa-help-row" style="${c?.has_visa === 'non' ? '' : 'display:none'}">
-            <label>💼 ${t('form_needs_visa_help')}</label>
+            <label><i class=ico-briefcase></i> ${t('form_needs_visa_help')}</label>
             <select name="needs_visa_help">
               <option value="" ${!c?.needs_visa_help ? 'selected' : ''}>—</option>
               <option value="oui" ${c?.needs_visa_help === 'oui' ? 'selected' : ''}>Oui</option>
@@ -2727,11 +2960,11 @@ const Clients = {
       <div class="suivi-log" id="suivi-log-${id}"><div class="suivi-log-empty">Chargement…</div></div>
       <div class="suivi-add-log">
         <select class="suivi-add-select" id="suivi-chan-${id}">
-          <option value="whatsapp">💬 WhatsApp</option>
-          <option value="call">📞 Appel</option>
-          <option value="line">📱 Line</option>
-          <option value="email">✉️ Email</option>
-          <option value="note">📝 Note</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="call">Appel</option>
+          <option value="line">Line</option>
+          <option value="email">Email</option>
+          <option value="note">Note</option>
         </select>
         <input class="suivi-add-input" id="suivi-note-${id}" placeholder="Loguer une action…"
           onkeydown="if(event.key==='Enter')Clients._suiviAddLog(${id})">
@@ -2805,14 +3038,14 @@ const Clients = {
     if (!slot) return;
     try {
       const rows = await api.get(`/activities?client_id=${id}`);
-      const ICONS = { call:'📞', whatsapp:'💬', line:'📱', visit:'🏠', email:'✉️', note:'📝', proposal:'📤', system:'⚙️' };
+      const ICONS = { call:'<i class=ico-phone></i>', whatsapp:'<i class=ico-message></i>', line:'<i class=ico-smartphone></i>', visit:'<i class=ico-home></i>', email:'<i class=ico-mail></i>', note:'<i class=ico-note></i>', proposal:'<i class=ico-send></i>', system:'<i class=ico-settings></i>' };
 
       // Calcul jours sans contact
       if (lateBadge && rows.length) {
         const last = new Date(rows[0].created_at);
         const days = Math.floor((Date.now() - last) / 86400000);
         if (days >= 7) {
-          lateBadge.innerHTML = `<div class="suivi-late-badge">⚠️ ${days} jours sans contact — à relancer</div>`;
+          lateBadge.innerHTML = `<div class="suivi-late-badge"><i class=ico-alert></i> ${days} jours sans contact — à relancer</div>`;
         }
       }
 
@@ -2832,7 +3065,7 @@ const Clients = {
           const label = this._suiviRelDay(d);
           sep = `<div class="suivi-log-sep"><span>${label}</span></div>`;
         }
-        const icon = ICONS[r.type] || '📌';
+        const icon = ICONS[r.type] || '<i class=ico-pin></i>';
         const chan = r.type ? `<span class="suivi-log-channel">${icon} ${r.type}</span>` : '';
         const when = this._relativeTime(r.created_at);
 
@@ -2941,7 +3174,7 @@ const Clients = {
       <div class="suivi-ctx-item" onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients.openDetailModal(${id})">↗ Voir la fiche</div>
       ${assignItems}
       <div class="suivi-ctx-sep"></div>
-      <div class="suivi-ctx-item danger" onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients.archiveClient(${id})">🗄 Archiver</div>`;
+      <div class="suivi-ctx-item danger" onclick="document.querySelectorAll('.suivi-ctx-menu').forEach(m=>m.remove());Clients.archiveClient(${id})"><i class=ico-archive></i> Archiver</div>`;
 
     const x = Math.min(event.clientX, window.innerWidth - 210);
     const y = Math.min(event.clientY, window.innerHeight - 250);

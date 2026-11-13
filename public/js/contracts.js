@@ -52,7 +52,7 @@ const Contracts = {
 
     document.getElementById('content').innerHTML = `
       <div class="section-header">
-        <h2>📋 Contracts</h2>
+        <h2><i class=ico-clipboard></i> Contracts</h2>
         <div class="header-actions">
           <button class="btn btn-primary" onclick="Contracts.openAddModal()">+ New contract</button>
         </div>
@@ -63,7 +63,7 @@ const Contracts = {
           Active <span class="kanban-count">${counts.active}</span>
         </button>
         <button class="pill ${this.filterStatus==='expiring'?'active':''}" onclick="Contracts.setFilter('expiring')">
-          ⚠️ Expiring &lt;60d <span class="kanban-count">${counts.expiring}</span>
+          <i class=ico-alert></i> Expiring &lt;60d <span class="kanban-count">${counts.expiring}</span>
         </button>
         <button class="pill ${this.filterStatus==='expired'?'active':''}" onclick="Contracts.setFilter('expired')">
           Expired <span class="kanban-count">${counts.expired}</span>
@@ -99,15 +99,15 @@ const Contracts = {
             ${d.property_zone ? `<span class="contract-zone">· ${d.property_zone}</span>` : ''}
           </div>
           <div class="contract-meta">
-            ${d.lease_start ? `📅 ${fmtDate(d.lease_start)} → ${fmtDate(d.lease_end)}` : '<span style="color:var(--text-3);font-style:italic">No dates set</span>'}
+            ${d.lease_start ? `<i class=ico-calendar></i> ${fmtDate(d.lease_start)} → ${fmtDate(d.lease_end)}` : '<span style="color:var(--text-3);font-style:italic">No dates set</span>'}
             ${rent ? ` · <strong>${Number(rent).toLocaleString('fr-FR')} ฿/mo</strong>` : ''}
-            ${d.deposit ? ` · 🔒 Caution / Deposit: <strong>${Number(d.deposit).toLocaleString('fr-FR')} ฿</strong>` : ''}
+            ${d.deposit ? ` · <i class=ico-lock></i> Caution / Deposit: <strong>${Number(d.deposit).toLocaleString('fr-FR')} ฿</strong>` : ''}
           </div>
           <div class="contract-commission">
-            <span>💰 Commission: ${commFmt}</span>
+            <span><i class=ico-wallet></i> Commission: ${commFmt}</span>
             <button class="comm-badge ${d.commission_paid ? 'paid' : 'unpaid'}"
               onclick="Contracts.toggleCommission(${d.id}, ${d.commission_paid})">
-              ${d.commission_paid ? '✅ Paid' : '❌ Unpaid'}
+              ${d.commission_paid ? '<i class=ico-check-circle></i> Paid' : '<i class=ico-x-circle></i> Unpaid'}
             </button>
           </div>
           ${d.notes ? `<p class="contract-notes">${d.notes}</p>` : ''}
@@ -115,7 +115,7 @@ const Contracts = {
         <div class="contract-actions">
           ${badge(d.status)}
           <button class="btn btn-sm btn-secondary" onclick="Contracts.openEditModal(${d.id})">Edit</button>
-          <button class="btn btn-sm btn-ghost" onclick="Contracts.renew(${d.id})" title="Renew contract">🔄 Renew</button>
+          <button class="btn btn-sm btn-ghost" onclick="Contracts.renew(${d.id})" title="Renew contract"><i class=ico-refresh></i> Renew</button>
           <button class="btn btn-sm btn-ghost" onclick="Contracts.remove(${d.id})" title="Delete">✕</button>
         </div>
       </div>`;
@@ -199,7 +199,7 @@ const Contracts = {
           </select>
         </div>
         <div class="form-row">
-          <label>📅 Date de début</label>
+          <label><i class=ico-calendar></i> Date de début</label>
           <input type="date" name="lease_start" id="lease-start" value="${d?.lease_start||''}"
             oninput="Contracts._autoEnd()">
         </div>
@@ -209,27 +209,27 @@ const Contracts = {
             <button type="button" class="btn btn-sm btn-secondary" onclick="Contracts._setDuration(6)">6 mois</button>
             <button type="button" class="btn btn-sm btn-secondary" onclick="Contracts._setDuration(12)">1 an</button>
           </div>
-          <label style="font-size:11px;color:var(--text-3);margin-top:8px;display:block">📅 Date de fin (manuelle)</label>
+          <label style="font-size:11px;color:var(--text-3);margin-top:8px;display:block"><i class=ico-calendar></i> Date de fin (manuelle)</label>
           <input type="date" name="lease_end" id="lease-end" value="${d?.lease_end||''}">
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>💰 Loyer mensuel (฿)</label>
+            <label><i class=ico-wallet></i> Loyer mensuel (฿)</label>
             <input type="number" name="monthly_rent" placeholder="53000" value="${d?.monthly_rent||d?.property_price||''}">
           </div>
           <div class="form-row">
-            <label>🔒 Caution / Deposit (฿)</label>
+            <label><i class=ico-lock></i> Caution / Deposit (฿)</label>
             <input type="number" name="deposit" placeholder="106000" value="${d?.deposit||''}">
           </div>
         </div>
         <div class="form-2">
           <div class="form-row">
-            <label>🏆 Commission (฿)</label>
+            <label><i class=ico-trophy></i> Commission (฿)</label>
             <input type="number" name="commission_amount" placeholder="53000" value="${d?.commission_amount||''}">
           </div>
           <div class="form-row" style="display:flex;align-items:center;gap:10px;padding-top:22px">
             <input type="checkbox" name="commission_paid" id="comm-paid" ${d?.commission_paid?'checked':''} style="width:auto">
-            <label for="comm-paid" style="margin:0">Commission payée ✅</label>
+            <label for="comm-paid" style="margin:0">Commission payée <i class=ico-check-circle></i></label>
           </div>
         </div>
         <div class="form-row">
@@ -273,7 +273,7 @@ const Contracts = {
     const d = this.data.find(x => x.id === id);
     if (d) d.commission_paid = newVal;
     this.render();
-    Toast.show(newVal ? '✅ Commission marked as paid' : '❌ Commission marked as unpaid');
+    Toast.show(newVal ? 'Commission marked as paid' : 'Commission marked as unpaid');
   },
 
   async renew(id) {

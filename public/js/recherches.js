@@ -8,11 +8,11 @@ const Recherches = {
   _propPickerData: [],
 
   STATUSES: [
-    { key: 'Envoyé',        labelFR: 'Envoyé',        labelEN: 'Sent',           icon: '📤', color: '#3B82F6' },
-    { key: 'Intéressé',     labelFR: 'Intéressé',     labelEN: 'Interested',     icon: '👍', color: '#22C55E' },
-    { key: 'Pas intéressé', labelFR: 'Pas intéressé', labelEN: 'Not interested', icon: '👎', color: '#6B7280' },
-    { key: 'Visite',        labelFR: 'Visite',        labelEN: 'Viewing',        icon: '🏠', color: '#8B5CF6' },
-    { key: 'Loué',          labelFR: 'Loué',          labelEN: 'Rented',         icon: '✅', color: '#16A34A' },
+    { key: 'Envoyé',        labelFR: 'Envoyé',        labelEN: 'Sent',           icon: '<i class=ico-send></i>', color: '#4F6BED' },
+    { key: 'Intéressé',     labelFR: 'Intéressé',     labelEN: 'Interested',     icon: '<i class=ico-thumbs-up></i>', color: '#0F9F8A' },
+    { key: 'Pas intéressé', labelFR: 'Pas intéressé', labelEN: 'Not interested', icon: '<i class=ico-thumbs-down></i>', color: '#9A9490' },
+    { key: 'Visite',        labelFR: 'Visite',        labelEN: 'Viewing',        icon: '<i class=ico-home></i>', color: '#9B59B6' },
+    { key: 'Loué',          labelFR: 'Loué',          labelEN: 'Rented',         icon: '<i class=ico-check-circle></i>', color: '#00A35A' },
   ],
 
   _t(fr, en) { return (typeof getLang === 'function' && getLang() === 'en') ? en : fr; },
@@ -21,6 +21,7 @@ const Recherches = {
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
+    this._animNext = true;
     try {
       const [allClients, allProposals, allProps, users] = await Promise.all([
         api.get('/clients?archived=0'),
@@ -45,77 +46,108 @@ const Recherches = {
   },
 
   // ── Rendu principal ───────────────────────────────────────────────────────
-  render() {
-    const allP    = Object.values(this.proposals).flat();
-    const total   = allP.length;
-    const pending = allP.filter(p => p.status === 'Envoyé').length;
-
-    document.getElementById('content').innerHTML = `
-      <div style="display:flex;flex-direction:column;height:calc(100vh - 0px);overflow:hidden">
-
-        <!-- Barre du haut -->
-        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px">
-          <div>
-            <h1 style="font-size:20px;font-weight:700;margin:0 0 2px">🔍 ${this._t('Recherches','Searches')}</h1>
-            <div style="font-size:12px;color:var(--text-3);display:flex;gap:12px">
-              <span>${this.clients.length} ${this._t('clients actifs','active clients')}</span>
-              <span>·</span>
-              <span>${total} ${this._t(total !== 1 ? 'biens proposés' : 'bien proposé', total !== 1 ? 'properties proposed' : 'property proposed')}</span>
-              ${pending ? `<span>·</span><span style="color:#EA580C;font-weight:600">${pending} ${this._t('en attente','pending')}</span>` : ''}
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="Recherches.openAddClientModal()" style="flex-shrink:0">
-            + ${this._t('Ajouter un client','Add client')}
-          </button>
-        </div>
-
-        <!-- Split -->
-        <div style="display:flex;flex:1;overflow:hidden">
-
-          <!-- Gauche : liste clients -->
-          <div style="width:240px;flex-shrink:0;border-right:1.5px solid var(--border);overflow-y:auto;background:var(--surface-2,#fff)">
-            ${this.clients.length
-              ? this.clients.map(c => this.clientRowHTML(c)).join('')
-              : `<p style="padding:16px;font-size:13px;color:var(--text-3)">${this._t('Aucun client en recherche active.','No active search clients.')}</p>`
-            }
-          </div>
-
-          <!-- Droite : détail -->
-          <div style="flex:1;overflow-y:auto;background:var(--surface-1)">
-            ${this.selectedId ? this.detailPanelHTML() : `<p style="padding:24px;font-size:13px;color:var(--text-3)">${this._t('Sélectionne un client.','Select a client.')}</p>`}
-          </div>
-
-        </div>
-      </div>`;
+  FUNNEL: ['Envoyé', 'Intéressé', 'Visite', 'Loué'],
+  _st(key) { return this.STATUSES.find(x => x.key === key) || this.STATUSES[0]; },
+  _stLabel(s) { return this._isEN() ? s.labelEN : s.labelFR; },
+  _segs(pct, n, color, delay) {
+    return typeof Clients !== 'undefined' ? Clients._segs(pct, n, color, delay) : '';
+  },
+  // Étape la plus avancée atteinte par un client (0 = rien proposé … 4 = loué)
+  _progress(props) {
+    let best = 0;
+    props.forEach(p => { const i = this.FUNNEL.indexOf(p.status) + 1; if (i > best) best = i; });
+    return best;
   },
 
-  // ── Ligne client (sidebar gauche) ─────────────────────────────────────────
-  clientRowHTML(c) {
-    const props    = this.proposals[c.id] || [];
-    const pending  = props.filter(p => p.status === 'Envoyé').length;
-    const isActive = c.id === this.selectedId;
-    const budget   = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null;
-    const zone     = c.zones ? (typeof trZone === 'function' ? trZone(c.zones) : c.zones) : null;
+  render() {
+    const anim = this._animNext; this._animNext = false;
+    const allP     = this.clients.flatMap(c => this.proposals[c.id] || []);
+    const total    = allP.length;
+    const pending  = allP.filter(p => p.status === 'Envoyé').length;
+    const positive = allP.filter(p => ['Intéressé', 'Visite', 'Loué'].includes(p.status)).length;
+    const visits   = allP.filter(p => p.status === 'Visite').length;
+    const noProp   = this.clients.filter(c => !(this.proposals[c.id] || []).length).length;
+    const rate     = total ? Math.round(positive / total * 100) : 0;
+    const ic = n => `<i class=ico-${n}></i>`;
+    const count = v => `<span class="fin-count" data-v="${v}">${v}</span>`;
+    const kpi = (i, icon, label, tag, value, caption, extra = '') => `
+      <article class="fin-kpi fin-in" style="--i:${i}">
+        <div class="fin-kpi-top"><span class="fin-caption">${icon}${label}</span>${tag}</div>
+        <div class="fin-kpi-row"><span class="fin-kpi-num">${value}</span>${extra}</div>
+        <span class="fin-caption fin-subtle">${caption}</span>
+      </article>`;
 
-    return `
-      <div onclick="Recherches.selectClient(${c.id})"
-        oncontextmenu="Recherches._ctxMenu(${c.id},event)"
-        style="padding:9px 12px 9px 10px;cursor:pointer;border-bottom:0.5px solid var(--border);
-               background:${isActive ? 'var(--surface-1)' : 'transparent'};
-               border-left:3px solid ${isActive ? '#d4a853' : 'transparent'};
-               transition:background .12s">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:2px">
-          <span style="font-size:12.5px;font-weight:${isActive ? '600' : '500'};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</span>
-          ${pending
-            ? `<span style="flex-shrink:0;font-size:10px;font-weight:600;background:#EA580C18;color:#EA580C;padding:1px 7px;border-radius:99px">${pending} att.</span>`
-            : props.length
-              ? `<span style="flex-shrink:0;font-size:10px;background:#22C55E18;color:#16a34a;padding:1px 6px;border-radius:99px">✓ ${props.length}</span>`
-              : ''}
+    document.getElementById('content').innerHTML = `
+      <div class="rc-root${anim ? '' : ' cl-static'}">
+        <div class="db-head fin-in">
+          <div>
+            <div class="fin-caption db-date">Pipeline</div>
+            <h2 class="db-hello">${this._t('Recherches', 'Searches')}</h2>
+          </div>
+          <div class="header-actions fin-actions">
+            <button class="fin-ctl fin-ctl-primary" onclick="Recherches.openAddClientModal()">${typeof FIN_ICONS !== 'undefined' ? FIN_ICONS.plus : '+ '}${this._t('Ajouter un client', 'Add client')}</button>
+          </div>
         </div>
-        <div style="font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75">
-          ${[budget, zone].filter(Boolean).join(' · ') || '—'}
+
+        <div class="fin-kpis">
+          ${kpi(1, ic('user-search'), this._t('Clients en recherche', 'Active searches'),
+            noProp ? `<span class="fin-tag fin-tag-down">${noProp} ${this._t('sans proposition', 'without proposal')}</span>` : '',
+            count(this.clients.length), this._t('recherche active en ce moment', 'currently searching'))}
+          ${kpi(2, ic('home'), this._t('Biens proposés', 'Properties proposed'), '',
+            count(total), this.clients.length ? `${(total / this.clients.length).toFixed(1).replace('.', ',')} ${this._t('par client en moyenne', 'per client on average')}` : '—')}
+          ${kpi(3, ic('hourglass'), this._t('En attente de réponse', 'Awaiting reply'),
+            visits ? `<span class="fin-tag fin-tag-up">${visits} ${this._t(visits > 1 ? 'visites' : 'visite', visits > 1 ? 'viewings' : 'viewing')}</span>` : '',
+            count(pending), this._t('biens envoyés sans retour du client', 'sent, no client feedback yet'))}
+          ${kpi(4, ic('thumbs-up'), this._t('Retours positifs', 'Positive feedback'),
+            `<span class="fin-tag fin-tag-neutral">${positive} / ${total}</span>`,
+            `${count(rate)}<span class="fin-cur">%</span>`, this._t('intéressé, visite ou loué', 'interested, viewing or rented'),
+            `<span class="cl-kpi-bar">${this._segs(rate, 10, 'var(--fin-trend)', 300)}</span>`)}
+        </div>
+
+        <div class="rc-split">
+          <aside class="fin-panel rc-list fin-in" style="--i:5">
+            <div class="fin-panel-head"><h3 class="fin-eyebrow">${this._t('Clients', 'Clients')}</h3><span class="fin-caption fin-subtle">${this.clients.length}</span></div>
+            <div class="rc-rows">
+              ${this.clients.length
+                ? this.clients.map(c => this.clientRowHTML(c)).join('')
+                : `<p class="db-empty">${this._t('Aucun client en recherche active.', 'No active search clients.')}</p>`}
+            </div>
+          </aside>
+          <section class="rc-detail fin-in" style="--i:6">
+            ${this.selectedId && this.clients.find(c => c.id === this.selectedId)
+              ? this.detailPanelHTML()
+              : `<div class="fin-panel"><p class="db-empty">${this._t('Sélectionne un client.', 'Select a client.')}</p></div>`}
+          </section>
         </div>
       </div>`;
+    if (anim && typeof Finance !== 'undefined') Finance.afterRender();
+  },
+
+  // ── Ligne client (liste de gauche) ────────────────────────────────────────
+  clientRowHTML(c) {
+    const props   = this.proposals[c.id] || [];
+    const pending = props.filter(p => p.status === 'Envoyé').length;
+    const step    = this._progress(props);
+    const st      = step ? this._st(this.FUNNEL[step - 1]) : null;
+    const budget  = c.budget_max ? Number(c.budget_max).toLocaleString('fr-FR') + ' ฿' : null;
+    const zone    = c.zones ? (typeof trZone === 'function' ? trZone(c.zones) : c.zones) : null;
+    const urg     = typeof Clients !== 'undefined' ? Clients._urg(c) : null;
+
+    return `
+      <button type="button" class="rc-row${c.id === this.selectedId ? ' on' : ''}"
+        onclick="Recherches.selectClient(${c.id})" oncontextmenu="Recherches._ctxMenu(${c.id},event)">
+        <span class="rc-row-top">
+          <span class="rc-row-name">${c.name}</span>
+          ${urg ? `<span class="rc-row-urg" style="color:${urg.color}">${urg.label}</span>` : ''}
+        </span>
+        <span class="rc-row-meta">${[budget, zone].filter(Boolean).join(' · ') || '—'}</span>
+        <span class="rc-row-prog">
+          ${this._segs(step / 4 * 100, 4, st ? st.color : 'var(--fin-track)')}
+          <span>${props.length
+            ? `${props.length} ${this._t(props.length > 1 ? 'biens' : 'bien', props.length > 1 ? 'properties' : 'property')} · ${pending ? `${pending} ${this._t('en attente', 'pending')}` : this._stLabel(st || this._st('Pas intéressé'))}`
+            : this._t('Rien proposé', 'Nothing proposed')}</span>
+        </span>
+      </button>`;
   },
 
   selectClient(id) {
@@ -123,81 +155,74 @@ const Recherches = {
     this.render();
   },
 
-  // ── Panneau droit ─────────────────────────────────────────────────────────
+  // ── Fiche de recherche (droite) ───────────────────────────────────────────
   detailPanelHTML() {
     const c = this.clients.find(x => x.id === this.selectedId);
     if (!c) return '';
     const props = this.proposals[c.id] || [];
+    const isEN  = this._isEN();
+    const T     = v => (typeof tr === 'function' ? tr(v) : v);
+    const urg   = typeof Clients !== 'undefined' ? Clients._urg(c) : null;
+    const pot   = typeof Clients !== 'undefined' ? Clients._potential(c) : null;
+    const zone  = c.zones ? (typeof trZone === 'function' ? trZone(c.zones) : c.zones) : null;
+    const phone = (c.whatsapp || '').replace(/\D/g, '');
 
-    const isEN = typeof getLang === 'function' && getLang() === 'en';
-    const bdSuffix  = isEN ? ' bd.' : ' ch.';
-    const seeFiche  = isEN ? 'View profile →' : 'Voir fiche →';
+    const cell = (label, value, sub = '') => `
+      <div class="rc-crit">
+        <span class="fin-caption fin-subtle">${label}</span>
+        <span class="rc-crit-val">${value}</span>
+        ${sub ? `<span class="rc-crit-sub">${sub}</span>` : ''}
+      </div>`;
+    const dash = '<span class="fin-subtle">—</span>';
 
-    const meta = [
-      c.budget_max
-        ? `💰 ${Number(c.budget_max).toLocaleString('fr-FR')} ฿${c.budget_eur ? ' · ' + Number(c.budget_eur).toLocaleString('fr-FR') + ' €' : ''}/mois`
-        : null,
-      c.zones         ? `📍 ${typeof trZone === 'function' ? trZone(c.zones) : c.zones}` : null,
-      c.property_type ? `🏠 ${typeof tr === 'function' ? tr(c.property_type) : c.property_type}${c.bedrooms ? ' · ' + c.bedrooms + bdSuffix : ''}` : null,
-      c.move_in_date  ? `📅 ${fmtDate(c.move_in_date)}` : null,
-    ].filter(Boolean);
-
-    // Mini-cards critères
-    const cards = [
-      c.budget_max ? { label: 'Budget', val: `${Number(c.budget_max).toLocaleString('fr-FR')} ฿/mois` } : null,
-      (c.property_type || c.bedrooms) ? { label: 'Type', val: `${c.property_type ? (typeof tr === 'function' ? tr(c.property_type) : c.property_type) : ''}${c.bedrooms ? ' · ' + c.bedrooms + bdSuffix : ''}` } : null,
-      c.move_in_date  ? { label: isEN ? 'Move-in' : 'Arrivée', val: fmtDate(c.move_in_date) } : null,
-      c.duration      ? { label: isEN ? 'Duration' : 'Durée',  val: typeof tr === 'function' ? tr(c.duration) : c.duration } : null,
-    ].filter(Boolean);
+    const counts = this.STATUSES.map(s => ({ ...s, n: props.filter(p => p.status === s.key).length }));
 
     return `
-      <div style="max-width:720px;padding:20px 24px">
-
-        <!-- Header client -->
-        <div style="background:var(--surface-2,#fff);border:0.5px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:${cards.length || c.criteria ? '12px' : '0'}">
-            <div>
-              <h2 style="font-size:17px;font-weight:700;margin:0 0 4px">${c.name}</h2>
-              ${c.zones ? `<div style="font-size:12px;color:var(--text-2)">📍 ${typeof trZone === 'function' ? trZone(c.zones) : c.zones}</div>` : ''}
-              ${c.criteria ? `<div style="font-size:12px;color:var(--text-3);margin-top:5px;font-style:italic">"${c.criteria}"</div>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              ${c.budget_max ? `<span style="font-size:12px;font-weight:700;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:7px;padding:4px 10px">${Number(c.budget_max).toLocaleString('fr-FR')} ฿/mois</span>` : ''}
-              <button onclick="Recherches.openClientDetail(${c.id})"
-                style="font-size:11px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer;white-space:nowrap">
-                ${seeFiche}
-              </button>
-            </div>
+      <div class="fin-panel rc-fiche">
+        <div class="rc-fiche-head">
+          <div class="rc-fiche-id">
+            <h3 class="rc-fiche-name">${c.name}</h3>
+            <div class="rc-fiche-sub">${zone ? `<i class=ico-pin></i> ${zone}` : this._t('Zone non précisée', 'No area specified')}</div>
           </div>
-          ${cards.length > 1 ? `
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${cards.filter((_,i) => i > 0).map(card => `
-              <div style="background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:6px 12px;min-width:80px">
-                <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:2px">${card.label}</div>
-                <div style="font-size:12px;font-weight:600;color:var(--text)">${card.val}</div>
+          <div class="rc-fiche-actions">
+            ${phone ? `<a class="fin-ctl" href="https://wa.me/${phone}" target="_blank" rel="noopener"><i class=ico-message></i>WhatsApp</a>` : ''}
+            <button class="fin-ctl" onclick="Recherches.openClientDetail(${c.id})">${isEN ? 'Profile' : 'Fiche client'}</button>
+            <button class="fin-ctl fin-ctl-primary" onclick="Recherches.openProposeModal(${c.id})">${typeof FIN_ICONS !== 'undefined' ? FIN_ICONS.plus : '+ '}${this._t('Proposer un bien', 'Propose a property')}</button>
+          </div>
+        </div>
+
+        <div class="rc-crits">
+          ${cell('Budget', c.budget_max ? `${Number(c.budget_max).toLocaleString('fr-FR')} ฿` : dash,
+            c.budget_eur ? `${Number(c.budget_eur).toLocaleString('fr-FR')} € ${this._t('par mois', 'per month')}` : '')}
+          ${cell('Type', c.property_type ? T(c.property_type) : dash, c.bedrooms ? `${c.bedrooms} ${isEN ? 'bedroom(s)' : 'chambre(s)'}` : '')}
+          ${cell(isEN ? 'Move-in' : 'Arrivée', urg ? urg.date : dash, urg ? `<span style="color:${urg.color};font-weight:600">${urg.label}</span>` : '')}
+          ${cell(isEN ? 'Duration' : 'Durée', c.duration ? T(c.duration) : dash,
+            pot && pot.total ? `<span class="cl-pot" title="${Clients._potTitle(c)}">+${Math.round(pot.total).toLocaleString('fr-FR')} € ${this._t('potentiel', 'potential')}</span>` : '')}
+        </div>
+
+        ${c.criteria ? `<p class="rc-quote">${c.criteria}</p>` : ''}
+      </div>
+
+      <div class="fin-panel rc-props">
+        <div class="fin-panel-head">
+          <h3 class="fin-eyebrow">${this._t('Biens proposés', 'Properties proposed')}</h3>
+          <span class="fin-caption fin-subtle">${props.length}</span>
+        </div>
+        ${props.length ? `
+          <div class="rc-funnel">
+            ${counts.map((s, i) => `
+              <div class="rc-funnel-step${s.n ? '' : ' off'}">
+                <span class="rc-funnel-top"><span class="db-dot" style="background:${s.color}"></span>${this._stLabel(s)}<b>${s.n}</b></span>
+                ${this._segs(s.n / props.length * 100, 10, s.color, 250 + i * 80)}
               </div>`).join('')}
-          </div>` : ''}
-        </div>
-
-        <!-- Propositions -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <span style="font-size:13px;font-weight:600;color:var(--text)">
-            ${props.length} ${this._t(props.length !== 1 ? 'biens proposés' : 'bien proposé', props.length !== 1 ? 'properties proposed' : 'property proposed')}
-          </span>
-          <button onclick="Recherches.openProposeModal(${c.id})"
-            style="font-size:12px;color:var(--gold,#d4a853);background:none;border:1px solid var(--gold,#d4a853);border-radius:8px;padding:5px 14px;cursor:pointer;transition:opacity .15s"
-            onmouseenter="this.style.opacity='.7'" onmouseleave="this.style.opacity='1'">
-            + ${this._t('Proposer un bien','Propose a property')}
-          </button>
-        </div>
-
-        ${props.length
-          ? props.map(p => this.proposalCardHTML(p)).join('')
-          : `<div style="padding:32px;text-align:center;color:var(--text-3);font-size:13px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2,#fff)">
-               ${this._t('Aucun bien proposé encore.','No property proposed yet.')}<br>
-               <span style="font-size:12px">${this._t('Clique sur "+ Proposer un bien" pour commencer.','Click on "+ Propose a property" to get started.')}</span>
-             </div>`
-        }
+          </div>
+          <div class="rc-cards">${props.map(p => this.proposalCardHTML(p)).join('')}</div>`
+        : `<div class="rc-empty">
+             <i class=ico-home></i>
+             <strong>${this._t('Aucun bien proposé pour l\'instant', 'No property proposed yet')}</strong>
+             <span>${this._t('Envoie une première sélection à ce client.', 'Send this client a first selection.')}</span>
+             <button class="fin-ctl" onclick="Recherches.openProposeModal(${c.id})">${this._t('Proposer un bien', 'Propose a property')}</button>
+           </div>`}
       </div>`;
   },
 
@@ -222,65 +247,47 @@ const Recherches = {
 
   // ── Carte proposition ─────────────────────────────────────────────────────
   proposalCardHTML(p) {
-    const s      = this.STATUSES.find(x => x.key === p.status) || this.STATUSES[0];
+    const s      = this._st(p.status);
     const title  = p.property_title || p.properties?.title || '—';
     const sub    = [
       p.properties?.zone,
       p.properties?.price ? Number(p.properties.price).toLocaleString('fr-FR') + ' ฿/mois' : null,
     ].filter(Boolean).join(' · ');
     const photos = Array.isArray(p.photos) ? p.photos : [];
-
-    // Avatar de qui a envoyé et qui a changé le statut (si différent)
-    const createdAv = this._userAv(p.created_by);
-    const updatedAv = (p.status_updated_by && p.status_updated_by !== p.created_by) ? this._userAv(p.status_updated_by) : '';
+    const createdAv = this._userAv(p.created_by, 20);
+    const updatedAv = (p.status_updated_by && p.status_updated_by !== p.created_by) ? this._userAv(p.status_updated_by, 20) : '';
+    const when = p.created_at ? new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '') : '';
 
     return `
-      <div style="background:var(--surface-2,#fff);border:0.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px">
-
-          <!-- Photos -->
-          ${photos.length ? `
-            <div style="display:flex;gap:5px;flex-shrink:0">
-              ${photos.slice(0, 3).map((ph, i) => `
-                <img src="${ph}" onclick="Recherches.viewPhoto('${p.id}',${i})"
-                  style="width:${photos.length === 1 ? '80' : '56'}px;height:${photos.length === 1 ? '80' : '56'}px;object-fit:cover;border-radius:8px;cursor:pointer;border:0.5px solid var(--border)">
-              `).join('')}
-            </div>` : `
-            <div style="width:48px;height:48px;border-radius:8px;background:var(--surface-1);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏠</div>`
-          }
-
-          <!-- Infos -->
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${title}</div>
-                ${sub ? `<div style="font-size:12px;color:var(--text-3)">${sub}</div>` : ''}
-              </div>
-              <!-- Statut + avatar dernière action -->
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-                ${updatedAv || createdAv}
-                <select onchange="Recherches.updateStatus('${p.id}', this.value, this)"
-                  style="font-size:11px;padding:4px 8px;border:1px solid ${s.color};border-radius:7px;background:${s.color}18;color:${s.color};cursor:pointer;outline:none">
-                  ${this.STATUSES.map(st =>
-                    `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${st.icon} ${this._isEN() ? st.labelEN : st.labelFR}</option>`
-                  ).join('')}
-                </select>
-              </div>
+      <article class="rc-card">
+        ${photos.length
+          ? `<div class="rc-card-photo">
+               <img src="${photos[0]}" alt="" onclick="Recherches.viewPhoto('${p.id}',0)">
+               ${photos.length > 1 ? `<span class="rc-card-more">+${photos.length - 1}</span>` : ''}
+             </div>`
+          : `<div class="rc-card-photo rc-card-nophoto"><i class=ico-home></i></div>`}
+        <div class="rc-card-body">
+          <div class="rc-card-top">
+            <div class="rc-card-id">
+              <span class="rc-card-title">${title}</span>
+              ${sub ? `<span class="rc-card-sub">${sub}</span>` : ''}
             </div>
-
-            <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
-              ${p.property_url
-                ? `<a href="${p.property_url}" target="_blank" rel="noopener"
-                    style="font-size:12px;color:var(--gold,#d4a853);text-decoration:none">🔗 ${this._t("Voir l'annonce",'View listing')}</a>`
-                : ''}
-              ${p.notes ? `<span style="font-size:12px;color:var(--text-2)">💬 ${p.notes}</span>` : ''}
-              ${p.created_by ? `<span style="font-size:11px;color:var(--text-3)">${this._t('Envoyé par','Sent by')} <strong>${p.created_by}</strong></span>` : ''}
-              <button onclick="Recherches.deleteProposal('${p.id}')"
-                style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:2px 4px" title="Supprimer">✕</button>
-            </div>
+            <select class="rc-status" style="--c:${s.color}" onchange="Recherches.updateStatus('${p.id}', this.value, this)" aria-label="Statut">
+              ${this.STATUSES.map(st =>
+                `<option value="${st.key}" ${p.status === st.key ? 'selected' : ''}>${this._stLabel(st)}</option>`
+              ).join('')}
+            </select>
+          </div>
+          ${p.notes ? `<p class="rc-card-note">${p.notes}</p>` : ''}
+          <div class="rc-card-foot">
+            <span class="rc-card-by">${updatedAv || createdAv}${p.created_by ? `${this._t('Envoyé par', 'Sent by')} ${p.created_by}` : ''}${when ? ` · ${when}` : ''}</span>
+            <span class="rc-card-actions">
+              ${p.property_url ? `<a class="fin-ctl fin-ctl-ghost" href="${p.property_url}" target="_blank" rel="noopener"><i class=ico-link></i>${this._t("Annonce", 'Listing')}</a>` : ''}
+              <button class="fin-icon-btn fin-icon-btn-danger" onclick="Recherches.deleteProposal('${p.id}')" title="${this._t('Supprimer', 'Delete')}">${typeof FIN_ICONS !== 'undefined' ? FIN_ICONS.trash : '✕'}</button>
+            </span>
           </div>
         </div>
-      </div>`;
+      </article>`;
   },
 
   // ── Visionneuse photos ────────────────────────────────────────────────────
@@ -289,7 +296,7 @@ const Recherches = {
     if (!p) return;
     const photos = Array.isArray(p.photos) ? p.photos : [];
     if (!photos[index]) return;
-    Modal.open('📷 Photo', `
+    Modal.open('Photo', `
       <div style="text-align:center">
         <img src="${photos[index]}" style="max-width:100%;max-height:65vh;border-radius:8px;object-fit:contain;display:block;margin:0 auto">
         ${photos.length > 1 ? `
@@ -360,9 +367,9 @@ const Recherches = {
       ? chipSection('✓ Correspondent aux critères', matched, true) + chipSection('Autres biens', rest.slice(0,4), false)
       : chipSection('Tous les biens disponibles', available.slice(0,8), false);
 
-    Modal.open(`📤 Proposer un bien — ${client?.name || ''}`, `
+    Modal.open(`Proposer un bien — ${client?.name || ''}`, `
       <div class="form-row">
-        <label style="font-weight:600">🏠 Depuis votre CRM</label>
+        <label style="font-weight:600"><i class=ico-home></i> Depuis votre CRM</label>
         <div style="position:relative;margin-bottom:8px">
           <input id="p-crm-search" placeholder="Rechercher par titre ou zone…" oninput="Recherches._filterProps(this.value)" autocomplete="off">
           <div id="prop-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;box-shadow:0 4px 16px #0006"></div>
@@ -389,7 +396,7 @@ const Recherches = {
       <div class="form-row">
         <label>Photos <span style="font-size:11px;color:var(--text-3)">max 3</span></label>
         <label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text-2);border:1px dashed var(--border);border-radius:8px;padding:6px 14px;margin-bottom:10px">
-          📷 Ajouter des photos
+          <i class=ico-camera></i> Ajouter des photos
           <input type="file" accept="image/*" multiple style="display:none" onchange="Recherches._addPhotos(this)">
         </label>
         <div id="p-photos-preview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
@@ -402,7 +409,7 @@ const Recherches = {
         <label>Statut initial</label>
         <select id="p-status">
           ${this.STATUSES.filter(s => s.key !== 'Loué').map(s =>
-            `<option value="${s.key}">${s.icon} ${s.key}</option>`
+            `<option value="${s.key}">${s.key}</option>`
           ).join('')}
         </select>
       </div>
@@ -516,11 +523,7 @@ const Recherches = {
 
   async updateStatus(id, status, selectEl) {
     const s = this.STATUSES.find(x => x.key === status) || this.STATUSES[0];
-    if (selectEl) {
-      selectEl.style.borderColor = s.color;
-      selectEl.style.background  = s.color + '18';
-      selectEl.style.color       = s.color;
-    }
+    if (selectEl) selectEl.style.setProperty('--c', s.color);
     try {
       const updatedBy = (typeof App !== 'undefined' && App.user?.name) || null;
       await api.patch(`/proposals/${id}/status`, { status });
@@ -530,12 +533,7 @@ const Recherches = {
           if (updatedBy) p.status_updated_by = updatedBy;
         }
       });
-      // Rafraîchir sidebar (badges en attente)
-      document.querySelectorAll('#content [onclick^="Recherches.selectClient"]').forEach(el => {
-        const cid = parseInt(el.getAttribute('onclick').match(/\d+/)[0]);
-        const c = this.clients.find(x => x.id === cid);
-        if (c) el.outerHTML = this.clientRowHTML(c);
-      });
+      this.render();   // met à jour les chiffres clés, la liste et l'entonnoir
     } catch { Toast.show('Erreur mise à jour', 'error'); }
   },
 
@@ -563,9 +561,9 @@ const Recherches = {
 
     // Statuts suivi disponibles depuis Recherches
     const suiviStatuses = [
-      { key: 'recherche_lancee', label: isEN ? '🔍 Search active' : '🔍 Recherche lancée', color: '#1D9E75' },
-      { key: 'en_attente',       label: isEN ? '⏸ On hold'        : '⏸ En attente',        color: '#9B59B6' },
-      { key: 'signe',            label: isEN ? '✅ Signed'         : '✅ Signé',             color: '#888780' },
+      { key: 'recherche_lancee', label: isEN ? '<i class=ico-search></i> Search active' : '<i class=ico-search></i> Recherche lancée', color: '#1D9E75' },
+      { key: 'en_attente',       label: isEN ? '<i class=ico-pause></i> On hold'        : '<i class=ico-pause></i> En attente',        color: '#9B59B6' },
+      { key: 'signe',            label: isEN ? '<i class=ico-check-circle></i> Signed'         : '<i class=ico-check-circle></i> Signé',             color: '#888780' },
       { key: 'a_contacter',      label: isEN ? '↩ Remove from searches' : '↩ Retirer des recherches', color: '#EF9F27' },
     ];
 
@@ -584,7 +582,7 @@ const Recherches = {
     // Voir la fiche
     const detailBtn = document.createElement('div');
     detailBtn.className = 'rech-ctx-item';
-    detailBtn.innerHTML = `👤 ${isEN ? 'View profile' : 'Voir la fiche'}`;
+    detailBtn.innerHTML = `<i class=ico-user></i> ${isEN ? 'View profile' : 'Voir la fiche'}`;
     detailBtn.onclick = () => { menu.remove(); this.openClientDetail(id); };
     menu.appendChild(detailBtn);
 

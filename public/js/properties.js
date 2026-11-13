@@ -9,6 +9,7 @@ const Properties = {
 
   async init() {
     document.getElementById('content').innerHTML = '<p class="spinner">Loading…</p>';
+    this._animNext = true;
     await this.load();
     this.render();
   },
@@ -28,7 +29,7 @@ const Properties = {
   },
 
   carouselHTML(photos, idx, propertyId, imgStyle = '') {
-    if (!photos.length) return '<div class="prop-no-photo">🏠</div>';
+    if (!photos.length) return '<div class="prop-no-photo"><i class=ico-home></i></div>';
     const photo = photos[idx] || photos[0];
     return `<div class="carousel-wrap">
       <img src="${photo.thumbnail}" class="prop-photo"${imgStyle ? ' style="' + imgStyle + '"' : ''}
@@ -93,64 +94,154 @@ const Properties = {
     if (type === 'zone')   this.filterZone     = val;
     if (type === 'beds')   this.filterBeds     = val;
     if (type === 'price')  this.filterPriceMax = Number(val);
-    this.render();
+    this._renderGrid();
   },
 
   // ── Rendu principal ─────────────────────────────────────────────────────────
+  STATUS_COLORS: { disponible: '#00A35A', 'proposé': '#C9922A', 'loué': '#9A9490' },
+  STATUS_FR:     { disponible: 'Disponible', 'proposé': 'Proposé', 'loué': 'Loué' },
+
+  _toggleMenu(e) {
+    e.stopPropagation();
+    const m = document.getElementById('pr-menu');
+    if (!m) return;
+    const open = m.style.display !== 'none';
+    m.style.display = open ? 'none' : 'block';
+    if (!open) setTimeout(() => document.addEventListener('click', () => { m.style.display = 'none'; }, { once: true }), 10);
+  },
+
+  _kpisHTML() {
+    const d = this.data;
+    const dispo  = d.filter(p => (p.status || '').toLowerCase() === 'disponible').length;
+    const prices = d.map(p => Number(p.price)).filter(v => v > 0);
+    const avg    = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+    const rate   = parseFloat(localStorage.getItem('eur_rate') || '37');
+    const zc = {};
+    d.forEach(p => { if (p.zone) zc[p.zone] = (zc[p.zone] || 0) + 1; });
+    const zones = Object.entries(zc).sort((a, b) => b[1] - a[1]);
+    const withPh = d.filter(p => this.getPhotos(p).length).length;
+    const pct = d.length ? Math.round(withPh / d.length * 100) : 0;
+    const f = v => Number(v).toLocaleString('fr-FR');
+    const ic = n => `<i class=ico-${n}></i>`;
+    const count = v => `<span class="fin-count" data-v="${v}">${f(v)}</span>`;
+    const segs = (p, n, c, dl) => typeof Clients !== 'undefined' ? Clients._segs(p, n, c, dl) : '';
+    const kpi = (i, icon, label, tag, value, caption, extra = '') => `
+      <article class="fin-kpi fin-in" style="--i:${i}">
+        <div class="fin-kpi-top"><span class="fin-caption">${icon}${label}</span>${tag}</div>
+        <div class="fin-kpi-row"><span class="fin-kpi-num">${value}</span>${extra}</div>
+        <span class="fin-caption fin-subtle">${caption}</span>
+      </article>`;
+    return `<div class="fin-kpis">
+      ${kpi(1, ic('building'), this.showArchived ? 'Biens archivés' : 'Biens au catalogue',
+        dispo ? `<span class="fin-tag fin-tag-up">${dispo} disponible${dispo > 1 ? 's' : ''}</span>` : '',
+        count(d.length), this.showArchived ? 'ancien listing' : 'listing actuel')}
+      ${kpi(2, ic('wallet'), 'Loyer moyen', avg ? `<span class="fin-tag fin-tag-neutral">≈ ${f(Math.round(avg / rate))} €</span>` : '',
+        `${count(avg)}<span class="fin-cur">฿</span>`,
+        prices.length ? `de ${f(Math.min(...prices))} à ${f(Math.max(...prices))} ฿ par mois` : '—')}
+      ${kpi(3, ic('pin'), 'Zones couvertes', '', count(zones.length),
+        zones.length ? `surtout ${zones[0][0]} (${zones[0][1]} bien${zones[0][1] > 1 ? 's' : ''})` : '—')}
+      ${kpi(4, ic('camera'), 'Photos renseignées', `<span class="fin-tag fin-tag-neutral">${pct} %</span>`,
+        count(withPh), `sur ${d.length} bien${d.length > 1 ? 's' : ''}`,
+        `<span class="cl-kpi-bar">${segs(pct, 10, 'var(--accent)', 300)}</span>`)}
+    </div>`;
+  },
+
+  _gridHTML() {
+    const list = this.filtered();
+    if (!list.length) return '<div class="rc-empty"><i class=ico-building></i><strong>Aucun bien ne correspond</strong><span>Élargis les filtres pour en voir plus.</span></div>';
+    const withPh = list.filter(p => this.getPhotos(p).length);
+    const noPh   = list.filter(p => !this.getPhotos(p).length);
+    const both   = withPh.length && noPh.length;
+    return `
+      ${withPh.length ? `${both ? `<h3 class="fin-eyebrow pr-group">Avec photos <span>${withPh.length}</span></h3>` : ''}
+        <div class="pr-grid">${withPh.map(p => this.cardHTML(p)).join('')}</div>` : ''}
+      ${noPh.length ? `${both ? `<h3 class="fin-eyebrow pr-group">Sans photo <span>${noPh.length}</span></h3>` : ''}
+        <div class="pr-grid pr-grid-compact">${noPh.map(p => this.cardHTML(p)).join('')}</div>` : ''}`;
+  },
+
+  _renderGrid() {
+    const g = document.getElementById('pr-body');
+    if (!g) { this.render(); return; }
+    document.querySelector('.pr-root')?.classList.add('cl-static');
+    g.innerHTML = this._gridHTML();
+    const n = this.filtered().length;
+    const c = document.getElementById('pr-count');
+    if (c) c.textContent = `${n} bien${n > 1 ? 's' : ''}`;
+    const v = document.getElementById('pr-price-val');
+    if (v) v.textContent = this.filterPriceMax >= 250000 ? 'Sans limite' : Number(this.filterPriceMax).toLocaleString('fr-FR') + ' ฿';
+  },
+
   render() {
+    const anim = this._animNext; this._animNext = false;
     const zones = this.uniqueZones();
     const beds  = this.uniqueBeds();
+    const n     = this.filtered().length;
     document.getElementById('content').innerHTML = `
-      <div class="section-header">
-        <h2>Properties</h2>
-        <div class="header-actions">
+      <div class="pr-root${anim ? '' : ' cl-static'}">
+      <div class="db-head fin-in">
+        <div>
+          <div class="fin-caption db-date">Catalogue</div>
+          <h2 class="db-hello">Biens</h2>
+        </div>
+        <div class="header-actions fin-actions">
+          <div class="fin-seg-toggle">
+            <button class="${this.showArchived ? '' : 'on'}" onclick="Properties.setTab(false)">Listing actuel</button>
+            <button class="${this.showArchived ? 'on' : ''}" onclick="Properties.setTab(true)">Ancien listing</button>
+          </div>
           ${!this.showArchived ? `
-            <button class="btn btn-primary" onclick="Properties.openAddModal()">+ Add</button>
-            <button class="btn btn-secondary" onclick="Properties.syncSheets()">↻ Sheets</button>
-            <button class="btn btn-secondary" onclick="Properties.cachePhotos()" title="Fetch & cache all photos from Drive">📸 Cache photos</button>
-            <button class="btn btn-ghost" onclick="Properties.archiveAll()" title="Basculer les propriétés actuelles en ancien listing">🗃 Archiver ancien listing</button>
-          ` : ''}
+          <div style="position:relative">
+            <button class="fin-ctl cl-more" onclick="Properties._toggleMenu(event)" title="Plus d'options">···</button>
+            <div id="pr-menu" class="cl-menu" style="display:none">
+              <button class="more-menu-item" onclick="Properties.syncSheets()"><i class=ico-refresh></i> Synchroniser Sheets</button>
+              <button class="more-menu-item" onclick="Properties.cachePhotos()"><i class=ico-camera></i> Mettre les photos en cache</button>
+              <div style="height:1px;background:var(--border);margin:4px 0"></div>
+              <button class="more-menu-item" onclick="Properties.archiveAll()"><i class=ico-archive></i> Archiver tout le listing</button>
+            </div>
+          </div>
+          <button class="fin-ctl fin-ctl-primary" onclick="Properties.openAddModal()">${typeof FIN_ICONS !== 'undefined' ? FIN_ICONS.plus : '+ '}Ajouter</button>` : ''}
         </div>
       </div>
 
-      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
-        <button onclick="Properties.setTab(false)" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:${!this.showArchived?'600':'400'};color:${!this.showArchived?'var(--accent)':'var(--text-2)'};border-bottom:2px solid ${!this.showArchived?'var(--accent)':'transparent'};margin-bottom:-2px;transition:all .15s">Listing actuel</button>
-        <button onclick="Properties.setTab(true)"  style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:${this.showArchived?'600':'400'};color:${this.showArchived?'var(--accent)':'var(--text-2)'};border-bottom:2px solid ${this.showArchived?'var(--accent)':'transparent'};margin-bottom:-2px;transition:all .15s">Ancien listing</button>
-      </div>
+      ${this._kpisHTML()}
 
-      <div class="filter-bar" style="margin-bottom:20px">
+      <div class="filter-bar cl-filters fin-in" style="--i:5">
         <select class="filter-select" onchange="Properties.setFilter('status',this.value)">
-          <option value="tous">All statuses</option>
-          <option value="disponible" ${this.filterStatus==='disponible'?'selected':''}>Available</option>
-          <option value="proposé"    ${this.filterStatus==='proposé'?'selected':''}>Proposed</option>
-          <option value="loué"       ${this.filterStatus==='loué'?'selected':''}>Rented</option>
+          <option value="tous">Tous les statuts</option>
+          <option value="disponible" ${this.filterStatus==='disponible'?'selected':''}>Disponible</option>
+          <option value="proposé"    ${this.filterStatus==='proposé'?'selected':''}>Proposé</option>
+          <option value="loué"       ${this.filterStatus==='loué'?'selected':''}>Loué</option>
         </select>
         ${zones.length ? `
         <select class="filter-select" onchange="Properties.setFilter('zone',this.value)">
-          <option value="toutes">All zones</option>
+          <option value="toutes">Toutes les zones</option>
           ${zones.map(z => `<option value="${z}" ${this.filterZone===z?'selected':''}>${z}</option>`).join('')}
         </select>` : ''}
         ${beds.length ? `
         <select class="filter-select" onchange="Properties.setFilter('beds',this.value)">
-          <option value="tous">All bedrooms</option>
-          ${beds.map(b => `<option value="${b}" ${this.filterBeds===b?'selected':''}>${b} BR</option>`).join('')}
+          <option value="tous">Toutes les chambres</option>
+          ${beds.map(b => `<option value="${b}" ${this.filterBeds===b?'selected':''}>${b} chambre${b > 1 ? 's' : ''}</option>`).join('')}
         </select>` : ''}
         <div class="price-slider-wrap">
-          <span style="font-size:12px;color:var(--text-3);white-space:nowrap">Max price</span>
+          <span class="cl-filter-count">Loyer max</span>
           <input type="range" min="0" max="250000" step="5000"
             value="${this.filterPriceMax}"
             oninput="Properties.setFilter('price', this.value)"
-            class="price-slider">
-          <span class="price-slider-val">
-            ${this.filterPriceMax >= 250000 ? 'No limit' : Number(this.filterPriceMax).toLocaleString('fr-FR') + ' ฿'}
+            class="price-slider" aria-label="Loyer maximum">
+          <span class="price-slider-val" id="pr-price-val">
+            ${this.filterPriceMax >= 250000 ? 'Sans limite' : Number(this.filterPriceMax).toLocaleString('fr-FR') + ' ฿'}
           </span>
         </div>
-        <span style="margin-left:auto;font-size:12px;color:var(--text-3)">${this.filtered().length} properties</span>
+        <span class="cl-filter-meta"><span class="cl-filter-count" id="pr-count">${n} bien${n > 1 ? 's' : ''}</span></span>
       </div>
 
-      <div class="cards-grid">
-        ${this.filtered().map(p => this.cardHTML(p)).join('') || '<p class="empty">No properties</p>'}
+      <div id="pr-body" class="fin-in" style="--i:6">${this._gridHTML()}</div>
       </div>`;
+    if (anim && typeof Finance !== 'undefined') Finance.afterRender();
+    // Photo Drive qui ne charge pas : on replie l'emplacement, la carte reste lisible
+    document.getElementById('pr-body')?.addEventListener('error', e => {
+      const slot = e.target.tagName === 'IMG' && e.target.closest('.pr-photo');
+      if (slot) slot.classList.add('pr-photo-failed');
+    }, true);
     // Précharge l'image suivante de chaque carte en arrière-plan
     setTimeout(() => {
       this.filtered().forEach(p => this.preloadAdjacent(this.getPhotos(p), this.photoIndex[p.id] || 0));
@@ -161,31 +252,32 @@ const Properties = {
   cardHTML(p) {
     const photos = this.getPhotos(p);
     const idx    = this.photoIndex[p.id] || 0;
+    const sk     = (p.status || '').toLowerCase();
+    const pill   = `<span class="db-pill pr-status" style="--c:${this.STATUS_COLORS[sk] || '#9A9490'}">${this.STATUS_FR[sk] || p.status || '—'}</span>`;
+    const specs  = [p.room_type, p.sqm, p.floor && p.floor !== '-' ? `Étage ${p.floor}` : '', p.room_no ? `Lot ${p.room_no}` : ''].filter(Boolean).join(' · ');
     return `
-      <div class="card" onclick="Properties.openDetailModal(${p.id}, event)" style="cursor:pointer">
-        <div id="photo-${p.id}" class="prop-photo-slot">
-          ${this.carouselHTML(photos, idx, p.id)}
+      <article class="pr-card${photos.length ? '' : ' pr-card-nophoto'}" onclick="Properties.openDetailModal(${p.id}, event)">
+        ${photos.length ? `<div id="photo-${p.id}" class="prop-photo-slot pr-photo">${this.carouselHTML(photos, idx, p.id)}</div>` : ''}
+        <div class="pr-card-body">
+          <div class="pr-card-top">
+            <span class="pr-card-title">${p.title}</span>
+            ${pill}
+          </div>
+          <div class="pr-card-price">${p.price ? `${Number(p.price).toLocaleString('fr-FR')} <span>฿ / mois</span>` : '<span>Loyer non renseigné</span>'}</div>
+          <div class="pr-card-meta">
+            ${p.zone ? `<span><i class=ico-pin></i>${p.zone}</span>` : ''}
+            ${specs ? `<span><i class=ico-bed></i>${specs}</span>` : ''}
+            ${p.owner_contact ? `<span class="fin-subtle"><i class=ico-user></i>${p.owner_contact}</span>` : ''}
+          </div>
+          <div class="pr-card-foot">
+            <button class="fin-ctl fin-ctl-ghost" onclick="Properties.openEditModal(${p.id})"><i class=ico-pencil></i>Modifier</button>
+            <span class="pr-card-icons">
+              ${p.share_token ? `<button class="fin-icon-btn" onclick="Properties.share('${p.share_token}',event)" title="Copier le lien client"><i class=ico-link></i></button>` : ''}
+              <button class="fin-icon-btn" onclick="Properties.archive(${p.id})" title="${this.showArchived ? 'Désarchiver' : 'Archiver'}"><i class=ico-archive></i></button>
+            </span>
+          </div>
         </div>
-        <div class="card-top" style="margin-bottom:8px;margin-top:10px">
-          ${badge(p.status)}
-        </div>
-        <div class="prop-title">${p.title}</div>
-        ${p.price ? `<div class="prop-price">${Number(p.price).toLocaleString('fr-FR')} ฿/mois</div>` : ''}
-        <div class="prop-zone" style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
-          ${p.zone         ? `<span>📍 ${p.zone}</span>` : ''}
-          ${p.room_type    ? `<span>🛏 ${p.room_type}${p.sqm ? ' · ' + p.sqm : ''}</span>` : ''}
-          ${p.floor        ? `<span>🏢 Floor ${p.floor}</span>` : ''}
-          ${p.room_no      ? `<span>🔑 Unit ${p.room_no}</span>` : ''}
-          ${p.owner_contact ? `<span style="color:var(--text-2);font-size:11px;margin-top:2px">👤 ${p.owner_contact}</span>` : ''}
-        </div>
-        <div class="card-actions">
-          <button class="btn btn-secondary btn-sm" onclick="Properties.openEditModal(${p.id})">Edit</button>
-          <button class="btn btn-ghost btn-sm" onclick="Properties.archive(${p.id})">
-            ${this.showArchived ? 'Unarchive' : 'Archive'}
-          </button>
-          ${p.share_token ? `<button class="btn btn-ghost btn-sm" onclick="Properties.share('${p.share_token}',event)" title="Copy client link">🔗</button>` : ''}
-        </div>
-      </div>`;
+      </article>`;
   },
 
   // ── Modal détail mozaïque ───────────────────────────────────────────────────
@@ -200,11 +292,11 @@ const Properties = {
 
     // ── Gallery ────────────────────────────────────────────────────
     const galleryEl = document.getElementById('prop-detail-gallery');
-    const placeholder = '<div class="pdm-gallery-placeholder">🏠</div>';
+    const placeholder = '<div class="pdm-gallery-placeholder"><i class=ico-home></i></div>';
     const imgMain  = photos[0] ? `<img src="${photos[0].thumbnail}" alt="" onerror="this.parentNode.innerHTML='${placeholder.replace(/'/g,"\\'")}'" loading="lazy">` : placeholder;
     const img2     = photos[1] ? `<img src="${photos[1].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : '';
     const img3html = photos.length > 3
-      ? `${photos[2] ? `<img src="${photos[2].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : ''}<div class="pdm-gallery-more"><span style="font-size:20px">🖼</span>+${photos.length - 2} photos</div>`
+      ? `${photos[2] ? `<img src="${photos[2].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : ''}<div class="pdm-gallery-more"><span style="font-size:20px"><i class=ico-image></i></span>+${photos.length - 2} photos</div>`
       : (photos[2] ? `<img src="${photos[2].thumbnail}" alt="" onerror="this.style.display='none'" loading="lazy">` : '');
     galleryEl.innerHTML = `
       <div class="pdm-gallery-main">${imgMain}</div>
@@ -225,11 +317,11 @@ const Properties = {
 
     // ── Chips ──────────────────────────────────────────────────────
     const chips = [
-      p.zone      && `<span class="pdm-chip">📍 ${p.zone}</span>`,
-      p.room_type && `<span class="pdm-chip">🛏 ${p.room_type}</span>`,
-      p.sqm       && `<span class="pdm-chip">📐 ${p.sqm}</span>`,
-      p.floor     && `<span class="pdm-chip">🏢 Étage ${p.floor}</span>`,
-      p.room_no   && `<span class="pdm-chip">🔑 Unité ${p.room_no}</span>`,
+      p.zone      && `<span class="pdm-chip"><i class=ico-pin></i> ${p.zone}</span>`,
+      p.room_type && `<span class="pdm-chip"><i class=ico-bed></i> ${p.room_type}</span>`,
+      p.sqm       && `<span class="pdm-chip"><i class=ico-ruler></i> ${p.sqm}</span>`,
+      p.floor     && `<span class="pdm-chip"><i class=ico-building></i> Étage ${p.floor}</span>`,
+      p.room_no   && `<span class="pdm-chip"><i class=ico-key></i> Unité ${p.room_no}</span>`,
     ].filter(Boolean);
     document.getElementById('pdm-chips').innerHTML = chips.join('');
 
@@ -275,10 +367,10 @@ const Properties = {
       contactHTML = `
         <div class="pdm-contact-label">Propriétaire</div>
         <div class="pdm-contact-name">${p.owner_contact}</div>
-        ${waLink ? `<button class="pdm-wap-btn" onclick="window.open('${waLink}','_blank')">📱 Contacter WhatsApp</button>` : ''}
-        ${p.drive_link ? `<a href="${p.drive_link}" target="_blank" class="pdm-drive-link">📁 Dossier Drive</a>` : ''}`;
+        ${waLink ? `<button class="pdm-wap-btn" onclick="window.open('${waLink}','_blank')"><i class=ico-smartphone></i> Contacter WhatsApp</button>` : ''}
+        ${p.drive_link ? `<a href="${p.drive_link}" target="_blank" class="pdm-drive-link"><i class=ico-folder></i> Dossier Drive</a>` : ''}`;
     } else if (p.drive_link) {
-      contactHTML = `<a href="${p.drive_link}" target="_blank" class="pdm-drive-link">📁 Dossier Drive</a>`;
+      contactHTML = `<a href="${p.drive_link}" target="_blank" class="pdm-drive-link"><i class=ico-folder></i> Dossier Drive</a>`;
     }
     document.getElementById('pdm-contact').innerHTML = contactHTML;
     document.getElementById('pdm-contact').style.display = contactHTML ? '' : 'none';
@@ -444,7 +536,7 @@ const Properties = {
   share(token, e) {
     e.stopPropagation();
     const url = `${location.origin}/listing/${token}`;
-    navigator.clipboard.writeText(url).then(() => Toast.show('🔗 Link copied!'));
+    navigator.clipboard.writeText(url).then(() => Toast.show('Link copied!'));
   },
 
   async submit(e, id) {

@@ -51,7 +51,7 @@ const Today = {
           <div class="today-section-title">${t('today_urgent')} <span class="kanban-count">${urgent.length}</span></div>
           ${urgent.length ? urgent.map(c => this.urgentCard(c)).join('') : `<p class="sub-empty">${t('today_no_urgent')}</p>`}
           ${soon.length ? `
-            <div class="today-section-subtitle">🟡 ${getLang() === 'fr' ? 'Dans 15–30 jours' : 'In 15–30 days'} (${soon.length})</div>
+            <div class="today-section-subtitle"><i class=ico-dot-yellow></i> ${getLang() === 'fr' ? 'Dans 15–30 jours' : 'In 15–30 days'} (${soon.length})</div>
             ${soon.map(c => this.urgentCard(c)).join('')}
           ` : ''}
         </div>
@@ -63,14 +63,14 @@ const Today = {
     const isPast = c.reminder_date < todayStr;
     const isToday = c.reminder_date === todayStr;
     const urgencyClass = isPast ? 'urgent-red' : 'urgent-amber';
-    const label = isPast ? (getLang() === 'fr' ? '⚠ En retard' : '⚠ Overdue') : (getLang() === 'fr' ? '📅 Aujourd\'hui' : '📅 Today');
+    const label = isPast ? (getLang() === 'fr' ? '<i class=ico-alert></i> En retard' : '<i class=ico-alert></i> Overdue') : (getLang() === 'fr' ? '<i class=ico-calendar></i> Aujourd\'hui' : '<i class=ico-calendar></i> Today');
     return `
       <div class="today-card" onclick="Today.openClient(${c.id})">
         <div class="today-card-top">
           <span class="today-client-name">${c.name}</span>
           <span class="action-tag ${isPast ? 'tag-hot' : 'tag-payer'} reminder-chip">${label}</span>
         </div>
-        ${c.reminder_note ? `<p class="today-note">💬 ${c.reminder_note}</p>` : ''}
+        ${c.reminder_note ? `<p class="today-note"><i class=ico-message></i> ${c.reminder_note}</p>` : ''}
         ${c.whatsapp ? `<a class="btn btn-wa btn-sm" href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()">WhatsApp</a>` : ''}
       </div>`;
   },
@@ -87,7 +87,7 @@ const Today = {
           <span class="today-client-name">${c.name}</span>
           <span class="${urgency}" style="font-size:12px;font-weight:700">${label}</span>
         </div>
-        <p class="today-note">📅 ${fmtDate(c.move_in_date)}${c.zones ? ' · ' + c.zones : ''}</p>
+        <p class="today-note"><i class=ico-calendar></i> ${fmtDate(c.move_in_date)}${c.zones ? ' · ' + c.zones : ''}</p>
         ${c.whatsapp ? `<a class="btn btn-wa btn-sm" href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()">WhatsApp</a>` : ''}
       </div>`;
   },

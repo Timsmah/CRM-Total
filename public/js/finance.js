@@ -8,6 +8,24 @@ const BANK_LOGOS = {
   total:    `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a1a1a"/><path d="M9 16h14M16 9l7 7-7 7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 
+const FIN_ICON = (paths) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const FIN_ICONS = {
+  commission: FIN_ICON('<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>'),
+  onboarding: FIN_ICON('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>'),
+  visa:       FIN_ICON('<rect width="18" height="20" x="3" y="2" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17h8"/>'),
+  call:       FIN_ICON('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
+  autre:      FIN_ICON('<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>'),
+  trophy:     FIN_ICON('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>'),
+  trend:      FIN_ICON('<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'),
+  lock:       FIN_ICON('<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+  edit:       FIN_ICON('<path d="M12 20h9"/><path d="M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.86z"/>'),
+  plus:       FIN_ICON('<path d="M12 5v14"/><path d="M5 12h14"/>'),
+  bars:       FIN_ICON('<line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/>'),
+  target:     FIN_ICON('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+  calendar:   FIN_ICON('<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>'),
+  trash:      FIN_ICON('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>'),
+};
+
 function bankLogo(name) {
   const key = Object.keys(BANK_LOGOS).find(k => name.toLowerCase().includes(k));
   if (!key) {
@@ -18,12 +36,18 @@ function bankLogo(name) {
   return BANK_LOGOS[key];
 }
 
+const FIN_CAT_COLORS = {
+  commission: '#C9922A',
+  onboarding: '#0F9F8A',
+  visa:       '#4F6BED',
+  call:       '#D6457A',
+  autre:      '#9A9490',
+};
+
 const Finance = {
   data: [],
   selectedMonth: '',
   _unlocked: false,   // in-memory only — resets on every page refresh
-  _chart: null,
-  _chart2: null,
   displayCur: localStorage.getItem('fin_display_cur') || 'THB',
 
   // ── Exchange rate (auto-refreshed daily, editable override) ───────────────
@@ -52,6 +76,7 @@ const Finance = {
     commission: { type: 'amount', amount: 50000, currency: 'THB' },
     onboarding: { type: 'count',  count: 10, label: 'recherches' },
     visa:       { type: 'count',  count: 4,  label: 'visas' },
+    call:       null,
     autre:      null,
   },
 
@@ -91,7 +116,6 @@ const Finance = {
     this.displayCur = this.displayCur === 'THB' ? 'EUR' : 'THB';
     localStorage.setItem('fin_display_cur', this.displayCur);
     this.render();
-    setTimeout(() => this.drawRevenueChart(), 60);
   },
 
   // Amount of a transaction in the current display currency
@@ -137,14 +161,13 @@ const Finance = {
     }
     await Promise.all([this.load(), this.fetchRate()]);
     this.render();
-    setTimeout(() => this.drawRevenueChart(), 60);
   },
 
   showLock() {
     document.getElementById('content').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:65vh">
         <div style="text-align:center;max-width:300px">
-          <div style="font-size:52px;margin-bottom:16px">🔒</div>
+          <div class="fin-lock-icon">${FIN_ICONS.lock}</div>
           <h3 style="font-size:19px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px">Finance</h3>
           <p style="color:var(--text-2);font-size:13px;margin-bottom:24px">Enter your Finance password to access this section</p>
           <form onsubmit="Finance.unlock(event)">
@@ -176,7 +199,6 @@ const Finance = {
       return;
     }
     this.render();
-    setTimeout(() => this.drawRevenueChart(), 60);
   },
 
   // ── Data ───────────────────────────────────────────────────────────────────
@@ -213,10 +235,11 @@ const Finance = {
 
   summaryByType() {
     const types = [
-      { key: 'commission', label: 'Commission', icon: '🤝', color: '#334155' },
-      { key: 'onboarding', label: 'Onboarding', icon: '🚀', color: '#0F766E' },
-      { key: 'visa',       label: 'Visa',        icon: '🛂', color: '#B45309' },
-      { key: 'autre',      label: 'Autre',        icon: '💼', color: '#9CA3AF' },
+      { key: 'commission', label: 'Commission', icon: FIN_ICONS.commission, color: FIN_CAT_COLORS.commission },
+      { key: 'onboarding', label: 'Onboarding', icon: FIN_ICONS.onboarding, color: FIN_CAT_COLORS.onboarding },
+      { key: 'visa',       label: 'Visa',       icon: FIN_ICONS.visa,       color: FIN_CAT_COLORS.visa },
+      { key: 'call',       label: 'Call',       icon: FIN_ICONS.call,       color: FIN_CAT_COLORS.call },
+      { key: 'autre',      label: 'Autre',      icon: FIN_ICONS.autre,      color: FIN_CAT_COLORS.autre },
     ];
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
     return types.map(t => {
@@ -239,123 +262,285 @@ const Finance = {
   },
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  CATS: [
+    { key: 'commission', label: 'Commission' },
+    { key: 'onboarding', label: 'Onboarding' },
+    { key: 'visa',       label: 'Visa' },
+    { key: 'call',       label: 'Call' },
+    { key: 'autre',      label: 'Autre' },
+  ],
+  period: 'month',   // 12 | 6 | 'month' (mois sélectionné, par jour) | 'week' (semaine en cours, par jour)
+  _series: [],
+
+  _ymShift(ym, delta) {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  },
+  _monthFr(ym) {
+    const [y, m] = ym.split('-');
+    return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  },
+  _txIn(ym)      { return this.data.filter(t => t.date?.startsWith(ym)); },
+  _sumTHB(txs)   { return txs.reduce((s, t) => s + this.toTHB(t), 0); },
+  _disp(thb)     { return this.displayCur === 'EUR' ? thb / this.eurRate : thb; },
+  _sym()         { return this.displayCur === 'EUR' ? '€' : '฿'; },
+
+  _count(thb) {
+    const v = Math.round(this._disp(thb));
+    return `<span class="fin-count" data-v="${v}">${v.toLocaleString('fr-FR')}</span><span class="fin-cur">${this._sym()}</span>`;
+  },
+  _sub(thb) {
+    if (!thb) return '';
+    return this.displayCur === 'EUR'
+      ? `${Math.round(thb).toLocaleString('fr-FR')} ฿`
+      : `≈ ${Math.round(thb / this.eurRate).toLocaleString('fr-FR')} €`;
+  },
+  _tag(pct, suffix = '') {
+    if (pct === null || !isFinite(pct)) return '';
+    const up = pct >= 0;
+    return `<span class="fin-tag ${up ? 'fin-tag-up' : 'fin-tag-down'}">${up ? '+' : ''}${Math.round(pct)} %${suffix}</span>`;
+  },
+  _segments(pct, { n = 17, color = 'var(--fin-trend)', delay = 0, step = 16 } = {}) {
+    const filled = Math.round(Math.min(100, Math.max(0, pct || 0)) / 100 * n);
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      html += i < filled
+        ? `<span class="fin-seg on" style="background:${color};--d:${delay + i * step}ms"></span>`
+        : `<span class="fin-seg"></span>`;
+    }
+    return `<span class="fin-segbar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct || 0)}">${html}</span>`;
+  },
+  _spark(values, delay = 250) {
+    const max = Math.max(...values, 1);
+    return `<span class="fin-spark" aria-hidden="true">${values.map((v, i) =>
+      `<span class="${i === values.length - 1 ? 'hi' : ''}" style="height:${Math.max(2, Math.round(v / max * 18))}px;--d:${delay + i * 30}ms"></span>`
+    ).join('')}</span>`;
+  },
+  _seriesOf(n) {
+    return Array.from({ length: n }, (_, i) => {
+      const ym = this._ymShift(this.selectedMonth, i - n + 1);
+      const byCat = { commission: 0, onboarding: 0, visa: 0, call: 0, autre: 0 };
+      this._txIn(ym).forEach(t => { byCat[t.type in byCat ? t.type : 'autre'] += this.toTHB(t); });
+      const total = byCat.commission + byCat.onboarding + byCat.visa + byCat.call + byCat.autre;
+      const [y, m] = ym.split('-');
+      const label = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+      return { ym, total, byCat, label };
+    });
+  },
+
+  // Série par jour : mois sélectionné ou semaine en cours (lundi → dimanche)
+  _daySeries(period) {
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const today = iso(new Date());
+    let days = [];
+    if (period === 'week') {
+      const d = new Date(); d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      days = Array.from({ length: 7 }, (_, i) => { const x = new Date(d); x.setDate(d.getDate() + i); return x; });
+    } else {
+      const [y, m] = this.selectedMonth.split('-').map(Number);
+      const n = new Date(y, m, 0).getDate();
+      days = Array.from({ length: n }, (_, i) => new Date(y, m - 1, i + 1, 12));
+    }
+    return days.map(d => {
+      const key = iso(d);
+      const byCat = { commission: 0, onboarding: 0, visa: 0, call: 0, autre: 0 };
+      this._txIn(key).forEach(t => { byCat[t.type in byCat ? t.type : 'autre'] += this.toTHB(t); });
+      const total = byCat.commission + byCat.onboarding + byCat.visa + byCat.call + byCat.autre;
+      const dn = d.getDate();
+      const label = period === 'week'
+        ? d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '') + ' ' + dn
+        : (dn === 1 || dn % 5 === 0 ? String(dn) : '');
+      return { day: key, total, byCat, label, sel: key === today,
+        title: d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) };
+    });
+  },
+  _seriesFor(period) {
+    return typeof period === 'number' ? this._seriesOf(period) : this._daySeries(period);
+  },
+  _periodCaption() {
+    if (this.period === 'week') return 'cette semaine';
+    if (this.period === 'month') return 'en ' + this._monthFr(this.selectedMonth).toLowerCase();
+    return `sur les ${this.period} derniers mois`;
+  },
+
+  _barsHTML() {
+    const SEG = 22;
+    const pts = this._series;
+    const max = Math.max(...pts.map(p => p.total), 1);
+    return pts.map((p, i) => {
+      const filled = p.total > 0 ? Math.max(1, Math.round(p.total / max * SEG)) : 0;
+      const colors = [];
+      let cum = 0;
+      this.CATS.forEach(c => {
+        cum += p.byCat[c.key];
+        const end = p.total ? Math.round(cum / p.total * filled) : 0;
+        while (colors.length < end) colors.push(FIN_CAT_COLORS[c.key]);
+      });
+      let segs = '';
+      for (let s = 0; s < SEG; s++) {
+        segs += s < filled
+          ? `<span class="on" style="background:${colors[s] || FIN_CAT_COLORS.autre};--d:${150 + i * 55 + s * 22}ms"></span>`
+          : '<span></span>';
+      }
+      return `
+        <button type="button" class="fin-bar${(p.ym ? p.ym === this.selectedMonth : p.sel) ? ' sel' : ''}"
+          onmouseenter="Finance.hoverBar(${i})" onfocus="Finance.hoverBar(${i})"
+          ${p.ym ? `onclick="Finance.changeMonth('${p.ym}')"` : ''} aria-label="${p.ym ? this._monthFr(p.ym) : p.title}">
+          <span class="fin-bar-col">${segs}</span>
+          <span class="fin-bar-lbl">${p.label}</span>
+        </button>`;
+    }).join('');
+  },
+
   render() {
-    const months     = this.months();
-    const summary    = this.summary();
-    const byType     = this.summaryByType();
-    const txMonth    = this.data.filter(t => t.date.startsWith(this.selectedMonth));
-    const grandTotal = txMonth.reduce((s, t) => s + this.toTHB(t), 0);
+    const months   = this.months();
+    const ym       = this.selectedMonth;
+    const txMonth  = this._txIn(ym);
+    const total    = this._sumTHB(txMonth);
+    const prev     = this._sumTHB(this._txIn(this._ymShift(ym, -1)));
+    const comm     = txMonth.filter(t => t.type === 'commission');
+    const commTot  = this._sumTHB(comm);
+    const commGoal = this.goalInTHB('commission');
+    const proj     = this.projection();
+    const year     = ym.slice(0, 4);
+    const ytd      = this._sumTHB(this.data.filter(t => t.date?.startsWith(year) && t.date.slice(0, 7) <= ym));
+    const ytdPrev  = this._sumTHB(this.data.filter(t => {
+      const d = t.date || '';
+      return d.startsWith(String(year - 1)) && d.slice(5, 7) <= ym.slice(5, 7);
+    }));
+    const best     = this.bestMonth();
+    const spark    = this._seriesOf(12).map(p => p.total);
+    this._series   = this._seriesFor(this.period);
+    const periodTot = this._series.reduce((s, p) => s + p.total, 0);
+    const byType   = this.summaryByType();
+    const accts    = this.summary();
+
+    const kpi = (i, icon, label, tag, value, caption, extra = '') => `
+      <article class="fin-kpi fin-in" style="--i:${i}">
+        <div class="fin-kpi-top">
+          <span class="fin-caption">${icon}${label}</span>${tag}
+        </div>
+        <div class="fin-kpi-row">
+          <span class="fin-kpi-num">${value}</span>${extra}
+        </div>
+        <span class="fin-caption fin-subtle">${caption}</span>
+      </article>`;
+
+    const commPct = commGoal ? Math.round(commTot / commGoal * 100) : null;
 
     document.getElementById('content').innerHTML = `
-      <div class="section-header">
+      <div class="section-header fin-in">
         <h2>Finance</h2>
-        <div class="header-actions">
-          <button class="btn btn-ghost" onclick="Finance.editRate()" title="Taux de change">
-            1€ = ${this.eurRate} ฿
-          </button>
-          <button class="btn btn-ghost" onclick="Finance.toggleDisplay()">
-            ${this.displayCur === 'THB' ? '฿ → €' : '€ → ฿'}
-          </button>
-          <select class="fin-month-sel" onchange="Finance.changeMonth(this.value)">
-            ${months.map(m =>
-              `<option value="${m}" ${m === this.selectedMonth ? 'selected' : ''}>${this.monthLabel(m)}</option>`
-            ).join('')}
+        <div class="header-actions fin-actions">
+          ${Privacy.btn()}
+          <button class="fin-ctl fin-ctl-ghost" onclick="Finance.editRate()" title="Modifier le taux de change">1 € = ${this.eurRate} ฿</button>
+          <div class="fin-seg-toggle">
+            <button class="${this.displayCur === 'THB' ? 'on' : ''}" onclick="Finance.displayCur !== 'THB' && Finance.toggleDisplay()">฿ THB</button>
+            <button class="${this.displayCur === 'EUR' ? 'on' : ''}" onclick="Finance.displayCur !== 'EUR' && Finance.toggleDisplay()">€ EUR</button>
+          </div>
+          <select class="fin-ctl fin-select" onchange="Finance.changeMonth(this.value)">
+            ${months.map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${this._monthFr(m)}</option>`).join('')}
           </select>
-          <button class="btn btn-primary" onclick="Finance.openAddModal()">+ Transaction</button>
+          <button class="fin-ctl fin-ctl-primary" onclick="Finance.openAddModal()">${FIN_ICONS.plus}Transaction</button>
         </div>
       </div>
 
-      <!-- KPI bar -->
-      <div class="fin-kpi-bar">
-        <div class="fin-kpi-item">
-          <span class="fin-kpi-lbl">Total ${this.monthLabel(this.selectedMonth)}</span>
-          <span class="fin-kpi-val">${this.fmtAs(grandTotal, 'THB')}</span>
-          ${grandTotal ? `<span class="fin-kpi-sub">${this.fmtAsSub(grandTotal, 'THB')}</span>` : ''}
-        </div>
-        <div class="fin-kpi-item">
-          <span class="fin-kpi-lbl">Transactions</span>
-          <span class="fin-kpi-val">${txMonth.length}</span>
-        </div>
-        ${(() => {
-          const commissions = txMonth.filter(t => t.type === 'commission');
-          const total = commissions.reduce((s, t) => s + this.toTHB(t), 0);
-          return total ? `<div class="fin-kpi-item">
-            <span class="fin-kpi-lbl">Commissions</span>
-            <span class="fin-kpi-val" style="color:#1D9E75">${this.fmtAs(total, 'THB')}</span>
-            <span class="fin-kpi-sub">${commissions.length} deal${commissions.length > 1 ? 's' : ''}</span>
-          </div>` : '';
-        })()}
+      <div class="fin-kpis">
+        ${kpi(1, FIN_ICONS.bars, 'Revenu du mois',
+          this._tag(prev ? (total - prev) / prev * 100 : null),
+          this._count(total),
+          `${this._sub(total) || '—'} · ${txMonth.length} transaction${txMonth.length > 1 ? 's' : ''}`,
+          this._spark(spark))}
+        ${kpi(2, FIN_ICONS.commission, 'Commissions',
+          commPct !== null ? `<span class="fin-tag fin-tag-neutral">${commPct} % objectif</span>` : '',
+          this._count(commTot),
+          `${comm.length} deal${comm.length > 1 ? 's' : ''} · ${this.goalLabel('commission')}`)}
+        ${kpi(3, FIN_ICONS.target, 'Projection fin de mois',
+          proj && prev ? this._tag((proj.projected - prev) / prev * 100, ' vs M-1') : '',
+          this._count(proj ? proj.projected : total),
+          proj ? `J${proj.dayElapsed} / ${proj.daysInMonth} · extrapolé` : 'Mois clôturé')}
+        ${kpi(4, FIN_ICONS.calendar, `Cumul ${year}`,
+          this._tag(ytdPrev ? (ytd - ytdPrev) / ytdPrev * 100 : null, ' vs N-1'),
+          this._count(ytd),
+          best ? `Meilleur mois : ${best.label}` : '—')}
       </div>
 
-      <!-- By account -->
-      <div class="fin-section-label">Comptes</div>
-      <div class="fin-acct-grid">
-        ${summary.map(r => `
+      <div class="fin-grid-2">
+        <section class="fin-panel fin-in" style="--i:5">
+          <div class="fin-panel-head">
+            <h3 class="fin-eyebrow">Revenus</h3>
+            <div class="fin-seg-toggle">
+              <button class="${this.period === 'week' ? 'on' : ''}" onclick="Finance.setPeriod('week')">Cette semaine</button>
+              <button class="${this.period === 'month' ? 'on' : ''}" onclick="Finance.setPeriod('month')">${this.selectedMonth === new Date().toISOString().slice(0, 7) ? 'Ce mois' : '1 mois'}</button>
+              <button class="${this.period === 6 ? 'on' : ''}" onclick="Finance.setPeriod(6)">6 mois</button>
+              <button class="${this.period === 12 ? 'on' : ''}" onclick="Finance.setPeriod(12)">12 mois</button>
+            </div>
+          </div>
+          <div class="fin-rev-head">
+            <div>
+              <div class="fin-big" id="fin-rev-total">${this._count(periodTot)}</div>
+              <div class="fin-caption fin-soft" id="fin-rev-cap">${this._periodCaption()}</div>
+            </div>
+            <div class="fin-legend">
+              ${this.CATS.map(c => `<span><i style="background:${FIN_CAT_COLORS[c.key]}"></i>${c.label}</span>`).join('')}
+            </div>
+          </div>
+          <div class="fin-bars" onmouseleave="Finance.hoverBar(null)">${this._barsHTML()}</div>
+        </section>
+
+        <section class="fin-panel fin-in" style="--i:6">
+          <div class="fin-panel-head">
+            <h3 class="fin-eyebrow">Objectifs du mois</h3>
+          </div>
+          <div class="fin-goals">
+            ${byType.map((r, idx) => {
+              const isCount = r.goal?.type === 'count';
+              const share = total ? this.toTHBFromGoal(r) / total * 100 : 0;
+              const pct = r.pct ?? share;
+              const value = isCount
+                ? `${r.count}<span class="fin-goal-den"> / ${r.goal.count}</span>`
+                : (r.total ? this.fmtAs(r.total, r.goalCur) : '—');
+              return `
+                <div class="fin-goal">
+                  <div class="fin-goal-top">
+                    <span class="fin-cat-icon" style="color:${r.color};background:${r.color}1A">${r.icon}</span>
+                    <span class="fin-goal-name">${r.label}</span>
+                    <span class="fin-goal-val">${value}</span>
+                  </div>
+                  ${this._segments(pct, { n: 24, color: r.color, delay: 300 + idx * 120 })}
+                  <div class="fin-goal-cap">
+                    <span>${r.goal ? this.goalLabel(r.key) : `${r.count} transaction${r.count !== 1 ? 's' : ''}`}</span>
+                    <span>${r.goal ? `${r.pct} %` : `${Math.round(share)} % du mois`}</span>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </section>
+      </div>
+
+      <div class="fin-section-label fin-in" style="--i:7">Comptes</div>
+      <div class="fin-acct-grid fin-in" style="--i:7">
+        ${accts.map((r, idx) => `
           <div class="fin-acct-tile">
             <div class="fin-acct-logo">${bankLogo(r.acct)}</div>
             <div class="fin-acct-name">${r.acct}</div>
             <div class="fin-acct-total">${this.fmtAs(r.total, 'THB')}</div>
-            ${r.total ? `<div class="fin-acct-sub">${this.fmtAsSub(r.total, 'THB')}</div>` : ''}
-            <div class="fin-acct-count">${r.count} tx</div>
+            <div class="fin-acct-sub">${r.total ? this.fmtAsSub(r.total, 'THB') : '&nbsp;'}</div>
+            <div class="fin-acct-count">${r.count} paiement${r.count > 1 ? 's' : ''}</div>
           </div>`).join('')}
         <div class="fin-acct-tile fin-acct-tile-total">
           <div class="fin-acct-logo">${bankLogo('total')}</div>
           <div class="fin-acct-name">Total</div>
-          <div class="fin-acct-total">${this.fmtAs(grandTotal, 'THB')}</div>
-          ${grandTotal ? `<div class="fin-acct-sub">${this.fmtAsSub(grandTotal, 'THB')}</div>` : ''}
-          <div class="fin-acct-count">${txMonth.length} tx</div>
+          <div class="fin-acct-total">${this.fmtAs(total, 'THB')}</div>
+          <div class="fin-acct-sub">${total ? this.fmtAsSub(total, 'THB') : '&nbsp;'}</div>
+          <div class="fin-acct-count">${txMonth.length} paiement${txMonth.length > 1 ? 's' : ''}</div>
         </div>
       </div>
 
-      <!-- By category + goals -->
-      <div class="fin-section-label">Catégories</div>
-      <div class="fin-cat-grid">
-        ${byType.map(r => {
-          const isCount      = r.goal?.type === 'count';
-          const displayTotal = isCount
-            ? `<span class="fin-cat-big">${r.count}</span><span class="fin-cat-goal-denom"> / ${r.goal.count} ${r.goal.label}</span>`
-            : (r.total ? this.fmtAs(r.total, r.goalCur) : '—');
-          const displaySub   = isCount
-            ? (r.total ? `≈ ${this.fmtAs(r.total, r.goalCur)}` : '')
-            : (r.total ? this.fmtAsSub(r.total, r.goalCur) : '');
-          return `
-          <div class="fin-cat-tile">
-            <div class="fin-cat-head">
-              <span class="fin-cat-icon">${r.icon}</span>
-              <span class="fin-cat-lbl">${r.label}</span>
-            </div>
-            <div class="fin-cat-total" style="color:${r.color}">${displayTotal}</div>
-            ${displaySub ? `<div class="fin-cat-sub">${displaySub}</div>` : ''}
-            ${!isCount ? `<div class="fin-cat-count">${r.count} transaction${r.count !== 1 ? 's' : ''}</div>` : ''}
-            ${r.goal ? `
-              <div class="fin-cat-bar-track">
-                <div class="fin-cat-bar-fill" style="width:${Math.min(r.pct,100)}%;background:${r.color}"></div>
-              </div>
-              <div class="fin-cat-goal-row">
-                <span style="font-size:11px;font-weight:700;color:${r.color}">${r.pct}%</span>
-                <span class="goal-label">${this.goalLabel(r.key)}</span>
-              </div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-
-      <!-- Insights -->
-      ${this.insightsHTML()}
-
-      <!-- Charts -->
-      <div class="fin-section-label">Répartition & tendance</div>
-      <div class="fin-charts-wrap">
-        <div class="fin-chart-donut">
-          <canvas id="chart-fin-donut"></canvas>
-        </div>
-        <div class="fin-chart-trend">
-          <canvas id="chart-fin-trend"></canvas>
-        </div>
-      </div>
-
-      <!-- Transactions table -->
-      <div class="fin-section-label">Transactions — ${this.monthLabel(this.selectedMonth)}</div>
-      <div class="fin-tx-wrap">
+      <div class="fin-section-label fin-in" style="--i:8">Transactions — ${this._monthFr(ym)}</div>
+      <div class="fin-tx-wrap fin-in" style="--i:8">
         <table class="tx-table">
           <thead>
             <tr>
@@ -366,8 +551,8 @@ const Finance = {
             ${txMonth.length ? txMonth.map(t => `
               <tr>
                 <td style="white-space:nowrap;color:var(--text-3)">${fmtDate(t.date)}</td>
-                <td><span class="tx-type-badge tx-type-${t.type}">${t.type}</span></td>
-                <td style="font-weight:500;color:var(--text)">${t.account}</td>
+                <td><span class="fin-type"><i style="background:${FIN_CAT_COLORS[t.type] || FIN_CAT_COLORS.autre}"></i>${t.type}</span></td>
+                <td><span class="fin-tx-acct"><span class="fin-tx-logo">${bankLogo(t.account)}</span>${t.account}</span></td>
                 <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
                 <td style="text-align:right">
                   <div class="tx-amount">${this.fmtAs(Number(t.amount), t.currency || 'THB')}</div>
@@ -375,8 +560,8 @@ const Finance = {
                 </td>
                 <td>
                   <div class="tx-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="Finance.openEditModal(${t.id})">✏️</button>
-                    <button class="btn btn-ghost btn-sm" onclick="Finance.remove(${t.id})" style="color:var(--red)">✕</button>
+                    <button class="fin-icon-btn" onclick="Finance.openEditModal(${t.id})" title="Modifier">${FIN_ICONS.edit}</button>
+                    <button class="fin-icon-btn fin-icon-btn-danger" onclick="Finance.remove(${t.id})" title="Supprimer">${FIN_ICONS.trash}</button>
                   </div>
                 </td>
               </tr>`).join('')
@@ -384,42 +569,45 @@ const Finance = {
           </tbody>
         </table>
       </div>`;
+
+    this.afterRender();
   },
 
-  // ── Analytics helpers ─────────────────────────────────────────────────────
-  _last6Months() {
-    const now = new Date();
-    const keys = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    }
-    return keys;
+  // Category total converted to THB (summaryByType keeps EUR goals in EUR)
+  toTHBFromGoal(r) {
+    return r.goalCur === 'EUR' ? r.total * this.eurRate : r.total;
   },
 
-  revenueByMonthDetailed() {
-    const cats = ['commission','onboarding','visa','autre'];
-    const months = {};
-    this._last6Months().forEach(k => { months[k] = { commission:0, onboarding:0, visa:0, autre:0 }; });
-    this.data.forEach(t => {
-      const k = (t.date||'').slice(0,7);
-      if (!(k in months)) return;
-      const cat = cats.includes(t.type) ? t.type : 'autre';
-      months[k][cat] += this.toTHB(t);
-    });
-    return months;
+  afterRender() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const els = [...document.querySelectorAll('#content .fin-count')];
+    els.forEach(el => { el.textContent = '0'; });
+    const t0 = performance.now(), dur = 900;
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      els.forEach(el => {
+        if (!el._stop) el.textContent = Math.round(Number(el.dataset.v) * e).toLocaleString('fr-FR');
+      });
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   },
 
-  revenueLastYear() {
-    const now = new Date();
-    const months = {};
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear() - 1, now.getMonth() - i, 1);
-      months[`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`] = 0;
-    }
-    this.data.forEach(t => { const k = (t.date||'').slice(0,7); if (k in months) months[k] += this.toTHB(t); });
-    return Object.values(months);
+  hoverBar(i) {
+    const tot = document.querySelector('#fin-rev-total .fin-count');
+    const cap = document.getElementById('fin-rev-cap');
+    if (!tot || !cap) return;
+    const p = i === null ? null : this._series[i];
+    const thb = p ? p.total : this._series.reduce((s, x) => s + x.total, 0);
+    tot._stop = true;
+    tot.textContent = Math.round(this._disp(thb)).toLocaleString('fr-FR');
+    cap.textContent = p
+      ? `${p.ym ? this._monthFr(p.ym) : p.title}${p.total ? ' · ' + this._sub(p.total) : ''}`
+      : this._periodCaption();
   },
+
+  setPeriod(n) { this.period = n; this.render(); },
 
   bestMonth() {
     const byMonth = {};
@@ -430,184 +618,21 @@ const Finance = {
     const entries = Object.entries(byMonth).sort((a,b) => b[1]-a[1]);
     if (!entries.length) return null;
     const [ym, total] = entries[0];
-    const [y,m] = ym.split('-');
-    return { label: new Date(y, m-1, 1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' }), total };
+    return { label: this._monthFr(ym), total };
   },
 
   projection() {
     const now = new Date();
     const [y, m] = this.selectedMonth.split('-').map(Number);
     if (y !== now.getFullYear() || m !== now.getMonth() + 1) return null;
-    const txMonth = this.data.filter(t => t.date?.startsWith(this.selectedMonth));
-    const total = txMonth.reduce((s,t) => s + this.toTHB(t), 0);
+    const total = this._sumTHB(this._txIn(this.selectedMonth));
     if (!total) return null;
     const daysInMonth = new Date(y, m, 0).getDate();
     const dayElapsed  = now.getDate();
     return { projected: Math.round(total / dayElapsed * daysInMonth), dayElapsed, daysInMonth };
   },
-
-  insightsHTML() {
-    const best = this.bestMonth();
-    const proj = this.projection();
-    if (!best && !proj) return '';
-    const cards = [];
-    if (best) cards.push(`
-      <div class="insight-card">
-        <div class="insight-icon">🏆</div>
-        <div class="insight-label">Meilleur mois</div>
-        <div class="insight-value">${this.fmtAs(best.total,'THB')}</div>
-        <div class="insight-sub">${best.label}</div>
-      </div>`);
-    if (proj) cards.push(`
-      <div class="insight-card">
-        <div class="insight-icon">📈</div>
-        <div class="insight-label">Projection fin de mois</div>
-        <div class="insight-value">${this.fmtAs(proj.projected,'THB')}</div>
-        <div class="insight-sub">J${proj.dayElapsed} / ${proj.daysInMonth} — extrapolé</div>
-      </div>`);
-    return `
-      <div class="fin-section-label">Insights</div>
-      <div class="summary-row" style="margin-bottom:8px">${cards.join('')}</div>`;
-  },
-
-  // ── Charts: donut mois en cours + courbe tendance 6 mois ────────────────
-  drawRevenueChart() {
-    if (this._chart)  { this._chart.destroy();  this._chart  = null; }
-    if (this._chart2) { this._chart2.destroy(); this._chart2 = null; }
-
-    const CATS = [
-      { key:'commission', label:'Commission', color:'#334155' },
-      { key:'onboarding', label:'Onboarding', color:'#0F766E' },
-      { key:'visa',       label:'Visa',       color:'#B45309' },
-      { key:'autre',      label:'Autre',      color:'#9CA3AF' },
-    ];
-    const fmt = thb => `${Number(thb).toLocaleString('fr-FR')} ฿  ≈ ${Math.round(thb/this.eurRate).toLocaleString('fr-FR')} €`;
-
-    // ── Donut — répartition du mois sélectionné ──────────────────────────
-    const ctxD = document.getElementById('chart-fin-donut');
-    if (ctxD) {
-      const txMonth  = this.data.filter(t => t.date.startsWith(this.selectedMonth));
-      const catKeys  = ['commission','onboarding','visa','autre'];
-      const totals   = catKeys.map(k =>
-        txMonth.filter(t => catKeys.includes(t.type) ? t.type === k : k === 'autre')
-               .reduce((s,t) => s + this.toTHB(t), 0)
-      );
-      const grandTotal = totals.reduce((s,v) => s + v, 0);
-      const totalStr   = this.displayCur === 'EUR'
-        ? `≈ ${Math.round(grandTotal/this.eurRate).toLocaleString('fr-FR')} €`
-        : `${grandTotal.toLocaleString('fr-FR')} ฿`;
-      const monthStr = new Date(this.selectedMonth + '-01')
-        .toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
-
-      const centerPlugin = {
-        id: 'centerText',
-        beforeDraw(chart) {
-          const { ctx: c, chartArea: a } = chart;
-          const cx = (a.left + a.right) / 2, cy = (a.top + a.bottom) / 2;
-          c.save();
-          c.textAlign = 'center';
-          c.font = '500 14px sans-serif';
-          c.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text') || '#1A1A1A';
-          c.fillText(totalStr, cx, cy + 2);
-          c.font = '11px sans-serif';
-          c.fillStyle = '#9A9490';
-          c.fillText(monthStr, cx, cy + 17);
-          c.restore();
-        }
-      };
-
-      this._chart = new Chart(ctxD, {
-        type: 'doughnut',
-        data: {
-          labels: CATS.map(c => c.label),
-          datasets: [{
-            data: totals,
-            backgroundColor: CATS.map(c => c.color),
-            borderWidth: 3,
-            borderColor: 'transparent',
-            hoverOffset: 6,
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          cutout: '66%',
-          plugins: {
-            legend: { display: true, position: 'right',
-              labels: { boxWidth:10, padding:10, font:{ size:11 }, color:'#9A9490' } },
-            tooltip: {
-              backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
-              callbacks: { label: c => `  ${c.label} : ${fmt(c.raw)}` }
-            }
-          },
-          animation: { duration:600 }
-        },
-        plugins: [centerPlugin]
-      });
-    }
-
-    // ── Courbe — total mensuel 6 derniers mois + N-1 ─────────────────────
-    const ctxT = document.getElementById('chart-fin-trend');
-    if (ctxT) {
-      const detailed  = this.revenueByMonthDetailed();
-      const lastYear  = this.revenueLastYear();
-      const labels    = this._last6Months().map(k => {
-        const [y,m] = k.split('-');
-        return new Date(y,m-1,1).toLocaleDateString('fr-FR', { month:'short' });
-      });
-      const totals = Object.values(detailed).map(m => m.commission + m.onboarding + m.visa + m.autre);
-
-      this._chart2 = new Chart(ctxT, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Cette année',
-              data: totals,
-              borderColor: '#334155',
-              backgroundColor: 'rgba(51,65,85,0.07)',
-              borderWidth: 2,
-              pointRadius: 4,
-              pointBackgroundColor: '#334155',
-              tension: 0.35,
-              fill: true,
-            },
-            {
-              label: 'N−1',
-              data: lastYear,
-              borderColor: 'rgba(150,150,150,0.4)',
-              backgroundColor: 'transparent',
-              borderWidth: 1.5,
-              borderDash: [4,3],
-              pointRadius: 2.5,
-              pointBackgroundColor: 'rgba(150,150,150,0.5)',
-              tension: 0.35,
-            }
-          ]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, position: 'top',
-              labels: { boxWidth:10, padding:12, font:{ size:11 }, color:'#9A9490' } },
-            tooltip: {
-              backgroundColor:'#1A1A1A', cornerRadius:8, padding:10,
-              callbacks: { label: c => `  ${c.dataset.label} : ${fmt(c.raw)}` }
-            }
-          },
-          scales: {
-            y: { beginAtZero:true, grid:{ color:'rgba(150,150,150,0.1)' },
-                 ticks:{ color:'#9A9490', callback: v => v ? (v/1000).toFixed(0)+'k' : '0' } },
-            x: { ticks:{ color:'#9A9490', font:{ weight:'600' } }, grid:{ display:false } }
-          },
-          animation: { duration:800, easing:'easeOutQuart' }
-        }
-      });
-    }
-  },
-
   // ── Actions ────────────────────────────────────────────────────────────────
-  changeMonth(m) { this.selectedMonth = m; this.render(); setTimeout(() => this.drawRevenueChart(), 60); },
+  changeMonth(m) { this.selectedMonth = m; this.render(); },
 
   editRate() {
     const r = prompt(`Exchange rate (THB per €)\nCurrent: 1€ = ${this.eurRate} ฿`, this.eurRate);
@@ -616,7 +641,6 @@ const Finance = {
     if (!isNaN(val) && val > 0) {
       this.eurRate = val;
       this.render();
-      setTimeout(() => this.drawRevenueChart(), 60);
     }
   },
 
@@ -665,7 +689,7 @@ const Finance = {
           <div class="form-row">
             <label>Type *</label>
             <select name="type" required>
-              ${['commission','onboarding','visa','autre'].map(s =>
+              ${['commission','onboarding','visa','call','autre'].map(s =>
                 `<option ${t?.type === s ? 'selected' : ''}>${s}</option>`
               ).join('')}
             </select>
@@ -735,7 +759,6 @@ const Finance = {
       Modal.close();
       await this.load();
       this.render();
-      setTimeout(() => this.drawRevenueChart(), 60);
     } catch (err) {
       Toast.show(err.message, 'error');
     }
@@ -746,7 +769,6 @@ const Finance = {
     await api.del(`/finance/${id}`);
     this.data = this.data.filter(t => t.id !== id);
     this.render();
-    setTimeout(() => this.drawRevenueChart(), 60);
     Toast.show('Transaction deleted');
   }
 };
