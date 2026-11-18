@@ -198,7 +198,7 @@ const Clients = {
   hiddenCols: new Set(JSON.parse(localStorage.getItem('crm_hidden_cols') || '[]')),
   selectionMode: false,
   selectedClients: new Set(),
-  clientFilters: { name: '', urgency: '', scoreMin: '', agent: '' },
+  clientFilters: { name: '', urgency: '', scoreMin: '', agent: '', period: '', formFilled: '' },
   viewMode: 'kanban',
   suiviSelectedId: null,
   _suiviUsers: null, // cached team members
@@ -404,7 +404,7 @@ const Clients = {
       const tx = await api.get('/finance');
       const rate = parseFloat(localStorage.getItem('eur_rate') || '37');
       const eur = tx.filter(t => t.type === 'onboarding')
-        .map(t => Math.round(t.currency === 'EUR' ? Number(t.amount) : Number(t.amount) / rate))
+        .map(t => Math.round(t.currency === 'EUR' ? Number(t.amount) : Number(t.amount) / (typeof Fx !== 'undefined' ? Fx.rateOn(t.date) : rate)))
         .filter(v => v >= this.FEE_MIN);
       this._feeAvg = eur.length >= 5 ? Math.round(eur.reduce((a, b) => a + b, 0) / eur.length) : null;
     } catch { this._feeAvg = null; }
@@ -826,8 +826,20 @@ ${th('score', 'Score')}${th('comm', 'Potentiel', 'num')}<th>Agent</th>${th('lead
           <option value="score:desc" ${sortV === 'score:desc' ? 'selected' : ''}>Meilleur score</option>
           <option value="score:asc"  ${sortV === 'score:asc' ? 'selected' : ''}>Score le plus bas</option>
         </select>`}
+        <select class="filter-select" onchange="Clients.setClientFilter('period',this.value)">
+          <option value=""     ${!f.period?'selected':''}>Tous leads</option>
+          <option value="7d"   ${f.period==='7d'?'selected':''}>7 derniers jours</option>
+          <option value="week" ${f.period==='week'?'selected':''}>Cette semaine</option>
+          <option value="month"${f.period==='month'?'selected':''}>Ce mois</option>
+          <option value="30d"  ${f.period==='30d'?'selected':''}>30 derniers jours</option>
+        </select>
+        <select class="filter-select" onchange="Clients.setClientFilter('formFilled',this.value)">
+          <option value=""    ${!f.formFilled?'selected':''}>Tous profils</option>
+          <option value="yes" ${f.formFilled==='yes'?'selected':''}>Form rempli ✓</option>
+          <option value="no"  ${f.formFilled==='no'?'selected':''}>Infos manquantes</option>
+        </select>
         <select class="filter-select" onchange="Clients.setClientFilter('urgency',this.value)">
-          <option value="">Toutes urgences</option>
+          <option value="">Toutes échéances</option>
           <option value="urgent-red"    ${f.urgency==='urgent-red'?'selected':''}>Arrive &lt; 14j</option>
           <option value="urgent-amber"  ${f.urgency==='urgent-amber'?'selected':''}>Arrive &lt; 30j</option>
           <option value="urgent-yellow" ${f.urgency==='urgent-yellow'?'selected':''}>Arrive &lt; 60j</option>
@@ -870,6 +882,35 @@ ${th('score', 'Score')}${th('comm', 'Potentiel', 'num')}<th>Agent</th>${th('lead
         if (c.suivi_assigned_to !== f.agent) return false;
       }
     }
+    // Filtre période (date de création du lead)
+    if (f.period) {
+      const created = c.form_submitted_at || c.created_at;
+      if (!created) return false;
+      const d = new Date(created);
+      const now = new Date();
+      if (f.period === 'week') {
+        const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); startOfWeek.setHours(0,0,0,0);
+        if (d < startOfWeek) return false;
+      } else if (f.period === 'month') {
+        if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+      } else if (f.period === '30d') {
+        if ((now - d) > 30 * 86400000) return false;
+      } else if (f.period === '7d') {
+        if ((now - d) > 7 * 86400000) return false;
+      }
+    }
+    // Filtre form rempli (budget + durée + date arrivée renseignés)
+    if (f.formFilled === 'yes') {
+      const hasBudget = !!(c.budget_max || c.budget_eur);
+      const hasDuration = !!(c.duration && c.duration.trim());
+      const hasDate = !!c.move_in_date;
+      if (!hasBudget || !hasDuration || !hasDate) return false;
+    } else if (f.formFilled === 'no') {
+      const hasBudget = !!(c.budget_max || c.budget_eur);
+      const hasDuration = !!(c.duration && c.duration.trim());
+      const hasDate = !!c.move_in_date;
+      if (hasBudget && hasDuration && hasDate) return false;
+    }
     return true;
   },
 
@@ -892,7 +933,7 @@ ${th('score', 'Score')}${th('comm', 'Potentiel', 'num')}<th>Agent</th>${th('lead
   },
 
   clearClientFilters() {
-    this.clientFilters = { name: '', urgency: '', scoreMin: '', agent: '' };
+    this.clientFilters = { name: '', urgency: '', scoreMin: '', agent: '', period: '', formFilled: '' };
     this.render();
   },
 
