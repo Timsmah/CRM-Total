@@ -59,15 +59,14 @@ const Finance = {
     localStorage.setItem('eur_rate_ts', Date.now());
   },
 
-  async fetchRate() {
-    try {
-      const r = await fetch('https://api.frankfurter.app/latest?from=EUR&to=THB');
-      const j = await r.json();
-      const rate = j?.rates?.THB;
-      if (rate) {
-        localStorage.setItem('eur_rate', String(Math.round(rate * 100) / 100));
-      }
-    } catch { /* silent — keep last known rate */ }
+  // Le taux est géré par Fx (app.js) : mise à jour automatique toutes les 6 heures
+  async fetchRate() { await Fx.refresh(); },
+
+  // ── Comptes partagés — part personnelle ────────────────────────────────────
+  ACCOUNT_SHARES: { 'KBank HSC': 0.5 }, // 50% = ma part sur ce compte
+  _shareOf(acct) { return this.ACCOUNT_SHARES[acct] ?? 1; },
+  _sumShared(txs) { // somme pondérée par la part perso
+    return txs.reduce((s, t) => s + this.inDisplay(t) * this._shareOf(t.account), 0);
   },
 
   // ── Monthly goals ──────────────────────────────────────────────────────────
@@ -95,10 +94,13 @@ const Finance = {
   },
 
   // ── Conversion helpers ─────────────────────────────────────────────────────
+  // Chaque transaction est convertie au taux de SA date (Fx.rateOn) : un montant saisi ne bouge plus.
+  rateOf(t) { return typeof Fx !== 'undefined' ? Fx.rateOn(t.date) : this.eurRate; },
   toTHB(t) {
-    return t.currency === 'EUR'
-      ? Math.round(Number(t.amount) * this.eurRate)
-      : Number(t.amount);
+    return t.currency === 'EUR' ? Number(t.amount) * this.rateOf(t) : Number(t.amount);
+  },
+  toEUR(t) {
+    return t.currency === 'EUR' ? Number(t.amount) : Number(t.amount) / this.rateOf(t);
   },
 
   fmtEUR(thb) {
@@ -120,11 +122,7 @@ const Finance = {
 
   // Amount of a transaction in the current display currency
   inDisplay(t) {
-    const amt = Number(t.amount);
-    if (this.displayCur === 'EUR') {
-      return t.currency === 'EUR' ? amt : amt / this.eurRate;
-    }
-    return t.currency === 'EUR' ? Math.round(amt * this.eurRate) : amt;
+    return this.displayCur === 'EUR' ? this.toEUR(t) : this.toTHB(t);
   },
 
   // Formate `amount` (dans `fromCur`) dans la devise d'affichage courante
@@ -149,9 +147,9 @@ const Finance = {
 
   // Pour une transaction individuelle
   fmtSub(t) {
-    const amt = Number(t.amount);
     const cur = t.currency || 'THB';
-    return this.fmtAsSub(amt, cur);
+    const other = cur === 'EUR' ? this.toTHB(t) : this.toEUR(t);
+    return `≈ ${Math.round(other).toLocaleString('fr-FR')} ${cur === 'EUR' ? '฿' : '€'}`;
   },
 
   // ── Lock / unlock ──────────────────────────────────────────────────────────
@@ -159,7 +157,7 @@ const Finance = {
     if (!this._unlocked) {
       this.showLock(); return;
     }
-    await Promise.all([this.load(), this.fetchRate()]);
+    await Promise.all([this.load(), this.fetchRate(), typeof Fx !== 'undefined' ? Fx.ready() : null]);
     this.render();
   },
 
@@ -193,7 +191,7 @@ const Finance = {
     }
     this._unlocked = true;
     try {
-      await Promise.all([this.load(), this.fetchRate()]);
+      await Promise.all([this.load(), this.fetchRate(), typeof Fx !== 'undefined' ? Fx.ready() : null]);
     } catch (err) {
       Toast.show('Erreur chargement finance : ' + (err?.message || err), 'error');
       return;
@@ -228,7 +226,7 @@ const Finance = {
     const txMonth = this.data.filter(t => t.date.startsWith(this.selectedMonth));
     return accounts.map(acct => ({
       acct,
-      total: txMonth.filter(t => t.account === acct).reduce((s, t) => s + this.toTHB(t), 0),
+      total: txMonth.filter(t => t.account === acct).reduce((s, t) => s + this.inDisplay(t), 0),
       count: txMonth.filter(t => t.account === acct).length
     }));
   },
@@ -247,17 +245,13 @@ const Finance = {
       const goal = this.GOALS[t.key];
       const count = txs.length;
       // Sum in goal currency to keep EUR goals fixed
-      const total = txs.reduce((s, x) => {
-        if (goal?.currency === 'EUR') {
-          return s + (x.currency === 'EUR' ? Number(x.amount) : Number(x.amount) / this.eurRate);
-        }
-        return s + this.toTHB(x);
-      }, 0);
+      const total = txs.reduce((s, x) => s + (goal?.currency === 'EUR' ? this.toEUR(x) : this.toTHB(x)), 0);
+      const totalDisp = txs.reduce((s, x) => s + this.inDisplay(x), 0);
       let pct = null;
       if (goal?.type === 'count')  pct = Math.min(Math.round(count / goal.count * 100), 100);
       if (goal?.type === 'amount') pct = Math.min(Math.round(total / goal.amount * 100), 100);
       const goalCur = goal?.currency || 'THB';
-      return { ...t, total, count, goal, goalCur, pct };
+      return { ...t, total, totalDisp, count, goal, goalCur, pct };
     });
   },
 
@@ -282,19 +276,20 @@ const Finance = {
     return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   },
   _txIn(ym)      { return this.data.filter(t => t.date?.startsWith(ym)); },
-  _sumTHB(txs)   { return txs.reduce((s, t) => s + this.toTHB(t), 0); },
-  _disp(thb)     { return this.displayCur === 'EUR' ? thb / this.eurRate : thb; },
+  // Somme dans la devise d'affichage, chaque transaction à son propre taux
+  _sumTHB(txs)   { return txs.reduce((s, t) => s + this.inDisplay(t), 0); },
+  _disp(v)       { return v; },
   _sym()         { return this.displayCur === 'EUR' ? '€' : '฿'; },
 
   _count(thb) {
     const v = Math.round(this._disp(thb));
     return `<span class="fin-count" data-v="${v}">${v.toLocaleString('fr-FR')}</span><span class="fin-cur">${this._sym()}</span>`;
   },
-  _sub(thb) {
-    if (!thb) return '';
+  _sub(v) {
+    if (!v) return '';
     return this.displayCur === 'EUR'
-      ? `${Math.round(thb).toLocaleString('fr-FR')} ฿`
-      : `≈ ${Math.round(thb / this.eurRate).toLocaleString('fr-FR')} €`;
+      ? `≈ ${Math.round(v * this.eurRate).toLocaleString('fr-FR')} ฿`
+      : `≈ ${Math.round(v / this.eurRate).toLocaleString('fr-FR')} €`;
   },
   _tag(pct, suffix = '') {
     if (pct === null || !isFinite(pct)) return '';
@@ -321,7 +316,7 @@ const Finance = {
     return Array.from({ length: n }, (_, i) => {
       const ym = this._ymShift(this.selectedMonth, i - n + 1);
       const byCat = { commission: 0, onboarding: 0, visa: 0, call: 0, autre: 0 };
-      this._txIn(ym).forEach(t => { byCat[t.type in byCat ? t.type : 'autre'] += this.toTHB(t); });
+      this._txIn(ym).forEach(t => { byCat[t.type in byCat ? t.type : 'autre'] += this.inDisplay(t); });
       const total = byCat.commission + byCat.onboarding + byCat.visa + byCat.call + byCat.autre;
       const [y, m] = ym.split('-');
       const label = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
@@ -346,7 +341,7 @@ const Finance = {
     return days.map(d => {
       const key = iso(d);
       const byCat = { commission: 0, onboarding: 0, visa: 0, call: 0, autre: 0 };
-      this._txIn(key).forEach(t => { byCat[t.type in byCat ? t.type : 'autre'] += this.toTHB(t); });
+      this._txIn(key).forEach(t => { byCat[t.type in byCat ? t.type : 'autre'] += this.inDisplay(t); });
       const total = byCat.commission + byCat.onboarding + byCat.visa + byCat.call + byCat.autre;
       const dn = d.getDate();
       const label = period === 'week'
@@ -428,14 +423,15 @@ const Finance = {
         <span class="fin-caption fin-subtle">${caption}</span>
       </article>`;
 
-    const commPct = commGoal ? Math.round(commTot / commGoal * 100) : null;
+    const commTHB = comm.reduce((s, t) => s + this.toTHB(t), 0);   // objectif en ฿ : comparé en ฿
+    const commPct = commGoal ? Math.round(commTHB / commGoal * 100) : null;
 
     document.getElementById('content').innerHTML = `
       <div class="section-header fin-in">
         <h2>Finance</h2>
         <div class="header-actions fin-actions">
           ${Privacy.btn()}
-          <button class="fin-ctl fin-ctl-ghost" onclick="Finance.editRate()" title="Modifier le taux de change">1 € = ${this.eurRate} ฿</button>
+          <button class="fin-ctl fin-ctl-ghost" onclick="Finance.editRate()" title="Taux ${Fx.ageLabel()}, actualisé automatiquement toutes les 6 heures. Cliquer pour le modifier à la main.">1 € = ${this.eurRate} ฿</button>
           <div class="fin-seg-toggle">
             <button class="${this.displayCur === 'THB' ? 'on' : ''}" onclick="Finance.displayCur !== 'THB' && Finance.toggleDisplay()">฿ THB</button>
             <button class="${this.displayCur === 'EUR' ? 'on' : ''}" onclick="Finance.displayCur !== 'EUR' && Finance.toggleDisplay()">€ EUR</button>
@@ -497,11 +493,11 @@ const Finance = {
           <div class="fin-goals">
             ${byType.map((r, idx) => {
               const isCount = r.goal?.type === 'count';
-              const share = total ? this.toTHBFromGoal(r) / total * 100 : 0;
+              const share = total ? r.totalDisp / total * 100 : 0;
               const pct = r.pct ?? share;
               const value = isCount
                 ? `${r.count}<span class="fin-goal-den"> / ${r.goal.count}</span>`
-                : (r.total ? this.fmtAs(r.total, r.goalCur) : '—');
+                : (r.totalDisp ? `${Math.round(r.totalDisp).toLocaleString('fr-FR')} ${this._sym()}` : '—');
               return `
                 <div class="fin-goal">
                   <div class="fin-goal-top">
@@ -522,19 +518,24 @@ const Finance = {
 
       <div class="fin-section-label fin-in" style="--i:7">Comptes</div>
       <div class="fin-acct-grid fin-in" style="--i:7">
-        ${accts.map((r, idx) => `
+        ${accts.map((r, idx) => {
+          const share = this._shareOf(r.acct);
+          const isShared = share < 1;
+          const myPart = isShared ? r.total * share : null;
+          return `
           <div class="fin-acct-tile">
             <div class="fin-acct-logo">${bankLogo(r.acct)}</div>
-            <div class="fin-acct-name">${r.acct}</div>
-            <div class="fin-acct-total">${this.fmtAs(r.total, 'THB')}</div>
-            <div class="fin-acct-sub">${r.total ? this.fmtAsSub(r.total, 'THB') : '&nbsp;'}</div>
+            <div class="fin-acct-name">${r.acct}${isShared ? ` <span style="font-size:9px;font-weight:700;color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,var(--surface));border-radius:4px;padding:1px 5px">${Math.round(share*100)}%</span>` : ''}</div>
+            <div class="fin-acct-total">${this.fmtAs(r.total, this.displayCur)}</div>
+            ${isShared && myPart ? `<div class="fin-acct-sub" style="color:var(--accent)">ta part : ${this.fmtAs(myPart, this.displayCur)}</div>` : `<div class="fin-acct-sub">${r.total ? this._sub(r.total) : '&nbsp;'}</div>`}
             <div class="fin-acct-count">${r.count} paiement${r.count > 1 ? 's' : ''}</div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
         <div class="fin-acct-tile fin-acct-tile-total">
           <div class="fin-acct-logo">${bankLogo('total')}</div>
           <div class="fin-acct-name">Total</div>
-          <div class="fin-acct-total">${this.fmtAs(total, 'THB')}</div>
-          <div class="fin-acct-sub">${total ? this.fmtAsSub(total, 'THB') : '&nbsp;'}</div>
+          <div class="fin-acct-total" style="font-size:12px;font-weight:600;color:var(--text-2)">Gagné ${this.fmtAs(total, this.displayCur)}</div>
+          <div class="fin-acct-sub" style="font-size:15px;font-weight:700;color:var(--text)">Perso ${this.fmtAs(this._sumShared(txMonth), this.displayCur)}</div>
           <div class="fin-acct-count">${txMonth.length} paiement${txMonth.length > 1 ? 's' : ''}</div>
         </div>
       </div>
@@ -555,7 +556,7 @@ const Finance = {
                 <td><span class="fin-tx-acct"><span class="fin-tx-logo">${bankLogo(t.account)}</span>${t.account}</span></td>
                 <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes || '—'}</td>
                 <td style="text-align:right">
-                  <div class="tx-amount">${this.fmtAs(Number(t.amount), t.currency || 'THB')}</div>
+                  <div class="tx-amount">${Math.round(Number(t.amount)).toLocaleString('fr-FR')} ${t.currency === 'EUR' ? '€' : '฿'}</div>
                   <div class="eur-sub">${this.fmtSub(t)}</div>
                 </td>
                 <td>
@@ -635,7 +636,7 @@ const Finance = {
   changeMonth(m) { this.selectedMonth = m; this.render(); },
 
   editRate() {
-    const r = prompt(`Exchange rate (THB per €)\nCurrent: 1€ = ${this.eurRate} ฿`, this.eurRate);
+    const r = prompt(`Taux de change (bahts pour 1 €)\nActuel : 1 € = ${this.eurRate} ฿\nIl sera remplacé par le taux du marché à la prochaine mise à jour automatique (6 h).`, this.eurRate);
     if (!r) return;
     const val = parseFloat(r.replace(',', '.'));
     if (!isNaN(val) && val > 0) {
