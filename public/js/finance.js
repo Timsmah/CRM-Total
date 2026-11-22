@@ -64,9 +64,33 @@ const Finance = {
 
   // ── Comptes partagés — part personnelle ────────────────────────────────────
   ACCOUNT_SHARES: { 'KBank HSC': 0.5 }, // 50% = ma part sur ce compte
-  _shareOf(acct) { return this.ACCOUNT_SHARES[acct] ?? 1; },
+  _shareOf(acct) {
+    const s = this.ACCOUNT_SHARES[acct];
+    return s !== undefined ? s : 1;
+  },
   _sumShared(txs) { // somme pondérée par la part perso
     return txs.reduce((s, t) => s + this.inDisplay(t) * this._shareOf(t.account), 0);
+  },
+  _renderAcctTiles(accts) {
+    return accts.map(r => {
+      const share = this._shareOf(r.acct);
+      const isShared = share < 1;
+      const myPart = isShared ? r.total * share : null;
+      const shareTag = isShared
+        ? ' <span style="font-size:9px;font-weight:700;color:var(--amber);background:rgba(255,180,0,0.12);border-radius:4px;padding:1px 5px">' + Math.round(share * 100) + '%</span>'
+        : '';
+      const subLine = (isShared && myPart)
+        ? '<div class="fin-acct-sub" style="color:var(--accent)">ta part : ' + this.fmtAs(myPart, this.displayCur) + '</div>'
+        : '<div class="fin-acct-sub">' + (r.total ? this._sub(r.total) : '&nbsp;') + '</div>';
+      const plural = r.count > 1 ? 's' : '';
+      return '<div class="fin-acct-tile">'
+        + '<div class="fin-acct-logo">' + bankLogo(r.acct) + '</div>'
+        + '<div class="fin-acct-name">' + r.acct + shareTag + '</div>'
+        + '<div class="fin-acct-total">' + this.fmtAs(r.total, this.displayCur) + '</div>'
+        + subLine
+        + '<div class="fin-acct-count">' + r.count + ' paiement' + plural + '</div>'
+        + '</div>';
+    }).join('');
   },
 
   // ── Monthly goals ──────────────────────────────────────────────────────────
@@ -518,19 +542,7 @@ const Finance = {
 
       <div class="fin-section-label fin-in" style="--i:7">Comptes</div>
       <div class="fin-acct-grid fin-in" style="--i:7">
-        ${accts.map((r, idx) => {
-          const share = this._shareOf(r.acct);
-          const isShared = share < 1;
-          const myPart = isShared ? r.total * share : null;
-          return `
-          <div class="fin-acct-tile">
-            <div class="fin-acct-logo">${bankLogo(r.acct)}</div>
-            <div class="fin-acct-name">${r.acct}${isShared ? ` <span style="font-size:9px;font-weight:700;color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,var(--surface));border-radius:4px;padding:1px 5px">${Math.round(share*100)}%</span>` : ''}</div>
-            <div class="fin-acct-total">${this.fmtAs(r.total, this.displayCur)}</div>
-            ${isShared && myPart ? `<div class="fin-acct-sub" style="color:var(--accent)">ta part : ${this.fmtAs(myPart, this.displayCur)}</div>` : `<div class="fin-acct-sub">${r.total ? this._sub(r.total) : '&nbsp;'}</div>`}
-            <div class="fin-acct-count">${r.count} paiement${r.count > 1 ? 's' : ''}</div>
-          </div>`;
-        }).join('')}
+        ${this._renderAcctTiles(accts)}
         <div class="fin-acct-tile fin-acct-tile-total">
           <div class="fin-acct-logo">${bankLogo('total')}</div>
           <div class="fin-acct-name">Total</div>
