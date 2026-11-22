@@ -36,6 +36,7 @@ const Dashboard = {
         api.get('/properties?archived=0'),
         api.get('/finance').catch(() => []),
         api.get(`/notes?date=${this._viewDate}`).catch(() => ({ tasks: [], notes: '' })),
+        typeof Fx !== 'undefined' ? Fx.ready() : null,
       ]);
       this.clients    = clients.map(c => ({ ...c, move_in_date: this._isoDate(c.move_in_date) }));
       this.properties = properties;
@@ -227,7 +228,8 @@ const Dashboard = {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   },
   _rate() { return parseFloat(localStorage.getItem('eur_rate') || '37'); },
-  _toTHB(tx) { return tx.currency === 'EUR' ? Number(tx.amount) * this._rate() : Number(tx.amount); },
+  // Montant figé au taux du jour de la transaction (voir Fx.rateOn)
+  _toTHB(tx) { return tx.currency === 'EUR' ? Number(tx.amount) * (typeof Fx !== 'undefined' ? Fx.rateOn(tx.date) : this._rate()) : Number(tx.amount); },
   _ym(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; },
   _daysTo(date) {
     const now = new Date(); now.setHours(0, 0, 0, 0);

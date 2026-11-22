@@ -398,6 +398,7 @@ const App = {
 
     const hash = window.location.hash.slice(1);
     const startSection = (this.user.role === 'guest') ? 'clients' : (hash || 'dashboard');
+    Fx.start();   // taux EUR → THB : historique + mise à jour toutes les 6 h
     Router.navigate(startSection);
 
     window.addEventListener('hashchange', () => {
@@ -732,6 +733,100 @@ const Theme = {
     const next = this.current() === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem('crm_theme', next); } catch {}
+  },
+};
+
+// Taux de change EUR → THB : rafraîchi automatiquement toutes les 6 heures.
+// Stocké dans localStorage ('eur_rate', 'eur_rate_ts'), lu par Finance, Dashboard, Clients, Biens.
+const Fx = {
+  MAX_AGE: 6 * 3600 * 1000,
+  SOURCES: [
+    ['https://api.frankfurter.dev/v1/latest?from=EUR&to=THB', j => j?.rates?.THB],
+    ['https://open.er-api.com/v6/latest/EUR',                 j => j?.rates?.THB],
+  ],
+  age() {
+    const ts = Number(localStorage.getItem('eur_rate_ts'));
+    return ts ? Date.now() - ts : Infinity;
+  },
+  ageLabel() {
+    const a = this.age();
+    if (!isFinite(a)) return 'jamais mis à jour';
+    const h = Math.floor(a / 3600000);
+    return h < 1 ? "mis à jour il y a moins d'une heure" : `mis à jour il y a ${h} h`;
+  },
+  async refresh(force) {
+    if (!force && this.age() < this.MAX_AGE) return false;
+    if (this._busy) return false;
+    this._busy = true;
+    try {
+      for (const [url, pick] of this.SOURCES) {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) continue;
+          const rate = Number(pick(await r.json()));
+          if (rate > 20 && rate < 80) {          // garde-fou contre une réponse aberrante
+            const prev = localStorage.getItem('eur_rate');
+            const next = String(Math.round(rate * 100) / 100);
+            localStorage.setItem('eur_rate', next);
+            localStorage.setItem('eur_rate_ts', String(Date.now()));
+            return prev !== next;
+          }
+        } catch { /* source suivante */ }
+      }
+      return false;                              // on garde le dernier taux connu
+    } finally { this._busy = false; }
+  },
+  // ── Taux historiques (un par jour ouvré, source BCE via Frankfurter) ──
+  // Une transaction en € est convertie au taux du JOUR de la transaction : son montant ne bouge plus ensuite.
+  HIST_KEY: 'fx_hist',
+  _hist: null,
+  hist() {
+    if (!this._hist) { try { this._hist = JSON.parse(localStorage.getItem(this.HIST_KEY) || '{}'); } catch { this._hist = {}; } }
+    return this._hist;
+  },
+  rateOn(date) {
+    const h = this.hist();
+    const d = String(date || '').slice(0, 10);
+    if (h[d]) return h[d];
+    // week-end / jour férié : dernier taux connu avant cette date
+    let best = null;
+    for (const k in h) if (k <= d && (!best || k > best)) best = k;
+    if (best) return h[best];
+    return parseFloat(localStorage.getItem('eur_rate') || '37');
+  },
+  async loadHistory() {
+    const h = this.hist();
+    const days = Object.keys(h).sort();
+    const today = new Date().toISOString().slice(0, 10);
+    if (days.length && days[days.length - 1] >= today) return;
+    // Au premier chargement on remonte à 2025 ; ensuite on ne complète que les jours manquants
+    const from = days.length ? days[days.length - 1] : '2025-01-01';
+    try {
+      const r = await fetch(`https://api.frankfurter.dev/v1/${from}..?from=EUR&to=THB`);
+      if (!r.ok) return;
+      const j = await r.json();
+      for (const [d, v] of Object.entries(j.rates || {})) if (v?.THB > 20 && v.THB < 80) h[d] = v.THB;
+      localStorage.setItem(this.HIST_KEY, JSON.stringify(h));
+    } catch { /* hors ligne : on garde ce qu'on a */ }
+  },
+  // Promesse attendue par Finance / Dashboard avant d'afficher (max 3 s pour ne jamais bloquer l'écran)
+  ready() {
+    if (!this._ready) this._ready = Promise.race([this.loadHistory(), new Promise(r => setTimeout(r, 3000))]);
+    return this._ready;
+  },
+
+  start() {
+    this.ready();
+    const tick = async () => {
+      const changed = await this.refresh();
+      // Rafraîchit l'écran seulement s'il affiche des montants convertis et qu'aucune fenêtre n'est ouverte
+      const modalOpen = !document.getElementById('modal-overlay')?.classList.contains('hidden');
+      if (changed && !modalOpen && Router.current === 'dashboard') Router.navigate('dashboard');
+      if (changed && !modalOpen && Router.current === 'finance' && Finance._unlocked) Finance.render();
+    };
+    tick();
+    setInterval(tick, 15 * 60 * 1000);           // contrôle toutes les 15 min, mise à jour si le taux a plus de 6 h
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
   },
 };
 
